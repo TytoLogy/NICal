@@ -72,10 +72,13 @@ function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% Setup Paths
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	disp([mfilename ': checking paths'])
+	pdir = ['C:\TytoLogy\TytoSettings\' getenv('USERNAME')];
 	if isempty(which('RPload'))
 		cdir = pwd;
-		pdir = ['C:\TytoLogy\TytoSettings\' getenv('USERNAME')];
-		disp([mfilename ': loading paths using ' pdir])
+		disp([mfilename ': loading paths using ' pdir]);
+		if ~exist(pdir, 'dir')
+			error('%s: Cannot locate paths!', mfilename);
+		end
 		cd(pdir);
 		tytopaths
 		cd(cdir);
@@ -86,17 +89,16 @@ function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% Initial Calibration settings
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	
+		%------------------------------------------------------------
 		% first check to see if defaults file exists
-		
-		% need to get the path for the mfile for CalibrateHeadphoneMic
-		mpath = mfilename('fullpath');
-		defaultsfile = [mpath '_Defaults.mat'];
+		%------------------------------------------------------------
+		defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat']);
 		
 		if exist(defaultsfile, 'file')
-			disp('Loading cal data from defaults file...')
+			fprintf('Loading cal settings from defaults file %s ...\n', defaultsfile)
 			load(defaultsfile, 'cal');
 		else
+			% no defaults found, so use internal values
 			% Frequency range
 			cal.Fmin = 3000;
 			cal.Fstep = 100;
@@ -129,6 +131,7 @@ function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 			cal.AttenFixValue = 90;
 			% default fr response file for Knowles mics
 			cal.mic_fr_file = '..\CalibrationData\FFamp_CIThp_24-Sep-2009_fr.mat';
+	
 		end
 	
 		% assign cal struct to the GUI handles structure for safe keeping
