@@ -1,5 +1,5 @@
 %--------------------------------------------------------------------------
-% HeaphoneCal_tdtinit.m
+% SpeakerCal_tdtinit.m
 %--------------------------------------------------------------------------
 % sets up TDT parameters
 %
@@ -7,15 +7,12 @@
 
 %--------------------------------------------------------------------------
 % Sharad Shanbhag
-% sharad.shanbhag@einstein.yu.edu
+% sshanbhag@neomed.edu
 %--------------------------------------------------------------------------
-% Created: 5 Feb 2008
-% 				Created from FFCal_tdtinit.m
+% Created: 1 March, 2012
+% 				Created from HeadphoneCal_tdtinit.m
 % 
 % Revisions:
-%	19 June, 2009 (SJS): updated documentation
-%	5 March, 2010 (SJS):	fixed status and tagname issue to comply
-%								with new RPclose and RPgettag methods
 %--------------------------------------------------------------------------
 
 disp('...starting TDT hardware...');
@@ -24,7 +21,7 @@ disp('...starting TDT hardware...');
 % Initialize the TDT devices
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% Initialize RX8 device 2
-	tmpdev = RX8init('GB', iodev.Dnum);
+	tmpdev = RZ6init('GB', iodev.Dnum);
 	iodev.C = tmpdev.C;
 	iodev.handle = tmpdev.handle;
 	iodev.status = tmpdev.status;

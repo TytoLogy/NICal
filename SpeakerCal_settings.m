@@ -1,22 +1,17 @@
 %--------------------------------------------------------------------------
-% HeadphoneCal_settings.m
+% SpeakerCal_settings.m
 %--------------------------------------------------------------------------
-% This sets up the HeaphoneCal parameters
+% This sets up the SpeakerCal parameters
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
 % Sharad Shanbhag
-% sshanbha@aecom.yu.edu
+% sshanbhag@neomed.edu
 %--------------------------------------------------------------------------
-% Revisions:
+% Created: 1 March, 2012
+% 				Created from HeadphoneCal_settings.m
 %
-%	5 Feb 2008:	Created from FFCal_settings.m
-%	23 January, 2009 (SJS):
-%		-	renamed miclrcal, replaced with frdata struct
-% 	19 June, 2009 (SJS): added documentation
-%	2 Nov, 2010 (SJS): moved iodev (TDT device) configuration to 
-% 						HeadphoneCal_OpeningFcn() for initialization and
-% 						to TDTSettingsMenuCtrl() for user modification
+% Revisions:
 %--------------------------------------------------------------------------
 
 disp('...general setup starting...');
@@ -33,12 +28,16 @@ disp('...general setup starting...');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load Microphone calibration data
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	load(handles.cal.mic_fr_file, 'frdata');
-	if ~isfield(frdata, 'DAscale')
-		frdata.DAscale = frdata.calsettings.DAscale;
+	if handles.AssumeFlatMic
+		DAscale = 1;
+	else
+		load(handles.cal.mic_fr_file, 'frdata');
+		if ~isfield(frdata, 'DAscale')
+			frdata.DAscale = frdata.calsettings.DAscale;
+		end
+		handles.cal.mic_fr = frdata;
 	end
-	handles.cal.mic_fr = frdata;
-
+	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % set global settings
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
@@ -50,6 +49,12 @@ disp('...general setup starting...');
 	% read in the gain on the mic preamp
 	Gain_dB = [40 40];
 	Gain = 10.^(Gain_dB./20);
+	
+%%%%%%
+!!!!!!!
+!!!!!!
+need to deal with calibration mic issue in GUI
+!!!!!!
 
 	% this is the sensitivity of the calibration mic in V / Pa
 	CalMic_sense = frdata.calsettings.CalMic_sense;

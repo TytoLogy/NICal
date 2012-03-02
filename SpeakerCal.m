@@ -1,15 +1,15 @@
-function varargout = HeadphoneCal(varargin)
-% HEADPHONECAL M-file for HeadphoneCal.fig
-%      HEADPHONECAL, by itself, creates a new HEADPHONECAL or raises the existing
+function varargout = SpeakerCal(varargin)
+% SPEAKERCAL M-file for SpeakerCal.fig
+%      SPEAKERCAL, by itself, creates a new SPEAKERCAL or raises the existing
 %      singleton*.
 %
-%      H = HEADPHONECAL returns the handle to a new HEADPHONECAL or the handle to
+%      H = SPEAKERCAL returns the handle to a new SPEAKERCAL or the handle to
 %      the existing singleton*.
 %
-%      HEADPHONECAL('CALLBACK',hObject,eventData,handles,...) calls the local
-%      function named CALLBACK in HEADPHONECAL.M with the given input arguments.
+%      SPEAKERCAL('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in SPEAKERCAL.M with the given input arguments.
 %
-%      HEADPHONECAL('Property','Value',...) creates a new HEADPHONECAL or raises the
+%      SPEAKERCAL('Property','Value',...) creates a new SPEAKERCAL or raises the
 %      existing singleton*.  
 %
 
@@ -44,8 +44,8 @@ function varargout = HeadphoneCal(varargin)
 	gui_Singleton = 1;
 	gui_State = struct('gui_Name',       mfilename, ...
 					   'gui_Singleton',  gui_Singleton, ...
-					   'gui_OpeningFcn', @HeadphoneCal_OpeningFcn, ...
-					   'gui_OutputFcn',  @HeadphoneCal_OutputFcn, ...
+					   'gui_OpeningFcn', @SpeakerCal_OpeningFcn, ...
+					   'gui_OutputFcn',  @SpeakerCal_OutputFcn, ...
 					   'gui_LayoutFcn',  [] , ...
 					   'gui_Callback',   []);
 	if nargin && ischar(varargin{1})
@@ -64,10 +64,10 @@ function varargout = HeadphoneCal(varargin)
 %--------------------------------------------------------------------------
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% --- Executes just before HeadphoneCal is made visible.
+% --- Executes just before SpeakerCal is made visible.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function HeadphoneCal_OpeningFcn(hObject, eventdata, handles, varargin)
+function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% Setup Paths
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -102,8 +102,8 @@ function HeadphoneCal_OpeningFcn(hObject, eventdata, handles, varargin)
 			cal.Fstep = 100;
 			cal.Fmax = 3500;
 			% set the min and max allowable stimulus levels
-			cal.Minlevel = 40;
-			cal.Maxlevel = 45;
+			cal.Minlevel = 60;
+			cal.Maxlevel = 70;
 			% Set the starting attenuation value
 			% (better to set too high instead of too low!!!!)
 			cal.StartAtten = 90;
@@ -174,11 +174,11 @@ function HeadphoneCal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% set this to wherever the circuits are stored
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		iodev.Circuit_Path = 'H:\Code\TytoLogy\toolbox\TDT\Circuits\RX8_2\50KHz';
-		iodev.Circuit_Name = 'RX8_2_BinauralRefStimResponseFiltered';
+		iodev.Circuit_Name = 'RZ6_1Out1FilteredIn';
 		iodev.REF = 0;
 		iodev.status = 0;
-		% Dnum = device number - this is for RX8 (2)
-		iodev.Dnum=2;
+		% Dnum = device number - this is for RZ6 (1)
+		iodev.Dnum=1;
 		handles.iodev = iodev;
 		guidata(hObject, handles);		
 		
@@ -190,7 +190,7 @@ function HeadphoneCal_OpeningFcn(hObject, eventdata, handles, varargin)
 		guidata(hObject, handles);		
 		
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	% UIWAIT makes HeadphoneCal wait for user response (see UIRESUME)
+	% UIWAIT makes SpeakerCal wait for user response (see UIRESUME)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% uiwait(handles.figure1);
 %--------------------------------------------------------------------------
@@ -211,7 +211,7 @@ function RunCalibration_ctrl_Callback(hObject, eventdata, handles)
 	COMPLETE = 0;
 	guidata(hObject, handles);
 	
- 	HeadphoneCal_RunCalibration
+ 	SpeakerCal_RunCalibration
 
 	set(handles.RunCalibration_ctrl, 'Enable', 'on');
 	set(handles.Abort_ctrl, 'Enable', 'off');
@@ -418,7 +418,7 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 	tmpfile = read_ui_str(handles.MicFRFileCtrl);
 	
 	if ~exist(tmpfile, 'file')
-		warndlg('Microphone calibration file not found!', 'HeadphoneCal Warning');
+		warndlg('Microphone calibration file not found!', 'SpeakerCal Warning');
 		% revert to old value
 		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
 	else
@@ -512,7 +512,7 @@ function TDTSettingsMenuCtrl_Callback(hObject, eventdata, handles)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %--------------------------------------------------------------------------
 % --- Outputs from this function are returned to the command line.
-function varargout = HeadphoneCal_OutputFcn(hObject, eventdata, handles) 
+function varargout = SpeakerCal_OutputFcn(hObject, eventdata, handles) 
 	% Get default command line output from handles structure
 	varargout{1} = handles.output;
 %--------------------------------------------------------------------------

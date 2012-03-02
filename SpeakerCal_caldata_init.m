@@ -1,25 +1,17 @@
 %--------------------------------------------------------------------------
-% HeadphoneCal_caldata_init.m
+% SpeakerCal_caldata_init.m
 %--------------------------------------------------------------------------
-%	Script for HeadphoneCal program to initialize/allocate caldata
-%	structure for headphone speaker calibration
+%	Script for SpeakerCal program to initialize/allocate caldata
+%	structure for speaker calibration
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
 % Sharad Shanbhag
-% sshanbha@aecom.yu.edu
+% sshanbhag@neomed.edu
 %--------------------------------------------------------------------------
-% Created: 5 Feb 2008, branched from FFCal_settings.m
+% Created: 1 March, 2012, branched from HeadphoneCal
 %
 % Revisions:
-%
-%	23 January, 2009 (SJS):
-%		-	renamed file from HeadphoneCal_caldata.m to 
-%			HeadphoneCal_caldata_init.m to more
-%			clearly indicate function of script.
-%	19 June, 2009 (SJS): 
-% 		-	added documentation, moved allocation of mags,
-%			phis, etc arrays to _RunCalibration.m.
 %--------------------------------------------------------------------------
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -37,18 +29,10 @@
 	caldata.atten = cal.StartAtten;					% initial attenuator setting
 	caldata.max_spl = cal.Maxlevel;					% maximum spl
 	caldata.min_spl = cal.Minlevel;					% minimum spl
-	caldata.frfile = handles.cal.mic_fr_file;
+	caldata.frfile = '';
 
 	% set up the arrays to hold the data
-	if cal.CheckCal
-		if cal.CheckCal == L || cal.CheckCal == R
-			Nchannels = 3;
-		elseif cal.CheckCal == BOTH
-			Nchannels = 4;
-		end
-	else
-		Nchannels = 2;
-	end
+	Nchannels = 2;
 	
 	%initialize the caldata structure arrays for the calibration data
 	tmpcell = cell(Nchannels, Nfreqs);
@@ -64,11 +48,18 @@
 % Fetch the l and r headphone mic adjustment values for the 
 % calibration frequencies using interpolation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	frdata.lmagadjval = interp1(frdata.freq, frdata.ladjmag, caldata.freq);
-	frdata.rmagadjval = interp1(frdata.freq, frdata.radjmag, caldata.freq);
-	frdata.lphiadjval = interp1(frdata.freq, frdata.ladjphi, caldata.freq);
-	frdata.rphiadjval = interp1(frdata.freq, frdata.radjphi, caldata.freq);
-
+	if ~exist('frdata', 'var')
+		frdata.lmagadjval = ones(size(caldata.freq));
+		frdata.rmagadjval = ones(size(caldata.freq));
+		frdata.lphiadjval = zeros(size(caldata.freq));
+		frdata.rphiadjval = zeros(size(caldata.freq));
+		frdata.DAscale = DAscale;
+	else
+		frdata.lmagadjval = interp1(frdata.freq, frdata.ladjmag, caldata.freq);
+		frdata.rmagadjval = interp1(frdata.freq, frdata.radjmag, caldata.freq);
+		frdata.lphiadjval = interp1(frdata.freq, frdata.ladjphi, caldata.freq);
+		frdata.rphiadjval = interp1(frdata.freq, frdata.radjphi, caldata.freq);	
+	end
 	caldata.DAscale = frdata.DAscale;
 	
 	if DEBUG
