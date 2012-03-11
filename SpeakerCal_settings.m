@@ -28,8 +28,10 @@ disp('...general setup starting...');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load Microphone calibration data
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	if handles.AssumeFlatMic
-		DAscale = 1;
+	if read_ui_val(handles.FRenableCtrl) == 0
+		DAscale = read_ui_str(handles.DAscaleCtrl, 'n');
+		handles.cal.mic_fr = [];
+		cal.DAscale = DAscale;
 	else
 		load(handles.cal.mic_fr_file, 'frdata');
 		if ~isfield(frdata, 'DAscale')
@@ -39,25 +41,24 @@ disp('...general setup starting...');
 	end
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% set global settings
+% settings
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 	earcalpath = pwd;
-	earcalfile = [earcalpath '\ear_cal.mat'];
+	earcalfile = fullfile(earcalpath, 'ear_cal.mat');
 
 	deciFactor = 1;
 
 	% read in the gain on the mic preamp
-	Gain_dB = [40 40];
-	Gain = 10.^(Gain_dB./20);
+	Gain_dB = handles.MicGain;
 	
-%%%%%%
-!!!!!!!
-!!!!!!
-need to deal with calibration mic issue in GUI
-!!!!!!
+	Gain = 10.^(Gain_dB./20);
 
 	% this is the sensitivity of the calibration mic in V / Pa
-	CalMic_sense = frdata.calsettings.CalMic_sense;
+	if read_ui_val(handles.FRenableCtrl) == 1
+		CalMic_sense = frdata.calsettings.CalMic_sense;
+	else
+		CalMic_sense = handles.MicSensitivity;
+	end
 	
 	% pre-compute the V -> Pa conversion factor
 	VtoPa = (CalMic_sense^-1);

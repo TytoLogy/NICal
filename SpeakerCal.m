@@ -38,7 +38,7 @@ function varargout = SpeakerCal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 02-Nov-2010 18:21:33
+% Last Modified by GUIDE v2.5 11-Mar-2012 15:43:20
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -69,22 +69,46 @@ function varargout = SpeakerCal(varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	% Setup Paths
+	% Initial Setup
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	%----------------------------------------------------------
+	% Setup Paths
+	%----------------------------------------------------------
 	disp([mfilename ': checking paths'])
 	pdir = ['C:\TytoLogy\TytoSettings\' getenv('USERNAME')];
 	if isempty(which('RPload'))
+		% could not find the RPload.m function (which is in TytoLogy
+		% toolbox) which suggests that the paths are not set or are 
+		% incorrect for this setup.  load the paths using the tytopaths program.
+		%--------
+		% First, store the current path
 		cdir = pwd;
-		disp([mfilename ': loading paths using ' pdir]);
-		if ~exist(pdir, 'dir')
-			error('%s: Cannot locate paths!', mfilename);
-		end
+		% build the path to the user's TytoSettings directory and
+		% change dirs to it.  Run the tytopaths script and then
+		% return to the original ("current") directory
+		disp([mfilename ': loading paths using ' pdir])
 		cd(pdir);
 		tytopaths
 		cd(cdir);
 	else
 		disp([mfilename ': paths ok, launching programn'])
 	end
+	
+	
+	%----------------------------------------------------------
+	% load the configuration information, store in config structure
+	% The HPSearch_Configuration.m function file will usually live in the
+	% <tytology path>\TytoSettings\<username\ directory
+	%----------------------------------------------------------
+	% load the configuration information, store in config structure
+	if isempty(which('SpeakerCal_Configuration'))
+		% need to add user config path
+		addpath(['C:\TytoLogy\TytoSettings\' getenv('USERNAME')]);
+	end	
+	config = SpeakerCal_Configuration;
+	% save handles
+	guidata(hObject, handles);	
 	
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% Initial Calibration settings
@@ -131,6 +155,7 @@ function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 			cal.AttenFixValue = 90;
 			% default fr response file for Knowles mics
 			cal.mic_fr_file = '..\CalibrationData\FFamp_CIThp_24-Sep-2009_fr.mat';
+			% cal.mic_fr_file = '';
 	
 		end
 	
@@ -174,16 +199,23 @@ function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
 		
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	% set this to wherever the circuits are stored
+	% setup iodev TDTToolbox device interface struct
+	% using information from the config struct 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		iodev.Circuit_Path = 'H:\Code\TytoLogy\toolbox\TDT\Circuits\RX8_2\50KHz';
-		iodev.Circuit_Name = 'RZ6_1Out1FilteredIn';
+		iodev.Circuit_Path = config.CIRCUIT_PATH;
+		iodev.Circuit_Name = config.CIRCUIT_NAME;
+		% Dnum = device number - this is for RZ6 (1)
+		iodev.Dnum = config.IODEVNUM;
 		iodev.REF = 0;
 		iodev.status = 0;
-		% Dnum = device number - this is for RZ6 (1)
-		iodev.Dnum=1;
 		handles.iodev = iodev;
-		guidata(hObject, handles);		
+		guidata(hObject, handles);
+
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	% set  function handles from configuration data
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		handles.initfunction = config.IOINITFUNCTION;
+		handles.iofunction = config.IOFUNCTION;
 		
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% Update handles structure
@@ -213,7 +245,7 @@ function RunCalibration_ctrl_Callback(hObject, eventdata, handles)
 	handles.CalComplete = 0;
 	COMPLETE = 0;
 	guidata(hObject, handles);
-	
+		
  	SpeakerCal_RunCalibration
 
 	set(handles.RunCalibration_ctrl, 'Enable', 'on');
@@ -531,6 +563,80 @@ function CloseRequestFcn(hObject, eventdata, handles)
 function Side_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 
+
+%--------------------------------------------------------------------------
+% Enables FR file use on button press in FRenableCtrl.
+%--------------------------------------------------------------------------
+function FRenableCtrl_Callback(hObject, eventdata, handles)
+	currentState = read_ui_val(hObject);
+	if currentState
+		%%% whatever needs to be done to enable mic FR
+		enable_ui(handles.MicFRFileCtrl);
+		disable_ui(handles.InputChannelCtrl);
+		disable_ui(handles.MicGainCtrl);
+		disable_ui(handles.MicSensitivityCtrl);
+		disable_ui(handles.DAscaleCtrl);
+		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
+		handles.FRenable = 1;
+	else
+		disable_ui(handles.MicFRFileCtrl);
+		%%% whatever needs to be done to disable mic FR use
+		disable_ui(handles.MicFRFileCtrl);
+		enable_ui(handles.InputChannelCtrl);
+		enable_ui(handles.MicGainCtrl);
+		enable_ui(handles.MicSensitivityCtrl);
+		enable_ui(handles.DAscaleCtrl);
+		handles.FRenable = 0;
+	end
+	
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% Sets input channel on selection change in InputChannelCtrl.
+%--------------------------------------------------------------------------
+function InputChannelCtrl_Callback(hObject, eventdata, handles)
+	newVal = read_ui_val(hObject);
+	if newVal == 1
+		handles.InputChannel = 1;
+	else
+		handles.InputChannel = 2;
+	end
+%--------------------------------------------------------------------------
+	
+%--------------------------------------------------------------------------
+% sets mic Gain
+%--------------------------------------------------------------------------
+function MicGainCtrl_Callback(hObject, eventdata, handles)
+	handles.MicGain = read_ui_str(hObject, 'n');
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% sets Mic sensitiviy
+%--------------------------------------------------------------------------
+function MicSensitivityCtrl_Callback(hObject, eventdata, handles)
+	handles.MicSensitivity = read_ui_str(hObject, 'n');
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
+%% ------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function DAscaleCtrl_Callback(hObject, eventdata, handles)
+	currentVal = read_ui_str(hObject, 'n')
+	if ~between(currentVal, 0, 10)
+		warning('DAscale must be between 0 and 10 Volts!')
+		update_ui_val(hObject, handles.DAscale);
+		return;
+	end
+	handles.DAscale = currentVal;
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Create Functions
@@ -610,20 +716,23 @@ function MicFRFileCtrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 	    set(hObject,'BackgroundColor','white');
 	end
+function InputChannelCtrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
+function MicGainCtrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
+function MicSensitivityCtrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
+function DAscaleCtrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
 %-------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

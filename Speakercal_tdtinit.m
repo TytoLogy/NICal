@@ -21,7 +21,7 @@ disp('...starting TDT hardware...');
 % Initialize the TDT devices
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% Initialize RX8 device 2
-	tmpdev = RZ6init('GB', iodev.Dnum);
+	tmpdev = handles.initfunction('GB', iodev.Dnum);
 	iodev.C = tmpdev.C;
 	iodev.handle = tmpdev.handle;
 	iodev.status = tmpdev.status;

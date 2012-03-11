@@ -1,5 +1,5 @@
 %--------------------------------------------------------------------------
-% HeadphoneCal_RunCalibration.m
+% SpeakerCal_RunCalibration.m
 %--------------------------------------------------------------------------
 % Runs the headphone speaker calibration using the in situ Knowles
 % microphones as the the calibration mics, corrected using data from
@@ -8,30 +8,11 @@
 
 %--------------------------------------------------------------------------
 % Sharad Shanbhag
-% sshanbha@aecom.yu.edu
+% sshanbhag@neomed.edu
 %--------------------------------------------------------------------------
-% Created:	18 June, 2008	SJS
-% 				Moving all RunCalibration_ctrl_Callback() operations
-% 				to here so that it's easier to track and catalog 
-% 				changes to the code.
+% Created:	March 2012 from HeadphoneCal_RunCalibration,	SJS
 %
 % Revisions:
-% 	18 June, 2008	SJS
-% 		File created, some comments/misc. cleanup of code
-%	16 January, 2009	SJS
-% 		-	More cleanup
-% 		-	Added Checks and Balances code to catch frequencies out of range 
-% 			of the _fr.mat file data (microphone calibration data file)
-% 		-	Made adjustments for the iodev struct format of the TDT functions
-%	2 April, 2009 (SJS):
-% 		- using bazaar for version control
-% 		- made some changes to PlotCal
-% 		- working on headphone check 
-%	17 April, 2009 (SJS):
-% 		- added some debugging elements
-% 		- can now use fixed attenuation factor for 
-% 		  measuring fr more accurately
-% 	19 June, 2009 (SJS): added documentation, ran Mlint profiler
 %--------------------------------------------------------------------------
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -54,7 +35,7 @@
 	COMPLETE = 0;
 	
 	% Load the settings and constants 
-	HeadphoneCal_settings;
+	SpeakerCal_settings;
 	
 	% save the GUI handle information
 	guidata(hObject, handles);
@@ -81,12 +62,12 @@
 % Start TDT things
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% Start the TDT circuits
-	HeadphoneCal_tdtinit;
+	SpeakerCal_tdtinit;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Setup caldata struct for storing the calibration data
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	HeadphoneCal_caldata_init;
+	SpeakerCal_caldata_init;
 	% set the FRANGE output scale value (usually 5 V)
 	FRANGE = caldata.DAscale;
 
@@ -199,7 +180,7 @@
 				update_ui_str(handles.RAttentext, MAX_ATTEN);
 
 				% play the sound;
-				[resp, rate] = headphone_io(iodev, S, acqpts);
+				[resp, rate] = handles.iofunction(iodev, S, acqpts);
 
 				% determine the magnitude and phase of the response
 				[lmag, lphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -243,7 +224,7 @@
 			% now, collect the data for frequency FREQ, LEFT headphone
 			for rep = 1:cal.Nreps
 				% play the sound;
-				[resp, rate] = headphone_io(iodev, S, acqpts);
+				[resp, rate] = handles.iofunction(iodev, S, acqpts);
 
 				% determine the magnitude and phase of the response
 				[lmag, lphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -366,7 +347,7 @@
 				update_ui_str(handles.RAttentext, Ratten);
 
 				% play the sound;
-				[resp, rate] = headphone_io(iodev, S, acqpts);
+				[resp, rate] = handles.iofunction(iodev, S, acqpts);
 				% determine the magnitude and phase of the response
 				[rmag, rphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, freq);
 				% adjust for the gain of the preamp and apply correction
@@ -410,7 +391,7 @@
 			% now, collect the data for frequency FREQ, RIGHT headphone
 			for rep = 1:cal.Nreps
 				% play the sound;
-				[resp, rate] = headphone_io(iodev, S, acqpts);
+				[resp, rate] = handles.iofunction(iodev, S, acqpts);
 
 				% determine the magnitude and phase of the response
 				[rmag, rphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -497,7 +478,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Exit gracefully (close TDT objects, etc)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	HeadphoneCal_tdtexit;
+	SpeakerCal_tdtexit;
 
 	if freq == F(3)
 		COMPLETE = 1;
