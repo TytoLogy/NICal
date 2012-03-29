@@ -49,15 +49,15 @@ disp('...general setup starting...');
 	deciFactor = 1;
 
 	% read in the gain on the mic preamp
-	Gain_dB = handles.MicGain;
-	
-	Gain = 10.^(Gain_dB./20);
+	Gain_dB = handles.cal.MicGain;
 
+	Gain = invdb(Gain_dB);
+	
 	% this is the sensitivity of the calibration mic in V / Pa
 	if read_ui_val(handles.FRenableCtrl) == 1
 		CalMic_sense = frdata.calsettings.CalMic_sense;
 	else
-		CalMic_sense = handles.MicSensitivity;
+		CalMic_sense = handles.cal.MicSensitivity;
 	end
 	
 	% pre-compute the V -> Pa conversion factor
@@ -91,7 +91,8 @@ disp('...general setup starting...');
 
 	%Input Filter Fc
 	handles.cal.InputFilter = 1;
-	handles.cal.InputFc = 120;
+	handles.cal.InputHPFc = 120;
+	handles.cal.InputLPFc = 45000;
 	%TTL pulse duration (msec)
 	handles.cal.TTLPulseDur = 1;
 

@@ -85,8 +85,16 @@ disp('...starting TDT hardware...');
 
 	%Setup filtering if desired
 	if cal.InputFilter
-		RPsettag(iodev, 'HPFreq', cal.InputFc);
+		RPsettag(iodev, 'HPFreq', cal.InputHPFc);
+		RPsettag(iodev, 'HPenable', 1);
+		RPsettag(iodev, 'LPFreq', cal.InputLPFc);
+		RPsettag(iodev, 'LPenable', 1);
 	end
+	
+	PA5setatten(PA5L, MAX_ATTEN);
+	PA5setatten(PA5R, MAX_ATTEN);
+	
+	
 	
 	TDTINIT = 1;
 

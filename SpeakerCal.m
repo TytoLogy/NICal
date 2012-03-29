@@ -123,6 +123,8 @@ function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 			load(defaultsfile, 'cal');
 		else
 			% no defaults found, so use internal values
+			disp('no defaults found, using internal values')
+			
 			% Frequency range
 			cal.Fmin = 3000;
 			cal.Fstep = 100;
@@ -141,8 +143,8 @@ function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 			cal.ISI = 200;
 			% Auto save ear_cal.mat in experiment calibration data dir
 			cal.AutoSave = 1;
-			% set the 'side' to both channels;
-			cal.Side = 3;
+			% set the 'side' to left channels;
+			cal.Side = 1;
 			% set the CheckCal flag in order to use a reference microphone to 
 			% check the calibration.  
 			% 0 == no check, 1 = Left, 2 = Right, 3 = Both
@@ -156,7 +158,10 @@ function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 			% default fr response file for Knowles mics
 			cal.mic_fr_file = '..\CalibrationData\FFamp_CIThp_24-Sep-2009_fr.mat';
 			% cal.mic_fr_file = '';
-	
+			cal.InputChannel = 1;
+			cal.MicGain = 0;
+			cal.MicSensitivity = 0.1;
+			cal.DAscale = 1;
 		end
 	
 		% assign cal struct to the GUI handles structure for safe keeping
@@ -197,6 +202,11 @@ function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
 			set(handles.AttenFixValueCtrlText, 'Visible', 'off');
 		end
 		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
+		
+		update_ui_val(handles.InputChannelCtrl, handles.cal.InputChannel);
+		update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
+		update_ui_str(handles.MicSensitivityCtrl, handles.cal.MicSensitivity);
+		update_ui_str(handles.DAscaleCtrl, handles.cal.DAscale);
 		
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% setup iodev TDTToolbox device interface struct
@@ -310,7 +320,7 @@ function Fmin_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 function Fmax_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
-	if ~between(tmp, handles.cal.Fmin, 22000)
+	if ~between(tmp, handles.cal.Fmin, 50000)
 		warndlg('Max Freq must be between Fmin & 22,000', 'Invalid Max Freq');
 		update_ui_str(hObject, handles.cal.Fmax);
 	else
@@ -473,6 +483,7 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %--------------------------------------------------------------------------
 function Menu_SaveCal_Callback(hObject, eventdata, handles)
+handles
 	[calfile, calpath] = uiputfile('*_cal.mat','Save headphone calibration data in file');
 	if calfile ~= 0
 		% save the sequence so we can match up with the RF data
@@ -561,9 +572,11 @@ function CloseRequestFcn(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 % --- Executes on selection change in Side.
 function Side_Callback(hObject, eventdata, handles)
+	newVal = read_ui_val(hObject);
+	handles.cal.Side = newVal;
+	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-
-
+	
 %--------------------------------------------------------------------------
 % Enables FR file use on button press in FRenableCtrl.
 %--------------------------------------------------------------------------
@@ -598,9 +611,9 @@ function FRenableCtrl_Callback(hObject, eventdata, handles)
 function InputChannelCtrl_Callback(hObject, eventdata, handles)
 	newVal = read_ui_val(hObject);
 	if newVal == 1
-		handles.InputChannel = 1;
+		handles.cal.InputChannel = 1;
 	else
-		handles.InputChannel = 2;
+		handles.cal.InputChannel = 2;
 	end
 %--------------------------------------------------------------------------
 	
@@ -608,7 +621,21 @@ function InputChannelCtrl_Callback(hObject, eventdata, handles)
 % sets mic Gain
 %--------------------------------------------------------------------------
 function MicGainCtrl_Callback(hObject, eventdata, handles)
-	handles.MicGain = read_ui_str(hObject, 'n');
+	newVal = read_ui_str(hObject, 'n');
+	
+	if isempty(newVal)
+		warning('%s: invalid MicGain value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicGain);
+	elseif ~all(isnumeric(newVal))
+		warning('%s: invalid MicGain value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicGain);
+	elseif length(newVal) ~= 1
+		handles.cal.MicGain = newVal(1);
+		update_ui_str(hObject, handles.cal.MicGain);
+	else
+		handles.cal.MicGain = newVal;
+	end
+	
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
@@ -616,25 +643,51 @@ function MicGainCtrl_Callback(hObject, eventdata, handles)
 % sets Mic sensitiviy
 %--------------------------------------------------------------------------
 function MicSensitivityCtrl_Callback(hObject, eventdata, handles)
-	handles.MicSensitivity = read_ui_str(hObject, 'n');
+	newVal = read_ui_str(hObject, 'n');
+	
+	if isempty(newVal)
+		warning('%s: invalid MicSensitivity value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicSensitivity);
+	elseif ~all(isnumeric(newVal))
+		warning('%s: invalid MicSensitivity value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicSensitivity);
+	elseif newVal <= 0
+		warning('%s: invalid MicSensitivity value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicSensitivity);
+	elseif length(newVal) ~= 1
+		handles.cal.MicSensitivity = newVal(1);
+		update_ui_str(hObject, handles.cal.MicSensitivity);
+	else
+		handles.cal.MicSensitivity = newVal;
+	end
+
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
 %% ------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function DAscaleCtrl_Callback(hObject, eventdata, handles)
-	currentVal = read_ui_str(hObject, 'n')
-	if ~between(currentVal, 0, 10)
-		warning('DAscale must be between 0 and 10 Volts!')
-		update_ui_val(hObject, handles.DAscale);
-		return;
+	newVal = read_ui_str(hObject, 'n');
+	
+	if isempty(newVal)
+		warning('%s: invalid tone level value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.DAscale);
+	elseif ~all(isnumeric(newVal))
+		warning('%s: invalid  tone level value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.DAscale);
+	elseif ~between(newVal, 0, 10)
+		warning('%s: invalid  tone level value %f', mfilename, newVal);
+		disp('tone level must be between 0 and 10 Volts!')
+		update_ui_str(hObject, handles.cal.DAscale);
+	elseif length(newVal) ~= 1
+		handles.cal.MicSensitivity = newVal(1);
+		update_ui_str(hObject, handles.cal.DAscale);
+	else
+		handles.cal.DAscale = newVal;
 	end
-	handles.DAscale = currentVal;
+		
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-
-
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
