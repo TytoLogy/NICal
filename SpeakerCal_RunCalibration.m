@@ -112,6 +112,7 @@ acqpts = ms2bin(cal.AcqDuration, iodev.Fs);
 stim_start = ms2bin(cal.StimDelay, iodev.Fs);
 stim_end = stim_start + outpts - 1;
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % setup attenuation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -173,9 +174,11 @@ for freq = F(1):F(2):F(3)
 		end
 
 		while retry
-			% need to set the attenuators
+			% need to set the attenuators - since this is for the
+			% L channel, set the R channel attenuator to MAX attenuation
 			PA5setatten(PA5L, Latten);
 			PA5setatten(PA5R, MAX_ATTEN);
+			% update ui
 			update_ui_str(handles.LAttentext, Latten);
 			update_ui_str(handles.RAttentext, MAX_ATTEN);
 
@@ -198,14 +201,14 @@ for freq = F(1):F(2):F(3)
 				% if at limit, peg the attenuator value to max attenuation
 				if Latten > MAX_ATTEN
 					Latten = MAX_ATTEN;
-					warning('Latten is maxed out!');
+					disp('Latten is maxed out!');
 					retry = 0;
 				end
 			elseif lmagdB < cal.Minlevel
 				Latten = Latten - cal.AttenStep;
 				if Latten <= 0
 					Latten = 0;
-					warning('Latten at minimum level!');
+					disp('Latten at minimum level!');
 					retry = 0;
 				end
 			else
@@ -356,14 +359,14 @@ for freq = F(1):F(2):F(3)
 				% max attenuation
 				if Ratten > MAX_ATTEN
 					Ratten = MAX_ATTEN;
-					warning('Ratten is maxed out!');
+					disp('Ratten is maxed out!');
 					retry = 0;
 				end
 			elseif rmagdB < cal.Minlevel
 				Ratten = Ratten - cal.AttenStep;
 				if Ratten <= 0
 					Ratten = 0;
-					warning('Ratten at minimum level!');
+					disp('Ratten at minimum level!');
 					retry = 0;
 				end
 			else
