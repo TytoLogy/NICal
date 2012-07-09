@@ -1,15 +1,15 @@
-function varargout = SpeakerCal(varargin)
-% SPEAKERCAL M-file for SpeakerCal.fig
-%      SPEAKERCAL, by itself, creates a new SPEAKERCAL or raises the existing
+function varargout = NICal(varargin)
+% NICAL M-file for NICal.fig
+%      NICAL, by itself, creates a new NICAL or raises the existing
 %      singleton*.
 %
-%      H = SPEAKERCAL returns the handle to a new SPEAKERCAL or the handle to
+%      H = NICAL returns the handle to a new NICAL or the handle to
 %      the existing singleton*.
 %
-%      SPEAKERCAL('CALLBACK',hObject,eventData,handles,...) calls the local
-%      function named CALLBACK in SPEAKERCAL.M with the given input arguments.
+%      NICAL('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in NICAL.M with the given input arguments.
 %
-%      SPEAKERCAL('Property','Value',...) creates a new SPEAKERCAL or raises the
+%      NICAL('Property','Value',...) creates a new NICAL or raises the
 %      existing singleton*.  
 %
 
@@ -38,14 +38,14 @@ function varargout = SpeakerCal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 11-Mar-2012 15:43:20
+% Last Modified by GUIDE v2.5 09-Jul-2012 14:50:50
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
 	gui_State = struct('gui_Name',       mfilename, ...
 					   'gui_Singleton',  gui_Singleton, ...
-					   'gui_OpeningFcn', @SpeakerCal_OpeningFcn, ...
-					   'gui_OutputFcn',  @SpeakerCal_OutputFcn, ...
+					   'gui_OpeningFcn', @NICal_OpeningFcn, ...
+					   'gui_OutputFcn',  @NICal_OutputFcn, ...
 					   'gui_LayoutFcn',  [] , ...
 					   'gui_Callback',   []);
 	if nargin && ischar(varargin{1})
@@ -64,10 +64,10 @@ function varargout = SpeakerCal(varargin)
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-% --- Executes just before SpeakerCal is made visible.
+% --- Executes just before NICal is made visible.
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-function SpeakerCal_OpeningFcn(hObject, eventdata, handles, varargin)
+function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	% Initial Setup
 	%----------------------------------------------------------
@@ -573,7 +573,7 @@ function TDTSettingsMenuCtrl_Callback(hObject, eventdata, handles)
 
 %--------------------------------------------------------------------------
 % --- Outputs from this function are returned to the command line.
-function varargout = SpeakerCal_OutputFcn(hObject, eventdata, handles) 
+function varargout = NICal_OutputFcn(hObject, eventdata, handles) 
 	% Get default command line output from handles structure
 	varargout{1} = handles.output;
 %--------------------------------------------------------------------------
