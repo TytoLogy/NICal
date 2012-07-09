@@ -1,8 +1,8 @@
 %--------------------------------------------------------------------------
 % NICal_RunCalibration.m
 %--------------------------------------------------------------------------
-% Runs the headphone speaker calibration using the in situ Knowles
-% microphones as the the calibration mics, corrected using data from
+% Runs the speaker calibration
+% if FR Correction is selected, apply mic correction using data from
 % MicrophoneCal program (earphone fr data)
 %--------------------------------------------------------------------------
 
@@ -16,9 +16,11 @@
 %	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % Global Constants
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 L = 1;
 R = 2;
 REF = 3;
@@ -29,14 +31,17 @@ MAX_ATTEN = 120;
 
 DEBUG = 0;
 	
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % Initialization Scripts
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % set the COMPLETE flag to 0
 COMPLETE = 0;
+TDTINIT = 0;
 
 % Load the settings and constants 
-SpeakerCal_settings;
+NICal_settings;
 
 % save the GUI handle information
 guidata(hObject, handles);
@@ -44,9 +49,11 @@ guidata(hObject, handles);
 % make a local copy of the cal settings structure
 cal = handles.cal;
 	
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % Some checks and balances
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 if handles.FRenable
 	% is frequency in range of the fr data for the headphones?
 	% check low freq limit
@@ -61,22 +68,27 @@ if handles.FRenable
 	end
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Start TDT things
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Start the TDT circuits
-SpeakerCal_tdtinit;
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% Start DAQ things
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+NICal_NIinit;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % Setup caldata struct for storing the calibration data
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-SpeakerCal_caldata_init;
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+NICal_caldata_init;
 % set the FRANGE output scale value (usually 5 V)
 FRANGE = caldata.DAscale;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % Preallocate some arrays that are used locally
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 tmp = zeros(Nfreqs, cal.Nreps);
 tmpcell = cell(Nchannels, 1);
 for i=1:Nchannels
@@ -90,18 +102,22 @@ dists = tmpcell;
 distphis = tmpcell;
 atten = tmpcell;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % set the start and end bins for the calibration
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 start_bin = ms2bin(cal.StimDelay + cal.StimRamp, iodev.Fs);
 if ~start_bin
 	start_bin = 1;
 end
 end_bin = start_bin + ms2bin(cal.StimDuration-cal.StimRamp, iodev.Fs);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % create null stimulus and time vector for plots
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 zerostim = syn_null(cal.StimDuration, iodev.Fs, 0);
 zerostim = downsample(zerostim, deciFactor);
 dt = deciFactor/iodev.Fs;
@@ -113,10 +129,11 @@ acqpts = ms2bin(cal.AcqDuration, iodev.Fs);
 stim_start = ms2bin(cal.StimDelay, iodev.Fs);
 stim_end = stim_start + outpts - 1;
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % setup attenuation
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 if cal.AttenFix && between(cal.AttenFixValue, 0, 120)
 	Latten = cal.AttenFixValue;
 	Ratten = cal.AttenFixValue;
@@ -129,9 +146,11 @@ else
 	end
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % Now initiate sweeps
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 stopFlag = 0;
 rep = 1;
 freq_index = 1;
@@ -144,18 +163,60 @@ for freq = F(1):F(2):F(3)
 	% command line
 	disp(['FREQ: ' num2str(freq) '...']);
 
+	%------------------------------------------------------------------
 	% if cal.Side is 1 or 3 (LEFT or BOTH), calibrate L channel
 	% 		cal.Side == 1 is LEFT
 	% 		cal.Side == 2 is RIGHT
 	% 		cal.Side == 3 is BOTH channels, 
-	if cal.Side == 1 || cal.Side == 3
+	%------------------------------------------------------------------
+	
+	
+	
+	
+	
+	
+	Subscripted assignment dimension mismatch.
 
+Error in NICal_RunCalibration (line 180)
+		S(1, :) = insert_delay(S(1, :), cal.StimDelay, iodev.Fs);
+
+Error in NICal>RunCalibration_ctrl_Callback (line 288)
+ 	NICal_RunCalibration
+
+Error in gui_mainfcn (line 96)
+        feval(varargin{:});
+
+Error in NICal (line 58)
+		gui_mainfcn(gui_State, varargin{:});
+
+Error in
+@(hObject,eventdata)NICal('RunCalibration_ctrl_Callback',hObject,eventdata,guidata(hObject))
+
+ 
+Error while evaluating uicontrol Callback
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	if cal.Side == 1 || cal.Side == 3
 		% synthesize the L sine wave;
 		[S, stimspec.RMS, stimspec.phi] = syn_calibrationtone2(cal.StimDuration, iodev.Fs, freq, 0, 'L');
 		% scale the sound
 		S = FRANGE * S;
 		% apply the sin^2 amplitude envelope to the stimulus
 		S = sin2array(S, cal.StimRamp, iodev.Fs);
+		% insert delay
+		S(1, :) = insert_delay(S(1, :), cal.StimDelay, iodev.Fs);
+		S(2, :) = insert_delay(S(2, :), cal.StimDelay, iodev.Fs);
+		% save in Satt
+		Satt = S;
 		% plot the array
 		axes(handles.Lstimplot);	plot(tvec, downsample(S(1, :), deciFactor), 'g');
 		axes(handles.Rstimplot);	plot(zerostim, 'r');
@@ -164,8 +225,8 @@ for freq = F(1):F(2):F(3)
 		if cal.AttenFix
 			% no need to test attenuation but, 
 			% do need to set the attenuators
-			PA5setatten(PA5L, Latten);
-			PA5setatten(PA5R, MAX_ATTEN);
+			Satt(1, :) = handles.attfunction(S(1, :), Latten);
+			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
 			update_ui_str(handles.LAttentext, Latten);
 			update_ui_str(handles.RAttentext, MAX_ATTEN);
 			% set retry to 0 to skip testing
@@ -177,14 +238,14 @@ for freq = F(1):F(2):F(3)
 		while retry
 			% need to set the attenuators - since this is for the
 			% L channel, set the R channel attenuator to MAX attenuation
-			PA5setatten(PA5L, Latten);
-			PA5setatten(PA5R, MAX_ATTEN);
+			Satt(1, :) = handles.attfunction(S(1, :), Latten);
+			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
 			% update ui
 			update_ui_str(handles.LAttentext, Latten);
 			update_ui_str(handles.RAttentext, MAX_ATTEN);
 
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, S, acqpts);
+			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 			% adjust for the gain of the preamp and apply correction
@@ -228,7 +289,7 @@ for freq = F(1):F(2):F(3)
 		% now, collect the data for frequency FREQ, LEFT headphone
 		for rep = 1:cal.Nreps
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, S, acqpts);
+			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
 
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -305,9 +366,13 @@ for freq = F(1):F(2):F(3)
 			pause(0.001*cal.ISI);
 		end
 	end
-
+	
+	% pause for ISI
 	pause(0.001*cal.ISI);
 
+	%------------------------------------------------------------------
+	% if cal.Side is 2 or 3 (RIGHT or BOTH), calibrate *R* channel
+	%------------------------------------------------------------------	
 	if cal.Side == 2 || cal.Side == 3
 		%RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 		% synthesize the R sine wave;
@@ -316,6 +381,11 @@ for freq = F(1):F(2):F(3)
 		S = FRANGE * S;
 		% apply the sin^2 amplitude envelope to the stimulus
 		S = sin2array(S, cal.StimRamp, iodev.Fs);
+		% insert delay
+		S(1, :) = insert_delay(S(1, :), cal.StimDelay, iodev.Fs);
+		S(2, :) = insert_delay(S(2, :), cal.StimDelay, iodev.Fs);
+		% save in Satt
+		Satt = S;
 		% plot the array
 		axes(handles.Lstimplot);	plot(zerostim, 'g');
 		axes(handles.Rstimplot);	plot(tvec, downsample(S(2, :), deciFactor), 'r');
@@ -324,8 +394,8 @@ for freq = F(1):F(2):F(3)
 		if cal.AttenFix
 			% no need to test attenuation but, 
 			% do need to set the attenuators
-			PA5setatten(PA5L, MAX_ATTEN);
-			PA5setatten(PA5R, Ratten);
+			Satt(1, :) = handles.attfunction(S(1, :), Latten);
+			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
 			update_ui_str(handles.LAttentext, MAX_ATTEN);
 			update_ui_str(handles.RAttentext, Ratten);
 			% set retry to 0 to skip testing
@@ -336,13 +406,13 @@ for freq = F(1):F(2):F(3)
 
 		while retry
 			% need to set the attenuators
-			PA5setatten(PA5L, MAX_ATTEN);
-			PA5setatten(PA5R, Ratten);
+			Satt(1, :) = handles.attfunction(S(1, :), Latten);
+			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
 			update_ui_str(handles.LAttentext, MAX_ATTEN);
 			update_ui_str(handles.RAttentext, Ratten);
 
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, S, acqpts);
+			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
 			% determine the magnitude and phase of the response
 			[rmag, rphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 			% adjust for the gain of the preamp and apply correction
@@ -386,7 +456,7 @@ for freq = F(1):F(2):F(3)
 		% now, collect the data for frequency FREQ, RIGHT headphone
 		for rep = 1:cal.Nreps
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, S, acqpts);
+			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
 
 			% determine the magnitude and phase of the response
 			[rmag, rphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -462,10 +532,12 @@ for freq = F(1):F(2):F(3)
 	freq_index = freq_index + 1;
 end %********************End of Cal loop
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % Exit gracefully (close TDT objects, etc)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-SpeakerCal_tdtexit;
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+NICal_NIexit;
 
 if freq == F(3)
 	COMPLETE = 1;
@@ -473,9 +545,11 @@ else
 	return
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % Compute Averages
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 freq_index = 1;
 %*******************************LOOP through the frequencies
 for freq = F(1):F(2):F(3)
@@ -522,14 +596,20 @@ if DEBUG
 	caldata.phisdbug = phisdbug;
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % save handles and data
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 handles.caldata = caldata;
 
 guidata(hObject, handles);
 
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % plot the calibration data
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 PlotCal(caldata);
 
 if cal.AutoSave
@@ -541,3 +621,4 @@ disp('Finished.')
 
 
 save test.mat resp indx
+

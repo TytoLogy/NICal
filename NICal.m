@@ -65,15 +65,15 @@ function varargout = NICal(varargin)
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 % --- Executes just before NICal is made visible.
+% Performs Initial Setup
+%--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
-	% Initial Setup
-	%----------------------------------------------------------
-	
 	%----------------------------------------------------------
 	% Setup Paths
+	%----------------------------------------------------------
 	%----------------------------------------------------------
 	disp([mfilename ': checking paths'])
 	pdir = ['C:\TytoLogy\TytoSettings\' getenv('USERNAME')];
@@ -97,9 +97,11 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	
 	
 	%----------------------------------------------------------
+	%----------------------------------------------------------
 	% load the configuration information, store in config structure
 	% The HPSearch_Configuration.m function file will usually live in the
 	% <tytology path>\TytoSettings\<username\ directory
+	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% load the configuration information, store in config structure
 	if isempty(which('NICal_Configuration'))
@@ -111,117 +113,120 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	guidata(hObject, handles);	
 	
 	%----------------------------------------------------------
+	%----------------------------------------------------------
 	% Initial Calibration settings
 	%----------------------------------------------------------
-		%------------------------------------------------------------
-		% first check to see if defaults file exists
-		%------------------------------------------------------------
-		defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat']);
-		
-		if exist(defaultsfile, 'file')
-			fprintf('Loading cal settings from defaults file %s ...\n', defaultsfile)
-			load(defaultsfile, 'cal');
-		else
-			% no defaults found, so use internal values
-			disp('no defaults found, using internal values')
-			
-			% Frequency range
-			cal.Fmin = 3000;
-			cal.Fstep = 100;
-			cal.Fmax = 3500;
-			% set the min and max allowable stimulus levels
-			cal.Minlevel = 60;
-			cal.Maxlevel = 70;
-			% Set the starting attenuation value
-			% (better to set too high instead of too low!!!!)
-			cal.StartAtten = 90;
-			% set the stepsize for adjusting attenuation
-			cal.AttenStep = 2;
-			% # reps per frequency
-			cal.Nreps = 3;
-			% Inter-stim interval in seconds
-			cal.ISI = 200;
-			% Auto save ear_cal.mat in experiment calibration data dir
-			cal.AutoSave = 1;
-			% set the 'side' to left channels;
-			cal.Side = 1;
-			% set the CheckCal flag in order to use a reference microphone to 
-			% check the calibration.  
-			% 0 == no check, 1 = Left, 2 = Right, 3 = Both
-			cal.CheckCal = 0;
-			% these are used to use a fixed attenuation level
-			% will essentially generate a frequency response curve
-			% for the speaker (with the microphone correction factor
-			% from *_fr.mat file from CalibrateHeadphoneMic applied)
-			cal.AttenFix = 0;
-			cal.AttenFixValue = 90;
-			% default fr response file for Knowles mics
-			cal.mic_fr_file = '..\CalibrationData\FFamp_CIThp_24-Sep-2009_fr.mat';
-			% cal.mic_fr_file = '';
-			cal.InputChannel = 1;
-			cal.MicGain = 0;
-			cal.MicSensitivity = 0.1;
-			cal.DAscale = 1;
-		end
-	
-		% assign cal struct to the GUI handles structure for safe keeping
-		handles.defaultsfile = defaultsfile;		
-		handles.cal = cal;
-		guidata(hObject, handles);
-		
-		% update user interface
-		update_ui_str(handles.Fmin, handles.cal.Fmin);
-		update_ui_str(handles.Fmax, handles.cal.Fmax);
-		update_ui_str(handles.Fstep, handles.cal.Fstep);
-		update_ui_str(handles.Minlevel, handles.cal.Minlevel);
-		update_ui_str(handles.Maxlevel, handles.cal.Maxlevel);
-		update_ui_str(handles.AttenStep, handles.cal.AttenStep);
-		update_ui_str(handles.Nreps, handles.cal.Nreps);
-		update_ui_str(handles.ISI, handles.cal.ISI);
-		update_ui_val(handles.Side, handles.cal.Side);
-		update_ui_val(handles.AutoSave, handles.cal.AutoSave);
-		update_ui_val(handles.CheckCalCtrl, handles.cal.CheckCal + 1);
-		update_ui_val(handles.AttenFixCtrl, handles.cal.AttenFix);
-		update_ui_str(handles.AttenFixValueCtrl, handles.cal.AttenFixValue);
-		set(handles.AttenFixCtrl, 'HitTest', 'on');
-		set(handles.AttenFixCtrl, 'Enable', 'on');
-		set(handles.AttenFixCtrl, 'Visible', 'on');
-		if handles.cal.AttenFix
-			set(handles.AttenFixValueCtrl, 'HitTest', 'on');
-			set(handles.AttenFixValueCtrl, 'Enable', 'on');
-			set(handles.AttenFixValueCtrl, 'Visible', 'on');
-			set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
-			set(handles.AttenFixValueCtrlText, 'Enable', 'on');
-			set(handles.AttenFixValueCtrlText, 'Visible', 'on');
-		else
-			set(handles.AttenFixValueCtrl, 'HitTest', 'off');
-			set(handles.AttenFixValueCtrl, 'Enable', 'on');
-			set(handles.AttenFixValueCtrl, 'Visible', 'off');
-			set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
-			set(handles.AttenFixValueCtrlText, 'Enable', 'off');
-			set(handles.AttenFixValueCtrlText, 'Visible', 'off');
-		end
-		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
-		
-		update_ui_val(handles.InputChannelCtrl, handles.cal.InputChannel);
-		update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
-		update_ui_str(handles.MicSensitivityCtrl, handles.cal.MicSensitivity);
-		update_ui_str(handles.DAscaleCtrl, handles.cal.DAscale);
+	%----------------------------------------------------------
+	%------------------------------------------------------------
+	% first check to see if defaults file exists
+	%------------------------------------------------------------
+	defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat'])
+
+	if exist(defaultsfile, 'file')
+		fprintf('Loading cal settings from defaults file %s ...\n', defaultsfile)
+		load(defaultsfile, 'cal');
+	else
+		% no defaults found, so use internal values
+		disp('no defaults found, using internal values')
+
+		% Frequency range
+		cal.Fmin = 3000;
+		cal.Fstep = 100;
+		cal.Fmax = 3500;
+		% set the min and max allowable stimulus levels
+		cal.Minlevel = 60;
+		cal.Maxlevel = 70;
+		% Set the starting attenuation value
+		% (better to set too high instead of too low!!!!)
+		cal.StartAtten = 90;
+		% set the stepsize for adjusting attenuation
+		cal.AttenStep = 2;
+		% # reps per frequency
+		cal.Nreps = 3;
+		% Inter-stim interval in seconds
+		cal.ISI = 200;
+		% Auto save ear_cal.mat in experiment calibration data dir
+		cal.AutoSave = 1;
+		% set the 'side' to left channels;
+		cal.Side = 1;
+		% set the CheckCal flag in order to use a reference microphone to 
+		% check the calibration.  
+		% 0 == no check, 1 = Left, 2 = Right, 3 = Both
+		cal.CheckCal = 0;
+		% these are used to use a fixed attenuation level
+		% will essentially generate a frequency response curve
+		% for the speaker (with the microphone correction factor
+		% from *_fr.mat file from CalibrateHeadphoneMic applied)
+		cal.AttenFix = 0;
+		cal.AttenFixValue = 90;
+		% default fr response file for Knowles mics
+		cal.mic_fr_file = '..\CalibrationData\FFamp_CIThp_24-Sep-2009_fr.mat';
+		% cal.mic_fr_file = '';
+		cal.InputChannel = 1;
+		cal.MicGain = 0;
+		cal.MicSensitivity = 0.1;
+		cal.DAscale = 1;
+	end
+
+	% assign cal struct to the GUI handles structure for safe keeping
+	handles.defaultsfile = defaultsfile;		
+	handles.cal = cal;
+	guidata(hObject, handles);
+
+	% update user interface
+	update_ui_str(handles.Fmin, handles.cal.Fmin);
+	update_ui_str(handles.Fmax, handles.cal.Fmax);
+	update_ui_str(handles.Fstep, handles.cal.Fstep);
+	update_ui_str(handles.Minlevel, handles.cal.Minlevel);
+	update_ui_str(handles.Maxlevel, handles.cal.Maxlevel);
+	update_ui_str(handles.AttenStep, handles.cal.AttenStep);
+	update_ui_str(handles.Nreps, handles.cal.Nreps);
+	update_ui_str(handles.ISI, handles.cal.ISI);
+	update_ui_val(handles.Side, handles.cal.Side);
+	update_ui_val(handles.AutoSave, handles.cal.AutoSave);
+	update_ui_val(handles.CheckCalCtrl, handles.cal.CheckCal + 1);
+	update_ui_val(handles.AttenFixCtrl, handles.cal.AttenFix);
+	update_ui_str(handles.AttenFixValueCtrl, handles.cal.AttenFixValue);
+	set(handles.AttenFixCtrl, 'HitTest', 'on');
+	set(handles.AttenFixCtrl, 'Enable', 'on');
+	set(handles.AttenFixCtrl, 'Visible', 'on');
+	if handles.cal.AttenFix
+		set(handles.AttenFixValueCtrl, 'HitTest', 'on');
+		set(handles.AttenFixValueCtrl, 'Enable', 'on');
+		set(handles.AttenFixValueCtrl, 'Visible', 'on');
+		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
+		set(handles.AttenFixValueCtrlText, 'Enable', 'on');
+		set(handles.AttenFixValueCtrlText, 'Visible', 'on');
+	else
+		set(handles.AttenFixValueCtrl, 'HitTest', 'off');
+		set(handles.AttenFixValueCtrl, 'Enable', 'on');
+		set(handles.AttenFixValueCtrl, 'Visible', 'off');
+		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
+		set(handles.AttenFixValueCtrlText, 'Enable', 'off');
+		set(handles.AttenFixValueCtrlText, 'Visible', 'off');
+	end
+	update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
+
+	update_ui_val(handles.InputChannelCtrl, handles.cal.InputChannel);
+	update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
+	update_ui_str(handles.MicSensitivityCtrl, handles.cal.MicSensitivity);
+	update_ui_str(handles.DAscaleCtrl, handles.cal.DAscale);
 		
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	% setup iodev TDTToolbox device interface struct
+	% setup iodev NI device interface struct
 	% using information from the config struct 
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-		iodev.Circuit_Path = config.CIRCUIT_PATH;
-		iodev.Circuit_Name = config.CIRCUIT_NAME;
-		% Dnum = device number - this is for RZ6 (1)
-		iodev.Dnum = config.IODEVNUM;
-		iodev.REF = 0;
-		iodev.status = 0;
-		handles.iodev = iodev;
-		guidata(hObject, handles);
+	iodev.Circuit_Path = config.CIRCUIT_PATH;
+	iodev.Circuit_Name = config.CIRCUIT_NAME;
+	% Dnum = device number - this is for dev1
+	iodev.Dnum = sprintf('Dev%d', config.IODEVNUM);
+	% reference channel
+	iodev.REF = 1;
+	iodev.status = 0;
+	handles.iodev = iodev;
+	guidata(hObject, handles);
 
 	%----------------------------------------------------------
 	%----------------------------------------------------------
@@ -230,7 +235,24 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	handles.initfunction = config.IOINITFUNCTION;
 	handles.iofunction = config.IOFUNCTION;
-
+	handles.attfunction = config.ATTENFUNCTION;
+	
+	handles
+	
+	%----------------------------------------------------------
+	%----------------------------------------------------------
+	% setup for not using FR file
+	%----------------------------------------------------------
+	%----------------------------------------------------------
+	disable_ui(handles.MicFRFileCtrl);
+	%%% whatever needs to be done to disable mic FR use
+	disable_ui(handles.MicFRFileCtrl);
+	enable_ui(handles.InputChannelCtrl);
+	enable_ui(handles.MicGainCtrl);
+	enable_ui(handles.MicSensitivityCtrl);
+	enable_ui(handles.DAscaleCtrl);
+	handles.FRenable = 0;
+	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% Update handles structure

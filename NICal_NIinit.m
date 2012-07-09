@@ -16,87 +16,80 @@
 %	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 
-disp('...starting TDT hardware...');
+disp('...starting NI hardware...');
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Initialize the TDT devices
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	% Initialize RX8 device 2
-	tmpdev = handles.initfunction('GB', iodev.Dnum);
-	iodev.C = tmpdev.C;
-	iodev.handle = tmpdev.handle;
-	iodev.status = tmpdev.status;
-	
-	% Initialize PA5 attenuators (left = 1 and right = 2)
-	PA5L = PA5init('GB', 1);
-	PA5R = PA5init('GB', 2);
-	
-	if cal.CheckCal
-		iodev.REF = 3;
-	end
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% Initialize the NI device
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+iodev.NI = handles.initfunction('NI', iodev.Dnum);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Loads circuits
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	iodev.rploadstatus = RPload(iodev);
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% set sample rate to value specified in cal settings
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Starts Circuit
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	RPrun(iodev);
+%------------------------------------------------------
+% AI subsystem
+%------------------------------------------------------
+set(iodev.NI.ai, 'SampleRate', handles.cal.Fs);
+ActualRate = get(iodev.NI.ai, 'SampleRate');
+if handles.cal.Fs ~= ActualRate
+	warning('Requested ai Fs (%f) ~= ActualRate (%f)', handles.cal.Fs, ActualRate);
+	handles.cal.Fs = ActualRate;
+end
+iodev.Fs = ActualRate;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Check Status
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	iodev.status = RPcheckstatus(iodev);
+%------------------------------------------------------
+% AO subsystem
+%------------------------------------------------------
+set(iodev.NI.ao, 'SampleRate', iodev.Fs);
+ActualRate = get(iodev.NI.ao, 'SampleRate');
+if iodev.Fs ~= ActualRate
+	warning('ao: Requested SampleRate (%f) ~= ActualRate (%f)', iodev.Fs, ActualRate);
+end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% get the tags and values for the circuit
-% (added 5 Mar 2010 (SJS)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	tmptags = RPtagnames(iodev);
-	iodev.TagName = tmptags;
-	
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Query the sample rate from the circuit and set up the time vector and 
-% stimulus
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	iodev.Fs = RPsamplefreq(iodev);
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% set input range
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+for n = 1:length(iodev.NI.ai.Channel)
+	iodev.NI.ai.Channel(n).InputRange = [-5 5];
+end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Set up some of the buffer/stimulus parameters
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	% size of the Serial buffer
-	npts=150000;  
-	dt = 1/iodev.Fs;
-	mclock=RPgettag(iodev, 'mClock');
+%------------------------------------------------------------------------
+% EVENT and CALLBACK PARAMETERS
+%------------------------------------------------------------------------
+% % first, set the object to call the SamplesAcquiredFunction when
+% % BufferSize # of points are available
+% set(iodev.NI.ai, 'SamplesAcquiredFcnCount', AcqSamples);
+% % provide callback function handle (ai_plotpeek_callback.m)
+% set(iodev.NI.ai, 'SamplesAcquiredFcn', {@ai_plotpeek_2chan_callback});
 
-	% Set the total sweep period time
-	RPsettag(iodev, 'SwPeriod', ms2samples(cal.SweepPeriod, iodev.Fs));
-	% Set the sweep count (may not be necessary)
-	RPsettag(iodev, 'SwCount', 1);
-	% Set the Stimulus Delay
-	RPsettag(iodev, 'StimDelay', ms2samples(cal.StimDelay, iodev.Fs));
-	% Set the Stimulus Duration
-	RPsettag(iodev, 'StimDur', ms2samples(cal.StimDuration, iodev.Fs));
-	% Set the length of time to acquire data
-	RPsettag(iodev, 'AcqDur', ms2samples(cal.AcqDuration, iodev.Fs));
-	% set the ttl pulse duration
-	RPsettag(iodev, 'PulseDur', ms2samples(cal.TTLPulseDur, iodev.Fs));
+%------------------------------------------------------------------------
+% HARDWARE TRIGGERING
+%------------------------------------------------------------------------
+% set TriggerType to manual (to synchronize ai and ao)
+set([iodev.NI.ai iodev.NI.ao], 'TriggerType', 'Manual');
+% set manual trigger to HW on
+set(iodev.NI.ai,'ManualTriggerHwOn','Trigger')
+% only 1 "sweep" per trigger event 
+set(iodev.NI.ai, 'TriggerRepeat', 0);
+% set SamplesPerTrigger to Inf for continous acquisition or 
+% to # of samples to collect for each trigger event
+set(iodev.NI.ai, 'SamplesPerTrigger', ms2samples(cal.AcqDuration, iodev.Fs));
 
-	%Setup filtering if desired
-	if cal.InputFilter
-		RPsettag(iodev, 'HPFreq', cal.InputHPFc);
-		RPsettag(iodev, 'HPenable', 1);
-		RPsettag(iodev, 'LPFreq', cal.InputLPFc);
-		RPsettag(iodev, 'LPenable', 1);
-	end
-	
-	PA5setatten(PA5L, MAX_ATTEN);
-	PA5setatten(PA5R, MAX_ATTEN);
-	
-	
-	
-	TDTINIT = 1;
+%-------------------------------------------------------
+% set logging mode
+%	'Disk'	sets logging mode to a file on disk (specified by 'LogFileName)
+%	'Memory'	sets logging mode to memory only
+%	'Disk&Memory'	logs to file and memory
+%-------------------------------------------------------
+set(iodev.NI.ai, 'LoggingMode', 'Memory');
+
+TDTINIT = 1;
 
 
