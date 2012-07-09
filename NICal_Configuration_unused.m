@@ -1,9 +1,9 @@
-function out = SpeakerCal_Configuration
+function out = NICal_Configuration
 %------------------------------------------------------------------------
-% out = SpeakerCal_Configuration
+% out = NICal_Configuration
 %------------------------------------------------------------------------
 % 
-% Sets initial configuration for the SpeakerCal program
+% Sets initial configuration for the NICal program
 % 
 % Comment out/in the settings for your configuration!
 % 
@@ -32,6 +32,7 @@ function out = SpeakerCal_Configuration
 %	8 Nov, 2010 (SJS): 
 % 		-	updated for SingleMicCal
 %		-	added IOINIFUNCTION
+%	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 % TO DO:	there's gotta be a better way to manage 
 % 			different hardware setups.... HELP!!!!  

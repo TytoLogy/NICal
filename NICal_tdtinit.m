@@ -1,5 +1,5 @@
 %--------------------------------------------------------------------------
-% SpeakerCal_tdtinit.m
+% NICal_tdtinit.m
 %--------------------------------------------------------------------------
 % sets up TDT parameters
 %
@@ -13,6 +13,7 @@
 % 				Created from HeadphoneCal_tdtinit.m
 % 
 % Revisions:
+%	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 
 disp('...starting TDT hardware...');

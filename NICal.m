@@ -102,11 +102,11 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% <tytology path>\TytoSettings\<username\ directory
 	%----------------------------------------------------------
 	% load the configuration information, store in config structure
-	if isempty(which('SpeakerCal_Configuration'))
+	if isempty(which('NICal_Configuration'))
 		% need to add user config path
 		addpath(['C:\TytoLogy\TytoSettings\' getenv('USERNAME')]);
 	end	
-	config = SpeakerCal_Configuration;
+	config = NICal_Configuration;
 	% save handles
 	guidata(hObject, handles);	
 	
@@ -242,7 +242,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 		
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	% UIWAIT makes SpeakerCal wait for user response (see UIRESUME)
+	% UIWAIT makes NICal wait for user response (see UIRESUME)
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% uiwait(handles.figure1);
@@ -263,7 +263,7 @@ function RunCalibration_ctrl_Callback(hObject, eventdata, handles)
 	COMPLETE = 0;
 	guidata(hObject, handles);
 		
- 	SpeakerCal_RunCalibration
+ 	NICal_RunCalibration
 
 	set(handles.RunCalibration_ctrl, 'Enable', 'on');
 	set(handles.Abort_ctrl, 'Enable', 'off');
@@ -472,7 +472,7 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 	tmpfile = read_ui_str(handles.MicFRFileCtrl);
 	
 	if ~exist(tmpfile, 'file')
-		warndlg('Microphone calibration file not found!', 'SpeakerCal Warning');
+		warndlg('Microphone calibration file not found!', 'NICal Warning');
 		% revert to old value
 		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
 	else

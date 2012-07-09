@@ -1,7 +1,7 @@
 %--------------------------------------------------------------------------
-% SpeakerCal_caldata_init.m
+% NICal_caldata_init.m
 %--------------------------------------------------------------------------
-%	Script for SpeakerCal program to initialize/allocate caldata
+%	Script for NICal program to initialize/allocate caldata
 %	structure for speaker calibration
 %--------------------------------------------------------------------------
 
@@ -15,6 +15,7 @@
 %	28 Mar 2012 (SJS):
 %		-	made modifications in case FRdata are unused (i.e., calibration
 %			mic is used instead of calibrated mic)
+%	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

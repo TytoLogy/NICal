@@ -1,5 +1,5 @@
 %--------------------------------------------------------------------------
-% SpeakerCal_RunCalibration.m
+% NICal_RunCalibration.m
 %--------------------------------------------------------------------------
 % Runs the headphone speaker calibration using the in situ Knowles
 % microphones as the the calibration mics, corrected using data from
@@ -13,6 +13,7 @@
 % Created:	March 2012 from HeadphoneCal_RunCalibration,	SJS
 %
 % Revisions:
+%	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

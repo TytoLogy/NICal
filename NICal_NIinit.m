@@ -1,5 +1,5 @@
 %--------------------------------------------------------------------------
-% SpeakerCal_NIinit.m
+% NICal_NIinit.m
 %--------------------------------------------------------------------------
 % sets up NI data acquisition toolbox parameters
 %
@@ -13,6 +13,7 @@
 % 				Created from SpeakerCal_tdtinit.m
 % 
 % Revisions:
+%	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 
 disp('...starting TDT hardware...');

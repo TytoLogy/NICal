@@ -1,5 +1,5 @@
 %--------------------------------------------------------------------------
-% SpeakerCal_tdtexit.m
+% NICal_tdtexit.m
 %--------------------------------------------------------------------------
 %
 % closes TDT devices nicely
@@ -13,6 +13,7 @@
 % 				Created from HeadphoneCal_tdtexit.m
 % 
 % Revisions:
+%	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 
 

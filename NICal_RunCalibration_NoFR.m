@@ -1,5 +1,5 @@
 %--------------------------------------------------------------------------
-% SpeakerCal_RunCalibration_NoFR.m
+% NICal_RunCalibration_NoFR.m
 %--------------------------------------------------------------------------
 % Runs the headphone speaker calibration using a reference mic
 % (does not use frdata)
@@ -12,6 +12,7 @@
 % Created:	28 March 2012 from SpeakerCal_RunCalibration,	SJS
 %
 % Revisions:
+%	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -34,7 +35,7 @@
 	COMPLETE = 0;
 	
 	% Load the settings and constants 
-	SpeakerCal_settings;
+	NICal_settings;
 	
 	% save the GUI handle information
 	guidata(hObject, handles);
@@ -50,12 +51,12 @@
 % Start TDT things
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	% Start the TDT circuits
-	SpeakerCal_tdtinit;
+	NICal_tdtinit;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Setup caldata struct for storing the calibration data
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	SpeakerCal_caldata_init;
+	NICal_caldata_init;
 	% set the FRANGE output scale value (usually 5 V)
 	FRANGE = caldata.DAscale;
 
@@ -466,7 +467,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Exit gracefully (close TDT objects, etc)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	SpeakerCal_tdtexit;
+	NICal_tdtexit;
 
 	if freq == F(3)
 		COMPLETE = 1;
