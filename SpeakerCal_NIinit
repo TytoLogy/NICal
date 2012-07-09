@@ -1,16 +1,16 @@
 %--------------------------------------------------------------------------
-% SpeakerCal_NIinit.m
+% SpeakerCal_tdtinit.m
 %--------------------------------------------------------------------------
-% sets up NI data acquisition toolbox parameters
+% sets up TDT parameters
 %
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
-% Sharad J Shanbhag
+% Sharad Shanbhag
 % sshanbhag@neomed.edu
 %--------------------------------------------------------------------------
-% Created: 9 July 2012 (SJS)
-% 				Created from SpeakerCal_tdtinit.m
+% Created: 1 March, 2012
+% 				Created from HeadphoneCal_tdtinit.m
 % 
 % Revisions:
 %--------------------------------------------------------------------------

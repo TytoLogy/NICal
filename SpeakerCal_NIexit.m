@@ -1,16 +1,16 @@
 %--------------------------------------------------------------------------
-% SpeakerCal_tdtexit.m
+% SpeakerCal_NIexit.m
 %--------------------------------------------------------------------------
 %
-% closes TDT devices nicely
+% closes NI devices nicely
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
-% Sharad Shanbhag
-% sharad.shanbhag@einstein.yu.edu
+% Sharad J Shanbhag
+% sshanbhag@neomed.edu
 %--------------------------------------------------------------------------
-% Created: 1 March, 2012
-% 				Created from HeadphoneCal_tdtexit.m
+% Created: 9 July 2012 (SJS)
+% 				Created from SpeakerCal_tdtexit.m
 % 
 % Revisions:
 %--------------------------------------------------------------------------
