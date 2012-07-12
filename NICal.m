@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 09-Jul-2012 14:50:50
+% Last Modified by GUIDE v2.5 12-Jul-2012 18:39:10
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -95,7 +95,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 		disp([mfilename ': paths ok, launching programn'])
 	end
 	
-	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% load the configuration information, store in config structure
@@ -120,7 +119,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%------------------------------------------------------------
 	% first check to see if defaults file exists
 	%------------------------------------------------------------
-	defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat'])
+	defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat']);
 
 	if exist(defaultsfile, 'file')
 		fprintf('Loading cal settings from defaults file %s ...\n', defaultsfile)
@@ -128,7 +127,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	else
 		% no defaults found, so use internal values
 		disp('no defaults found, using internal values')
-
 		% Frequency range
 		cal.Fmin = 3000;
 		cal.Fstep = 100;
@@ -211,7 +209,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
 	update_ui_str(handles.MicSensitivityCtrl, handles.cal.MicSensitivity);
 	update_ui_str(handles.DAscaleCtrl, handles.cal.DAscale);
-		
+	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% setup iodev NI device interface struct
@@ -237,8 +235,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	handles.iofunction = config.IOFUNCTION;
 	handles.attfunction = config.ATTENFUNCTION;
 	
-	handles
-	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% setup for not using FR file
@@ -252,6 +248,10 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	enable_ui(handles.MicSensitivityCtrl);
 	enable_ui(handles.DAscaleCtrl);
 	handles.FRenable = 0;
+	
+	handles.MeasureLeak = 0;
+	update_ui_val(handles.MeasureLeakCtrl, handles.MeasureLeak);
+	guidata(hObject, handles);
 	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
@@ -340,7 +340,8 @@ function RAttentext_Callback(hObject, eventdata, handles)
 function Fmin_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	if ~between(tmp, 0, handles.cal.Fmax)
-		warndlg('Min Freq must be between 0 & Fmax', 'Invalid Min Freq');
+		tmpstr = sprintf('Min Freq must be between 0 & Fmax (%d)', handles.cal.Fmax);
+		warndlg(	tmpstr, 'Invalid Min Freq');
 		update_ui_str(hObject, handles.cal.Fmin);
 	else
 		handles.cal.Fmin = tmp;
@@ -351,8 +352,10 @@ function Fmin_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 function Fmax_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
-	if ~between(tmp, handles.cal.Fmin, 50000)
-		warndlg('Max Freq must be between Fmin & 22,000', 'Invalid Max Freq');
+	if ~between(tmp, handles.cal.Fmin, 125000)
+		tmpstr = sprintf('Max Freq must be between Fmin (%d) & 125,000 Hz', ...
+								handles.cal.Fmin);
+		warndlg(tmpstr, 'Invalid Max Freq');
 		update_ui_str(hObject, handles.cal.Fmax);
 	else
 		handles.cal.Fmax = tmp;
@@ -506,6 +509,14 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 	end
 %--------------------------------------------------------------------------
 
+%--------------------------------------------------------------------------
+% --- Executes on button press in MeasureLeakCtrl.
+%--------------------------------------------------------------------------
+function MeasureLeakCtrl_Callback(hObject, eventdata, handles)
+	handles.MeasureLeak = read_ui_val(hObject);
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
 
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
@@ -517,7 +528,6 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 
 %--------------------------------------------------------------------------
 function Menu_SaveCal_Callback(hObject, eventdata, handles)
-handles
 	[calfile, calpath] = uiputfile('*_cal.mat','Save headphone calibration data in file');
 	if calfile ~= 0
 		% save the sequence so we can match up with the RF data
@@ -548,6 +558,7 @@ function Menu_Close_Callback(hObject, eventdata, handles)
 
 %-------------------------------------------------------------------------
 function TDTSettingsMenuCtrl_Callback(hObject, eventdata, handles)
+	return
 	iodev = handles.iodev;
 	fullcircuit = fullfile(iodev.Circuit_Path, [iodev.Circuit_Name '.rcx'])
 	if ~exist(fullcircuit, 'file')
@@ -701,7 +712,6 @@ function MicSensitivityCtrl_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
-%% ------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function DAscaleCtrl_Callback(hObject, eventdata, handles)
 	newVal = read_ui_str(hObject, 'n');
@@ -727,11 +737,12 @@ function DAscaleCtrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
 % Create Functions
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function FreqVal_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
@@ -826,3 +837,6 @@ function DAscaleCtrl_CreateFcn(hObject, eventdata, handles)
 
 
 
+
+
+	

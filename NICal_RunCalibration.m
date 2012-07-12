@@ -38,7 +38,6 @@ DEBUG = 0;
 %-----------------------------------------------------------------------
 % set the COMPLETE flag to 0
 COMPLETE = 0;
-TDTINIT = 0;
 
 % Load the settings and constants 
 NICal_settings;
@@ -49,11 +48,18 @@ guidata(hObject, handles);
 % make a local copy of the cal settings structure
 cal = handles.cal;
 	
+
+% KLUDGE!!!!!!!
+handles.Nchannels = 2;
+guidata(hObject, handles);
+
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Some checks and balances
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% check calibration frequency range
+%------------------------------------------------
 if handles.FRenable
 	% is frequency in range of the fr data for the headphones?
 	% check low freq limit
@@ -90,8 +96,8 @@ FRANGE = caldata.DAscale;
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 tmp = zeros(Nfreqs, cal.Nreps);
-tmpcell = cell(Nchannels, 1);
-for i=1:Nchannels
+tmpcell = cell(handles.Nchannels, 1);
+for i=1:handles.Nchannels
 	tmpcell{i} = tmp;
 end
 mags = tmpcell;
@@ -101,6 +107,13 @@ phisraw = tmpcell;
 dists = tmpcell;
 distphis = tmpcell;
 atten = tmpcell;
+% add leak information if needed
+if handles.MeasureLeak == 1
+	leakmags = tmpcell;
+	leakphis = tmpcell;
+	leakdists = tmpcell;
+	leakdistphis = tmpcell;
+end
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -119,6 +132,7 @@ end_bin = start_bin + ms2bin(cal.StimDuration-cal.StimRamp, iodev.Fs);
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 zerostim = syn_null(cal.StimDuration, iodev.Fs, 0);
+zerostim = insert_delay(zerostim, cal.StimDelay, iodev.Fs);
 zerostim = downsample(zerostim, deciFactor);
 dt = deciFactor/iodev.Fs;
 outpts = length(zerostim);		
@@ -161,50 +175,16 @@ for freq = F(1):F(2):F(3)
 
 	% if we're collecting check data, print the frequency on the
 	% command line
-	disp(['FREQ: ' num2str(freq) '...']);
-
+	if cal.CheckCal
+		disp(['FREQ: ' num2str(freq) '...']);
+	end
+	
 	%------------------------------------------------------------------
 	% if cal.Side is 1 or 3 (LEFT or BOTH), calibrate L channel
 	% 		cal.Side == 1 is LEFT
 	% 		cal.Side == 2 is RIGHT
 	% 		cal.Side == 3 is BOTH channels, 
 	%------------------------------------------------------------------
-	
-	
-	
-	
-	
-	
-	Subscripted assignment dimension mismatch.
-
-Error in NICal_RunCalibration (line 180)
-		S(1, :) = insert_delay(S(1, :), cal.StimDelay, iodev.Fs);
-
-Error in NICal>RunCalibration_ctrl_Callback (line 288)
- 	NICal_RunCalibration
-
-Error in gui_mainfcn (line 96)
-        feval(varargin{:});
-
-Error in NICal (line 58)
-		gui_mainfcn(gui_State, varargin{:});
-
-Error in
-@(hObject,eventdata)NICal('RunCalibration_ctrl_Callback',hObject,eventdata,guidata(hObject))
-
- 
-Error while evaluating uicontrol Callback
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	if cal.Side == 1 || cal.Side == 3
 		% synthesize the L sine wave;
 		[S, stimspec.RMS, stimspec.phi] = syn_calibrationtone2(cal.StimDuration, iodev.Fs, freq, 0, 'L');
@@ -213,13 +193,14 @@ Error while evaluating uicontrol Callback
 		% apply the sin^2 amplitude envelope to the stimulus
 		S = sin2array(S, cal.StimRamp, iodev.Fs);
 		% insert delay
-		S(1, :) = insert_delay(S(1, :), cal.StimDelay, iodev.Fs);
-		S(2, :) = insert_delay(S(2, :), cal.StimDelay, iodev.Fs);
+		S = insert_delay(S, cal.StimDelay, iodev.Fs);
 		% save in Satt
 		Satt = S;
 		% plot the array
-		axes(handles.Lstimplot);	plot(tvec, downsample(S(1, :), deciFactor), 'g');
-		axes(handles.Rstimplot);	plot(zerostim, 'r');
+		% axes(handles.Lstimplot);
+		plot(handles.Lstimplot, tvec, downsample(S(1, :), deciFactor), 'g');
+		% axes(handles.Rstimplot);
+		plot(handles.Rstimplot, zerostim, 'r');
 
 		%loop while figuring out the L attenuator value.
 		if cal.AttenFix
@@ -246,6 +227,7 @@ Error while evaluating uicontrol Callback
 
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
+			
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 			% adjust for the gain of the preamp and apply correction
@@ -278,15 +260,15 @@ Error while evaluating uicontrol Callback
 			end
 
 			% plot the response
-			axes(handles.Lmicplot);
-			plot(downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
-			axes(handles.Rmicplot);
-			plot(downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
+			% axes(handles.Lmicplot);
+			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
+			% axes(handles.Rmicplot);
+			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
 		end
 
 		pause(0.001*cal.ISI);
 
-		% now, collect the data for frequency FREQ, LEFT headphone
+		% now, collect the data for frequency FREQ, LEFT channel
 		for rep = 1:cal.Nreps
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
@@ -327,7 +309,7 @@ Error while evaluating uicontrol Callback
 				[tmpdistmag, tmpdistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				dists{REF}(freq_index, rep) = tmpdistmag;
 				distphis{REF}(freq_index, rep) = tmpdistphi;
-				disp(sprintf('ref mag: %f    L mag: %f', dbspl(mags{REF}(freq_index, rep)), dbspl(mags{L}(freq_index, rep)) ));
+				fprintf('ref mag: %f    L mag: %f', dbspl(mags{REF}(freq_index, rep)), dbspl(mags{L}(freq_index, rep)) );
 			elseif cal.CheckCal == BOTH
 				[tmpmag, tmpphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 				mags{REFL}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
@@ -335,7 +317,7 @@ Error while evaluating uicontrol Callback
 				[tmpdistmag, tmpdistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				dists{REFL}(freq_index, rep) = tmpdistmag;
 				distphis{REFL}(freq_index, rep) = tmpdistphi;
-				disp(sprintf('refL mag: %f    L mag: %f', dbspl(mags{REFL}(freq_index, rep)), dbspl(mags{L}(freq_index, rep)) ));
+				fprintf('refL mag: %f    L mag: %f', dbspl(mags{REFL}(freq_index, rep)), dbspl(mags{L}(freq_index, rep)) );
 			end
 
 			% if DEBUG is set, save the raw magnitude and phase values
@@ -352,11 +334,30 @@ Error while evaluating uicontrol Callback
 				end
 			end
 
+			% if MeasureLeak is requested, measure it!
+			if handles.MeasureLeak
+				% determine magnitude and phase of the response in the
+				% opposite channel - this is the leak magnitude and phase
+				[rleakmag, rleakphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, freq);
+				% compute leak distortion (1st harmonic)
+				[rleakdistmag, rleakdistphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				% compute harmonic distortion measures before 
+				% applying corrections for the knowles mic response
+				leakdists{R}(freq_index, rep) = rleakdistmag / rleakmag;
+				% adjust for the gain of the preamp and apply correction
+				% factors for RMS and microphone calibration
+				rleakmag = RMSsin * rleakmag / (Gain(R)*frdata.rmagadjval(freq_index));
+				% store leak values
+				leakmags{R}(freq_index, rep) = VtoPa*(rleakmag);
+				leakphis{R}(freq_index, rep) = rleakphi - frdata.rphiadjval(freq_index);
+				leakdistphis{R}(freq_index, rep) = rleakdistphi - frdata.rphiadjval(freq_index);
+			end
+			
 			% plot the response
-			axes(handles.Lmicplot);
-			plot(downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
-			axes(handles.Rmicplot);
-			plot(downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
+			% axes(handles.Lmicplot);
+			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
+			% axes(handles.Rmicplot);
+			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
 
 			update_ui_str(handles.LVal, sprintf('%.4f', lmag));
 			update_ui_str(handles.LSPL, sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
@@ -382,13 +383,14 @@ Error while evaluating uicontrol Callback
 		% apply the sin^2 amplitude envelope to the stimulus
 		S = sin2array(S, cal.StimRamp, iodev.Fs);
 		% insert delay
-		S(1, :) = insert_delay(S(1, :), cal.StimDelay, iodev.Fs);
-		S(2, :) = insert_delay(S(2, :), cal.StimDelay, iodev.Fs);
+		S = insert_delay(S, cal.StimDelay, iodev.Fs);
 		% save in Satt
 		Satt = S;
 		% plot the array
-		axes(handles.Lstimplot);	plot(zerostim, 'g');
-		axes(handles.Rstimplot);	plot(tvec, downsample(S(2, :), deciFactor), 'r');
+		% axes(handles.Lstimplot);	
+		plot(handles.Lstimplot, zerostim, 'g');
+		% axes(handles.Rstimplot);
+		plot(handles.Rstimplot, tvec, downsample(S(2, :), deciFactor), 'r');
 
 		%loop while figuring out the R attenuator value.
 		if cal.AttenFix
@@ -445,10 +447,10 @@ Error while evaluating uicontrol Callback
 			end
 
 			% plot the response
-			axes(handles.Lmicplot);
-			plot(downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
-			axes(handles.Rmicplot);
-			plot(downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
+			% axes(handles.Lmicplot);
+			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
+			% axes(handles.Rmicplot);
+			plot(handles.Lmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
 		end
 
 		pause(0.001*cal.ISI);
@@ -484,7 +486,7 @@ Error while evaluating uicontrol Callback
 				[tmpdistmag, tmpdistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				dists{REF}(freq_index, rep) = tmpdistmag;
 				distphis{REF}(freq_index, rep) = tmpdistphi;					
-				disp(sprintf('ref mag: %f    R mag: %f', dbspl(mags{REF}(freq_index, rep)), dbspl(mags{R}(freq_index, rep)) ));
+				fprintf('ref mag: %f    R mag: %f', dbspl(mags{REF}(freq_index, rep)), dbspl(mags{R}(freq_index, rep)) );
 			elseif cal.CheckCal == BOTH
 				[tmpmag, tmpphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 				mags{REFR}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
@@ -492,7 +494,7 @@ Error while evaluating uicontrol Callback
 				[tmpdistmag, tmpphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				dists{REFR}(freq_index, rep) = tmpdistmag;
 				distphis{REFR}(freq_index, rep) = tmpdistphi;
-				disp(sprintf('refR mag: %f    R mag: %f', dbspl(mags{REFR}(freq_index, rep)), dbspl(mags{R}(freq_index, rep)) ));
+				fprintf('refR mag: %f    R mag: %f', dbspl(mags{REFR}(freq_index, rep)), dbspl(mags{R}(freq_index, rep)) );
 			end
 
 			% if DEBUG is set, save the raw magnitude and phase values
@@ -509,11 +511,26 @@ Error while evaluating uicontrol Callback
 				end
 			end
 
+			% if MeasureLeak is requested, measure it!
+			if handles.MeasureLeak
+				[lleakmag, lleakphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[lleakdistmag, lleakdistphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				% compute distortion measures before applying corrections
+				leakdists{L}(freq_index, rep) = lleakdistmag / lleakmag;
+				% adjust for the gain of the preamp and apply correction
+				% factors for RMS and microphone calibration
+				lleakmag = RMSsin * lleakmag / (Gain(L)*frdata.lmagadjval(freq_index));
+				% convert to Pascals (rms) and adjust phase measurements
+				leakmags{L}(freq_index, rep) = VtoPa*(lleakmag);
+				leakphis{L}(freq_index, rep) = lleakphi - frdata.lphiadjval(freq_index);
+				leakdistphis{L}(freq_index, rep) = lleakdistphi - frdata.lphiadjval(freq_index);
+			end
+			
 			% plot the response
-			axes(handles.Lmicplot);
-			plot(downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
-			axes(handles.Rmicplot);
-			plot(downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
+			% axes(handles.Lmicplot);
+			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
+			% axes(handles.Rmicplot);
+			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
 			% update values in text fields
 			update_ui_str(handles.LVal, '---');
 			update_ui_str(handles.LSPL, '---');
@@ -575,7 +592,8 @@ for freq = F(1):F(2):F(3)
 		mags{REFR}(freq_index, :) = dbspl(mags{REFR}(freq_index, :)) + atten{R}(freq_index, :);
 	end
 
-	for channel = 1:Nchannels				
+	% store in caldata struct
+	for channel = 1:handles.Nchannels				
 		caldata.mag(channel, freq_index) = mean( mags{channel}(freq_index, :) );
 		caldata.mag_stderr(channel, freq_index) = std( mags{channel}(freq_index, :) );
 
@@ -584,6 +602,31 @@ for freq = F(1):F(2):F(3)
 
 		caldata.dist(channel, freq_index) = mean( dists{channel}(freq_index, :) );
 		caldata.dist_stderr(channel, freq_index) = std( dists{channel}(freq_index, :) );
+	end
+	
+	% store leak data if collected
+	if handles.MeasureLeak
+		disp('Computing Leak Averages...')
+		% compute the averages for this frequency
+		leakmags{L}(freq_index, :) = dbspl(leakmags{L}(freq_index, :)) - dbspl(mags{R}(freq_index, :));
+		leakmags{R}(freq_index, :) = dbspl(leakmags{R}(freq_index, :)) - dbspl(mags{L}(freq_index, :));
+
+		leakphis{L}(freq_index, :) = leakphis{L}(freq_index, :) - phis{R}(freq_index, :);
+		leakphis{R}(freq_index, :) = leakphis{R}(freq_index, :) - phis{L}(freq_index, :);
+		
+		for channel = 1:handles.Nchannels
+			caldata.leakmag(channel, freq_index) = mean( leakmags{channel}(freq_index, :) );
+			caldata.leakmag_stderr(channel, freq_index) = std( leakmags{channel}(freq_index, :) );
+
+			caldata.leakphase(channel, freq_index) = mean( unwrap(leakphis{channel}(freq_index, :)) );
+			caldata.leakphase_stderr(channel, freq_index) = std( unwrap(leakphis{channel}(freq_index, :)) );
+
+			caldata.leakdist(channel, freq_index) = mean( leakdists{channel}(freq_index, :) );
+			caldata.leakdist_stderr(channel, freq_index) = std( leakdists{channel}(freq_index, :) );
+
+			caldata.leakdistphis(channel, freq_index) = mean( leakdistphis{channel}(freq_index, :) );
+			caldata.leakdistphis_stderr(channel, freq_index) = std( leakdistphis{channel}(freq_index, :) );
+		end
 	end
 	freq_index = freq_index + 1;
 end
@@ -602,7 +645,6 @@ end
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 handles.caldata = caldata;
-
 guidata(hObject, handles);
 
 %-----------------------------------------------------------------------

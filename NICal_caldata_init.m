@@ -15,12 +15,17 @@
 %	28 Mar 2012 (SJS):
 %		-	made modifications in case FRdata are unused (i.e., calibration
 %			mic is used instead of calibrated mic)
-%	9 July, 2012 (SJS) renamed for NICal project
+%	9 Jul 2012 (SJS) renamed for NICal project
+%	12 Jul 2012 (SJS)
+%	 -	added comments
+%	 -	added leak variables for measuring crosstalk
 %--------------------------------------------------------------------------
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------
+%------------------------------------------------------------
 % Setup data storage variables and paths
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------
+%------------------------------------------------------------
 caldata.time_str = datestr(now, 31);			% date and time
 caldata.timestamp = now;							% timestamp
 caldata.adFc = iodev.Fs;							% analog input rate
@@ -33,19 +38,32 @@ caldata.atten = cal.StartAtten;					% initial attenuator setting
 caldata.max_spl = cal.Maxlevel;					% maximum spl
 caldata.min_spl = cal.Minlevel;					% minimum spl
 
-% set up the arrays to hold the data
-Nchannels = 2;
 
-%initialize the caldata structure arrays for the calibration data
-tmpcell = cell(Nchannels, Nfreqs);
-tmparr = zeros(Nchannels, Nfreqs);
+%------------------------------------------------------------------
+%------------------------------------------------------------------
+% initialize the caldata structure arrays for the calibration data
+%------------------------------------------------------------------
+%------------------------------------------------------------------
+tmparr = zeros(handles.Nchannels, Nfreqs);
 caldata.freq = Freqs;
 caldata.mag = tmparr;
 caldata.phase = tmparr;
 caldata.dist = tmparr;
 caldata.mag_stderr = tmparr;
 caldata.phase_stderr = tmparr;
+% if leak is to be measured, create storage space
+if handles.MeasureLeak
+	caldata.leakmag = tmparr;
+	caldata.leakmad_stderr = tmparr;
+	caldata.leakphase = tmparr;
+	caldata.leakphase_stderr = tmparr;
+	caldata.leakdist = tmparr;
+	caldata.leakdist_stderr = tmparr;
+	caldata.leakdistphis = tmparr;
+	caldata.leakdistphis_stderr = tmparr;
+end
 
+% if a non-reference mic (e.g., B&K) is not used, add some other stuff
 if ~handles.FRenable
 	caldata.Side = handles.cal.Side;
 	caldata.InputChannel = handles.cal.InputChannel;
@@ -58,10 +76,12 @@ if ~handles.FRenable
 	caldata.frdata = [];
 end
 	
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%------------------------------------------------------------------
+%------------------------------------------------------------------
 % Fetch the l and r headphone mic adjustment values for the 
-% calibration frequencies using interpolation
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% calibration frequencies using interpolation 
+%------------------------------------------------------------------
+%------------------------------------------------------------------
 if ~handles.FRenable
 	frdata.lmagadjval = ones(size(caldata.freq));
 	frdata.rmagadjval = ones(size(caldata.freq));
