@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 12-Jul-2012 19:37:36
+% Last Modified by GUIDE v2.5 13-Jul-2012 15:47:40
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -116,99 +116,25 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% Initial Calibration settings
 	%----------------------------------------------------------
 	%----------------------------------------------------------
+	
 	%------------------------------------------------------------
 	% first check to see if defaults file exists
 	%------------------------------------------------------------
-	defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat']);
-
-	if exist(defaultsfile, 'file')
-		fprintf('Loading cal settings from defaults file %s ...\n', defaultsfile)
-		load(defaultsfile, 'cal');
+	handles.defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat']);
+	if exist(handles.defaultsfile, 'file')
+		fprintf('Loading cal settings from defaults file %s ...\n', handles.defaultsfile)
+		load(handles.defaultsfile, 'cal');
 	else
 		% no defaults found, so use internal values
 		disp('no defaults found, using internal values')
-		% Frequency range
-		cal.Fmin = 3000;
-		cal.Fstep = 100;
-		cal.Fmax = 3500;
-		% set the min and max allowable stimulus levels
-		cal.Minlevel = 60;
-		cal.Maxlevel = 70;
-		% Set the starting attenuation value
-		% (better to set too high instead of too low!!!!)
-		cal.StartAtten = 90;
-		% set the stepsize for adjusting attenuation
-		cal.AttenStep = 2;
-		% # reps per frequency
-		cal.Nreps = 3;
-		% Inter-stim interval in seconds
-		cal.ISI = 200;
-		% Auto save ear_cal.mat in experiment calibration data dir
-		cal.AutoSave = 1;
-		% set the 'side' to left channels;
-		cal.Side = 1;
-		% set the CheckCal flag in order to use a reference microphone to 
-		% check the calibration.  
-		% 0 == no check, 1 = Left, 2 = Right, 3 = Both
-		cal.CheckCal = 0;
-		% these are used to use a fixed attenuation level
-		% will essentially generate a frequency response curve
-		% for the speaker (with the microphone correction factor
-		% from *_fr.mat file from CalibrateHeadphoneMic applied)
-		cal.AttenFix = 0;
-		cal.AttenFixValue = 90;
-		% default fr response file for Knowles mics
-		cal.mic_fr_file = '..\CalibrationData\FFamp_CIThp_24-Sep-2009_fr.mat';
-		% cal.mic_fr_file = '';
-		cal.InputChannel = 1;
-		cal.MicGain = 0;
-		cal.MicSensitivity = 0.1;
-		cal.DAscale = 1;
+		handles.cal = cal_structinit;
 	end
-
-	% assign cal struct to the GUI handles structure for safe keeping
-	handles.defaultsfile = defaultsfile;		
-	handles.cal = cal;
 	guidata(hObject, handles);
 
+	%----------------------------------------------------------
 	% update user interface
-	update_ui_str(handles.Fmin, handles.cal.Fmin);
-	update_ui_str(handles.Fmax, handles.cal.Fmax);
-	update_ui_str(handles.Fstep, handles.cal.Fstep);
-	update_ui_str(handles.Minlevel, handles.cal.Minlevel);
-	update_ui_str(handles.Maxlevel, handles.cal.Maxlevel);
-	update_ui_str(handles.AttenStep, handles.cal.AttenStep);
-	update_ui_str(handles.Nreps, handles.cal.Nreps);
-	update_ui_str(handles.ISI, handles.cal.ISI);
-	update_ui_val(handles.Side, handles.cal.Side);
-	update_ui_val(handles.AutoSave, handles.cal.AutoSave);
-	update_ui_val(handles.CheckCalCtrl, handles.cal.CheckCal + 1);
-	update_ui_val(handles.AttenFixCtrl, handles.cal.AttenFix);
-	update_ui_str(handles.AttenFixValueCtrl, handles.cal.AttenFixValue);
-	set(handles.AttenFixCtrl, 'HitTest', 'on');
-	set(handles.AttenFixCtrl, 'Enable', 'on');
-	set(handles.AttenFixCtrl, 'Visible', 'on');
-	if handles.cal.AttenFix
-		set(handles.AttenFixValueCtrl, 'HitTest', 'on');
-		set(handles.AttenFixValueCtrl, 'Enable', 'on');
-		set(handles.AttenFixValueCtrl, 'Visible', 'on');
-		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
-		set(handles.AttenFixValueCtrlText, 'Enable', 'on');
-		set(handles.AttenFixValueCtrlText, 'Visible', 'on');
-	else
-		set(handles.AttenFixValueCtrl, 'HitTest', 'off');
-		set(handles.AttenFixValueCtrl, 'Enable', 'on');
-		set(handles.AttenFixValueCtrl, 'Visible', 'off');
-		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
-		set(handles.AttenFixValueCtrlText, 'Enable', 'off');
-		set(handles.AttenFixValueCtrlText, 'Visible', 'off');
-	end
-	update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
-
-	update_ui_val(handles.InputChannelCtrl, handles.cal.InputChannel);
-	update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
-	update_ui_str(handles.MicSensitivityCtrl, handles.cal.MicSensitivity);
-	update_ui_str(handles.DAscaleCtrl, handles.cal.DAscale);
+	%----------------------------------------------------------
+	UpdateUIFromCal(handles, handles.cal);
 	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
@@ -228,12 +154,13 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	% set  function handles from configuration data
+	% set function handles from configuration data
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	handles.initfunction = config.IOINITFUNCTION;
 	handles.iofunction = config.IOFUNCTION;
 	handles.attfunction = config.ATTENFUNCTION;
+	guidata(hObject, handles);
 	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
@@ -248,7 +175,13 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	enable_ui(handles.MicSensitivityCtrl);
 	enable_ui(handles.DAscaleCtrl);
 	handles.FRenable = 0;
+	guidata(hObject, handles);
 	
+	%----------------------------------------------------------
+	%----------------------------------------------------------
+	% default is no leak (crosstalk) measurement
+	%----------------------------------------------------------
+	%----------------------------------------------------------
 	handles.MeasureLeak = 0;
 	update_ui_val(handles.MeasureLeakCtrl, handles.MeasureLeak);
 	guidata(hObject, handles);
@@ -270,29 +203,91 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% uiwait(handles.figure1);
 %--------------------------------------------------------------------------
 
+
+%--------------------------------------------------------------------------
+% updates UI from settings in cal
+%--------------------------------------------------------------------------
+function UpdateUIFromCal(handles, cal)
+	update_ui_str(handles.Fmin, cal.Fmin);
+	update_ui_str(handles.Fmax, cal.Fmax);
+	update_ui_str(handles.Fstep, cal.Fstep);
+	update_ui_str(handles.Minlevel, cal.Minlevel);
+	update_ui_str(handles.Maxlevel, cal.Maxlevel);
+	update_ui_str(handles.AttenStep, cal.AttenStep);
+	update_ui_str(handles.Nreps, cal.Nreps);
+	update_ui_str(handles.ISI, cal.ISI);
+	update_ui_val(handles.Side, cal.Side);
+	update_ui_val(handles.AutoSave, cal.AutoSave);
+	update_ui_val(handles.CheckCalCtrl, cal.CheckCal + 1);
+	update_ui_val(handles.AttenFixCtrl, cal.AttenFix);
+	update_ui_str(handles.AttenFixValueCtrl, cal.AttenFixValue);
+	set(handles.AttenFixCtrl, 'HitTest', 'on');
+	set(handles.AttenFixCtrl, 'Enable', 'on');
+	set(handles.AttenFixCtrl, 'Visible', 'on');
+	if cal.AttenFix
+		set(handles.AttenFixValueCtrl, 'HitTest', 'on');
+		set(handles.AttenFixValueCtrl, 'Enable', 'on');
+		set(handles.AttenFixValueCtrl, 'Visible', 'on');
+		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
+		set(handles.AttenFixValueCtrlText, 'Enable', 'on');
+		set(handles.AttenFixValueCtrlText, 'Visible', 'on');
+	else
+		set(handles.AttenFixValueCtrl, 'HitTest', 'off');
+		set(handles.AttenFixValueCtrl, 'Enable', 'on');
+		set(handles.AttenFixValueCtrl, 'Visible', 'off');
+		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
+		set(handles.AttenFixValueCtrlText, 'Enable', 'off');
+		set(handles.AttenFixValueCtrlText, 'Visible', 'off');
+	end
+	update_ui_str(handles.MicFRFileCtrl, cal.mic_fr_file);
+
+	update_ui_val(handles.InputChannelCtrl, cal.InputChannel);
+	update_ui_str(handles.MicGainCtrl, cal.MicGain);
+	update_ui_str(handles.MicSensitivityCtrl, cal.MicSensitivity);
+	update_ui_str(handles.DAscaleCtrl, cal.DAscale);
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
-% Main Calibration callback
+
+
+%-------------------------------------------------------------------------
+%-------------------------------------------------------------------------
+% Run Calibration callback
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 function RunCalibration_ctrl_Callback(hObject, eventdata, handles)
+	%---------------------------------------------------------------
+	% turn off calibration ctrl, enable abort ctrl
+	%---------------------------------------------------------------
 	set(handles.RunCalibration_ctrl, 'Enable', 'off');
 	set(handles.Abort_ctrl, 'Enable', 'on');
 	set(handles.Abort_ctrl, 'Visible', 'on');
 	set(handles.Abort_ctrl, 'HitTest', 'on');
 	set(handles.Abort_ctrl, 'Value', 0);
+	
+	%---------------------------------------------------------------
+	% initialize complete flag
+	%---------------------------------------------------------------
 	handles.CalComplete = 0;
 	COMPLETE = 0;
 	guidata(hObject, handles);
-		
- 	NICal_RunCalibration
 
+	%---------------------------------------------------------------
+	% run calibration script
+ 	%---------------------------------------------------------------
+	NICal_RunCalibration
+
+	%---------------------------------------------------------------
+	% enable Calibration ctrl, disable abort ctrl
+	%---------------------------------------------------------------
 	set(handles.RunCalibration_ctrl, 'Enable', 'on');
 	set(handles.Abort_ctrl, 'Enable', 'off');
 	set(handles.Abort_ctrl, 'Visible', 'off');
 	set(handles.Abort_ctrl, 'HitTest', 'off');
 	set(handles.Abort_ctrl, 'Value', 0);
 	
+	%---------------------------------------------------------------
+	% save cal settings
+	%---------------------------------------------------------------
 	if COMPLETE
 		handles.CalComplete = 1;
 		save(handles.defaultsfile, 'cal');
@@ -321,19 +316,21 @@ function SaveCalibration_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
-% GUI control callbacks
+% Calibration Settings callbacks
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
+%{
 function FreqVal_Callback(hObject, eventdata, handles)
-function LVal_Callback(hObject, eventdata, handles)
-function LSPL_Callback(hObject, eventdata, handles)
-function RVal_Callback(hObject, eventdata, handles)
-function RSPL_Callback(hObject, eventdata, handles)
-function LAttentext_Callback(hObject, eventdata, handles)
-function RAttentext_Callback(hObject, eventdata, handles)
+function LValText_Callback(hObject, eventdata, handles)
+function LSPLText_Callback(hObject, eventdata, handles)
+function RValText_Callback(hObject, eventdata, handles)
+function RSPLText_Callback(hObject, eventdata, handles)
+function LAttenText_Callback(hObject, eventdata, handles)
+function RAttenText_Callback(hObject, eventdata, handles)
+%}
 %-------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
@@ -495,7 +492,6 @@ function AttenFixCtrl_Callback(hObject, eventdata, handles)
 function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 	% get the fr file data
 	tmpfile = read_ui_str(handles.MicFRFileCtrl);
-	
 	if ~exist(tmpfile, 'file')
 		warndlg('Microphone calibration file not found!', 'NICal Warning');
 		% revert to old value
@@ -509,6 +505,13 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 	end
 %--------------------------------------------------------------------------
 
+
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function CalFileCtrl_Callback(hObject, eventdata, handles)
+%--------------------------------------------------------------------------
+
+
 %--------------------------------------------------------------------------
 % --- Executes on button press in MeasureLeakCtrl.
 %--------------------------------------------------------------------------
@@ -516,6 +519,138 @@ function MeasureLeakCtrl_Callback(hObject, eventdata, handles)
 	handles.MeasureLeak = read_ui_val(hObject);
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% Enables FR file use on button press in FRenableCtrl.
+%--------------------------------------------------------------------------
+function FRenableCtrl_Callback(hObject, eventdata, handles)
+	currentState = read_ui_val(hObject);
+	if currentState
+		% do whatever needs to be done to enable mic FR
+		enable_ui(handles.MicFRFileCtrl);
+		disable_ui(handles.InputChannelCtrl);
+		disable_ui(handles.MicGainCtrl);
+		disable_ui(handles.MicSensitivityCtrl);
+		disable_ui(handles.DAscaleCtrl);
+		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
+		handles.FRenable = 1;
+	else
+		disable_ui(handles.MicFRFileCtrl);
+		% do whatever needs to be done to disable mic FR use
+		disable_ui(handles.MicFRFileCtrl);
+		enable_ui(handles.InputChannelCtrl);
+		enable_ui(handles.MicGainCtrl);
+		enable_ui(handles.MicSensitivityCtrl);
+		enable_ui(handles.DAscaleCtrl);
+		handles.FRenable = 0;
+	end
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
+
+%--------------------------------------------------------------------------
+% Sets input channel on selection change in InputChannelCtrl.
+%--------------------------------------------------------------------------
+function InputChannelCtrl_Callback(hObject, eventdata, handles)
+	newVal = read_ui_val(hObject);
+	if newVal == 1
+		handles.cal.InputChannel = 1;
+	else
+		handles.cal.InputChannel = 2;
+	end
+%--------------------------------------------------------------------------
+	
+%--------------------------------------------------------------------------
+% sets mic Gain
+%--------------------------------------------------------------------------
+function MicGainCtrl_Callback(hObject, eventdata, handles)
+	newVal = read_ui_str(hObject, 'n');
+	
+	if isempty(newVal)
+		warning('NICal:ValueOutOfRange', '%s: invalid MicGain value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicGain);
+	elseif ~all(isnumeric(newVal))
+		warning('NICal:ValueOutOfRange', '%s: invalid MicGain value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicGain);
+	elseif length(newVal) ~= 1
+		handles.cal.MicGain = newVal(1);
+		update_ui_str(hObject, handles.cal.MicGain);
+	else
+		handles.cal.MicGain = newVal;
+	end
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% sets Mic sensitiviy
+%--------------------------------------------------------------------------
+function MicSensitivityCtrl_Callback(hObject, eventdata, handles)
+	newVal = read_ui_str(hObject, 'n');
+	if isempty(newVal)
+		warning('NICal:ValueOutOfRange', '%s: invalid MicSensitivity value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicSensitivity);
+	elseif ~all(isnumeric(newVal))
+		warning('NICal:ValueOutOfRange', '%s: invalid MicSensitivity value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicSensitivity);
+	elseif newVal <= 0
+		warning('NICal:ValueOutOfRange', '%s: invalid MicSensitivity value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.MicSensitivity);
+	elseif length(newVal) ~= 1
+		handles.cal.MicSensitivity = newVal(1);
+		update_ui_str(hObject, handles.cal.MicSensitivity);
+	else
+		handles.cal.MicSensitivity = newVal;
+	end
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% sets peak amplitude of output signal (tone)
+%--------------------------------------------------------------------------
+function DAscaleCtrl_Callback(hObject, eventdata, handles)
+	newVal = read_ui_str(hObject, 'n');
+	% some checks first
+	if isempty(newVal)
+		warning('NICal:ValueOutOfRange', '%s: invalid tone level value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.DAscale);
+	elseif ~all(isnumeric(newVal))
+		warning('NICal:ValueOutOfRange', '%s: invalid  tone level value %f', mfilename, newVal);
+		update_ui_str(hObject, handles.cal.DAscale);
+	elseif ~between(newVal, 0, 10)
+		warning('NICal:ValueOutOfRange', '%s: invalid  tone level value %f', mfilename, newVal);
+		disp('tone level must be between 0 and 10 Volts!')
+		update_ui_str(hObject, handles.cal.DAscale);
+	elseif length(newVal) ~= 1
+		handles.cal.MicSensitivity = newVal(1);
+		update_ui_str(hObject, handles.cal.DAscale);
+	else
+		% update cal.DAscale value to new value
+		handles.cal.DAscale = newVal;
+	end
+	% update handles
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------
+% --- Executes on button press in InputFilterCtrl.
+%-------------------------------------------------------------------------
+function InputFilterCtrl_Callback(hObject, eventdata, handles)
+%-------------------------------------------------------------------------
+
+
+
+%-------------------------------------------------------------------------
+%-------------------------------------------------------------------------
+function HiPassFcCtrl_Callback(hObject, eventdata, handles)
+
+
+
+
+
+%-------------------------------------------------------------------------
+%-------------------------------------------------------------------------
+function LoPassFcCtrl_Callback(hObject, eventdata, handles)
+
 
 
 %-------------------------------------------------------------------------
@@ -556,8 +691,10 @@ function Menu_Close_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
+% TDT menu (unused)
+%-------------------------------------------------------------------------
+%{
 function TDTSettingsMenuCtrl_Callback(hObject, eventdata, handles)
-	return
 	iodev = handles.iodev;
 	fullcircuit = fullfile(iodev.Circuit_Path, [iodev.Circuit_Name '.rcx'])
 	if ~exist(fullcircuit, 'file')
@@ -591,6 +728,7 @@ function TDTSettingsMenuCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 		iodev
 	end
+%}
 %-------------------------------------------------------------------------
 
 
@@ -624,116 +762,7 @@ function Side_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 	
-%--------------------------------------------------------------------------
-% Enables FR file use on button press in FRenableCtrl.
-%--------------------------------------------------------------------------
-function FRenableCtrl_Callback(hObject, eventdata, handles)
-	currentState = read_ui_val(hObject);
-	if currentState
-		%%% whatever needs to be done to enable mic FR
-		enable_ui(handles.MicFRFileCtrl);
-		disable_ui(handles.InputChannelCtrl);
-		disable_ui(handles.MicGainCtrl);
-		disable_ui(handles.MicSensitivityCtrl);
-		disable_ui(handles.DAscaleCtrl);
-		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
-		handles.FRenable = 1;
-	else
-		disable_ui(handles.MicFRFileCtrl);
-		%%% whatever needs to be done to disable mic FR use
-		disable_ui(handles.MicFRFileCtrl);
-		enable_ui(handles.InputChannelCtrl);
-		enable_ui(handles.MicGainCtrl);
-		enable_ui(handles.MicSensitivityCtrl);
-		enable_ui(handles.DAscaleCtrl);
-		handles.FRenable = 0;
-	end
-	
-	guidata(hObject, handles);
-%--------------------------------------------------------------------------
 
-%--------------------------------------------------------------------------
-% Sets input channel on selection change in InputChannelCtrl.
-%--------------------------------------------------------------------------
-function InputChannelCtrl_Callback(hObject, eventdata, handles)
-	newVal = read_ui_val(hObject);
-	if newVal == 1
-		handles.cal.InputChannel = 1;
-	else
-		handles.cal.InputChannel = 2;
-	end
-%--------------------------------------------------------------------------
-	
-%--------------------------------------------------------------------------
-% sets mic Gain
-%--------------------------------------------------------------------------
-function MicGainCtrl_Callback(hObject, eventdata, handles)
-	newVal = read_ui_str(hObject, 'n');
-	
-	if isempty(newVal)
-		warning('%s: invalid MicGain value %f', mfilename, newVal);
-		update_ui_str(hObject, handles.cal.MicGain);
-	elseif ~all(isnumeric(newVal))
-		warning('%s: invalid MicGain value %f', mfilename, newVal);
-		update_ui_str(hObject, handles.cal.MicGain);
-	elseif length(newVal) ~= 1
-		handles.cal.MicGain = newVal(1);
-		update_ui_str(hObject, handles.cal.MicGain);
-	else
-		handles.cal.MicGain = newVal;
-	end
-	
-	guidata(hObject, handles);
-%--------------------------------------------------------------------------
-
-%--------------------------------------------------------------------------
-% sets Mic sensitiviy
-%--------------------------------------------------------------------------
-function MicSensitivityCtrl_Callback(hObject, eventdata, handles)
-	newVal = read_ui_str(hObject, 'n');
-	
-	if isempty(newVal)
-		warning('%s: invalid MicSensitivity value %f', mfilename, newVal);
-		update_ui_str(hObject, handles.cal.MicSensitivity);
-	elseif ~all(isnumeric(newVal))
-		warning('%s: invalid MicSensitivity value %f', mfilename, newVal);
-		update_ui_str(hObject, handles.cal.MicSensitivity);
-	elseif newVal <= 0
-		warning('%s: invalid MicSensitivity value %f', mfilename, newVal);
-		update_ui_str(hObject, handles.cal.MicSensitivity);
-	elseif length(newVal) ~= 1
-		handles.cal.MicSensitivity = newVal(1);
-		update_ui_str(hObject, handles.cal.MicSensitivity);
-	else
-		handles.cal.MicSensitivity = newVal;
-	end
-
-	guidata(hObject, handles);
-%--------------------------------------------------------------------------
-
-%--------------------------------------------------------------------------
-function DAscaleCtrl_Callback(hObject, eventdata, handles)
-	newVal = read_ui_str(hObject, 'n');
-	
-	if isempty(newVal)
-		warning('%s: invalid tone level value %f', mfilename, newVal);
-		update_ui_str(hObject, handles.cal.DAscale);
-	elseif ~all(isnumeric(newVal))
-		warning('%s: invalid  tone level value %f', mfilename, newVal);
-		update_ui_str(hObject, handles.cal.DAscale);
-	elseif ~between(newVal, 0, 10)
-		warning('%s: invalid  tone level value %f', mfilename, newVal);
-		disp('tone level must be between 0 and 10 Volts!')
-		update_ui_str(hObject, handles.cal.DAscale);
-	elseif length(newVal) ~= 1
-		handles.cal.MicSensitivity = newVal(1);
-		update_ui_str(hObject, handles.cal.DAscale);
-	else
-		handles.cal.DAscale = newVal;
-	end
-		
-	guidata(hObject, handles);
-%--------------------------------------------------------------------------
 
 
 %--------------------------------------------------------------------------
@@ -743,23 +772,23 @@ function DAscaleCtrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-function FreqVal_CreateFcn(hObject, eventdata, handles)
+function FreqValText_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function LVal_CreateFcn(hObject, eventdata, handles)
+function LValText_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function LSPL_CreateFcn(hObject, eventdata, handles)
+function LSPLText_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function RVal_CreateFcn(hObject, eventdata, handles)
+function RValText_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function RSPL_CreateFcn(hObject, eventdata, handles)
+function RSPLText_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
@@ -792,11 +821,11 @@ function ISI_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function LAttentext_CreateFcn(hObject, eventdata, handles)
+function LAttenText_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function RAttentext_CreateFcn(hObject, eventdata, handles)
+function RAttenText_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
@@ -832,10 +861,19 @@ function DAscaleCtrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
 	end
+function CalFileCtrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
+function HiPassFcCtrl_CreateFcn(hObject, eventdata, handles)
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+function LoPassFcCtrl_CreateFcn(hObject, eventdata, handles)
+	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+		 set(hObject,'BackgroundColor','white');
+	end
 %-------------------------------------------------------------------------
 
 
 
-
-
-	

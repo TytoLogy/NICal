@@ -23,11 +23,7 @@ disp('...general setup starting...');
 % Global Constants
 %---------------------------------------------
 %---------------------------------------------
-L = 1;
-R = 2;
-REF = 3;
-BOTH = 3;
-MAX_ATTEN = 120;
+NICal_Constants;
 
 %---------------------------------------------
 %---------------------------------------------
@@ -51,8 +47,6 @@ end
 % settings
 %---------------------------------------------
 %---------------------------------------------
-earcalpath = pwd;
-earcalfile = fullfile(earcalpath, 'ear_cal.mat');
 % plot decimation factor
 deciFactor = 1;
 % read in the gain on the mic preamp
@@ -74,40 +68,12 @@ RMSsin = 1/sqrt(2);
 
 %---------------------------------------------
 %---------------------------------------------
-% set the stimulus/acquisition settings
-%---------------------------------------------
-%---------------------------------------------
-
 % set up the calibration frequency range
+%---------------------------------------------
+%---------------------------------------------
 Freqs = handles.cal.Fmin:handles.cal.Fstep:handles.cal.Fmax;
 F = [handles.cal.Fmin handles.cal.Fstep handles.cal.Fmax];
 Nfreqs = length(Freqs);
-
-% Stimulus Interval (ms)
-handles.cal.StimInterval = 100;
-% Stimulus Duration (ms)
-handles.cal.StimDuration = 250;
-% Duration of epoch (ms)
-handles.cal.SweepDuration = 500;
-% Delay of stimulus (ms)
-handles.cal.StimDelay = 5;
-% Total time to acquire data (ms)
-handles.cal.AcqDuration = handles.cal.SweepDuration;
-% Total sweep time = sweep duration + inter stimulus interval (ms)
-handles.cal.SweepPeriod = handles.cal.SweepDuration + handles.cal.StimInterval;
-% Stimulus ramp on/off time (ms)
-handles.cal.StimRamp = 1;
-
-% for NI card, set FS here
-handles.cal.Fs = 250000;
-
-% Input Filter Fc
-handles.cal.InputFilter = 1;
-handles.cal.InputHPFc = 120;
-handles.cal.InputLPFc = 120000;
-
-% TTL pulse duration (msec)
-handles.cal.TTLPulseDur = 1;
 
 %---------------------------------------------
 %---------------------------------------------
