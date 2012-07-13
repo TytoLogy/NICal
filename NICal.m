@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 13-Jul-2012 15:47:40
+% Last Modified by GUIDE v2.5 13-Jul-2012 18:45:32
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -120,14 +120,30 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%------------------------------------------------------------
 	% first check to see if defaults file exists
 	%------------------------------------------------------------
+	INITDEFAULT = 0;
+	if ~isempty(varargin)
+		if any(strcmpi('InitDefaults', varargin))
+			warndlg('Initializing Defaults!', mfilename);
+			INITDEFAULT = 1;
+		end
+	end
+	
 	handles.defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat']);
-	if exist(handles.defaultsfile, 'file')
+	if exist(handles.defaultsfile, 'file') && (INITDEFAULT == 0)
 		fprintf('Loading cal settings from defaults file %s ...\n', handles.defaultsfile)
 		load(handles.defaultsfile, 'cal');
+		handles.cal = cal;
+		clear cal
 	else
-		% no defaults found, so use internal values
-		disp('no defaults found, using internal values')
-		handles.cal = cal_structinit;
+		cal = cal_structinit;
+		if INITDEFAULT
+			save(handles.defaultsfile, 'cal');
+		else
+			% no defaults found, so use internal values
+			disp('no defaults found, using internal values')
+		end
+		handles.cal = cal;
+		clear cal;
 	end
 	guidata(hObject, handles);
 
@@ -717,7 +733,7 @@ function Menu_Close_Callback(hObject, eventdata, handles)
 % --- Outputs from this function are returned to the command line.
 function varargout = NICal_OutputFcn(hObject, eventdata, handles) 
 	% Get default command line output from handles structure
-	varargout{1} = handles.output;
+	varargout{1} = [];
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
@@ -887,3 +903,10 @@ function LoPassFcCtrl_CreateFcn(hObject, eventdata, handles)
 
 
 
+
+
+% --------------------------------------------------------------------
+function Menu_SaveLastDatum_Callback(hObject, eventdata, handles)
+% hObject    handle to Menu_SaveLastDatum (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

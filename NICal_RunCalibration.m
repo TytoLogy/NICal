@@ -216,7 +216,8 @@ for freq = F(1):F(2):F(3)
 		plot(handles.Lstimplot, tvec, downsample(S(1, :), deciFactor), 'g');
 		% axes(handles.Rstimplot);
 		plot(handles.Rstimplot, zerostim, 'r');
-
+		drawnow
+		
 		%loop while figuring out the L attenuator value.
 		if cal.AttenFix
 			% no need to test attenuation but, 
@@ -288,6 +289,7 @@ for freq = F(1):F(2):F(3)
 			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
 			% axes(handles.Rmicplot);
 			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
+			drawnow
 		end
 
 		pause(0.001*cal.ISI);
@@ -317,10 +319,6 @@ for freq = F(1):F(2):F(3)
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
 			lmag_adjusted = RMSsin * lmag / (Gain*frdata.lmagadjval(freq_index));
-
-			% update text display
-			update_ui_str(handles.LValText, sprintf('%.4f', lmag_adjusted));
-			update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(VtoPa*lmag_adjusted)));
 
 			% Store the values in the cell arrays for later averaging
 			% (we'll do the averages later in order to save time while
@@ -391,6 +389,9 @@ for freq = F(1):F(2):F(3)
 				% update R text display
 				update_ui_str(handles.RValText, sprintf('%.4f', rleakmag));
 				update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*rleakmag)));
+			else
+				update_ui_str(handles.RValText, '---');
+				update_ui_str(handles.RSPLText, '---');
 			end
 			
 			% plot the response
@@ -398,12 +399,12 @@ for freq = F(1):F(2):F(3)
 			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
 			% axes(handles.Rmicplot);
 			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
-
-			update_ui_str(handles.LVal, sprintf('%.4f', lmag));
-			update_ui_str(handles.LSPL, sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
-			update_ui_str(handles.RVal, '---');
-			update_ui_str(handles.RSPL, '---');
-
+			drawnow
+			
+			% update display
+			update_ui_str(handles.LValText, sprintf('%.4f', lmag));
+			update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
+keyboard
 			pause(0.001*cal.ISI);
 		end
 	end
@@ -591,6 +592,9 @@ for freq = F(1):F(2):F(3)
 				% update L text display
 				update_ui_str(handles.LValText, sprintf('%.4f', lleakmag));
 				update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(VtoPa*lleakmag)));
+			else
+				update_ui_str(handles.LValText, '---');
+				update_ui_str(handles.LSPLText, '---');				
 			end
 			
 			% plot the response
@@ -599,10 +603,8 @@ for freq = F(1):F(2):F(3)
 			% axes(handles.Rmicplot);
 			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
 			% update values in text fields
-			update_ui_str(handles.LVal, '---');
-			update_ui_str(handles.LSPL, '---');
-			update_ui_str(handles.RVal, sprintf('%.4f', rmag));
-			update_ui_str(handles.RSPL, sprintf('%.4f', dbspl(mags{R}(freq_index, rep))));
+			update_ui_str(handles.RValText, sprintf('%.4f', rmag));
+			update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(mags{R}(freq_index, rep))));
 
 			pause(0.001*cal.ISI);
 		end
@@ -699,6 +701,7 @@ end
 
 caldata.magsraw = magsraw;
 caldata.atten = atten;
+caldata.calibration_settings = cal;
 
 if DEBUG
 	caldata.magsdbug = magsdbug;
@@ -721,8 +724,8 @@ guidata(hObject, handles);
 PlotCal(caldata);
 
 if cal.AutoSave
-	disp(['Saving calibration data in ' earcalfile ' ...']);
-	save(earcalfile, '-MAT', 'caldata');
+	disp(['Saving calibration data in ' handles.cal.calfile ' ...']);
+	save(handles.cal.calfile, '-MAT', 'caldata');
 end
 
 disp('Finished.')

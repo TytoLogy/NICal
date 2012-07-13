@@ -100,7 +100,6 @@ cal.MicSensitivity = 0.1;
 %----------------------------------------------------------------
 cal.DAscale = 1;
 
-
 %---------------------------------------------
 %---------------------------------------------
 % set the stimulus/acquisition settings
@@ -122,7 +121,7 @@ cal.SweepPeriod = cal.SweepDuration + cal.StimInterval;
 cal.StimRamp = 1;
 
 % for NI card, set default sampling rate here
-cal.Fs = 300000;
+cal.Fs = 250000;
 
 % Input Filter Fc
 cal.InputFilter = 1;
