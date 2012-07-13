@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 12-Jul-2012 18:39:10
+% Last Modified by GUIDE v2.5 12-Jul-2012 19:37:36
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -554,7 +554,6 @@ function Menu_LoadFRData_Callback(hObject, eventdata, handles)
 function Menu_Close_Callback(hObject, eventdata, handles)
  	CloseRequestFcn(handles.figure1, eventdata, handles);
 %--------------------------------------------------------------------------
-
 
 %-------------------------------------------------------------------------
 function TDTSettingsMenuCtrl_Callback(hObject, eventdata, handles)

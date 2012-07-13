@@ -64,12 +64,12 @@ if handles.FRenable
 	% is frequency in range of the fr data for the headphones?
 	% check low freq limit
 	if F(1) < frdata.range(1)
-		warning([mfilename ': requested LF calibration limit is out of FR file bounds']);
+		warning('NICal:Freq', [mfilename ': requested LF calibration limit is out of FR file bounds']);
 		return
 	end
 	% check high freq limit
 	if F(3) > frdata.range(3)
-		warning([mfilename ': requested HF calibration limit is out of FR file bounds']);
+		warning('NICal:Freq', [mfilename ': requested HF calibration limit is out of FR file bounds']);
 		return
 	end
 end
@@ -156,7 +156,7 @@ else
 	Latten = cal.StartAtten;
 	Ratten = cal.StartAtten;
 	if ~between(cal.AttenFixValue, 0, 120)
-		warning([mfilename ': AttenFixValue out of range, using default StartAtten value'])
+		warning('NICal:Atten', [mfilename ': AttenFixValue out of range, using default StartAtten value'])
 	end
 end
 
@@ -346,7 +346,7 @@ for freq = F(1):F(2):F(3)
 				leakdists{R}(freq_index, rep) = rleakdistmag / rleakmag;
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				rleakmag = RMSsin * rleakmag / (Gain(R)*frdata.rmagadjval(freq_index));
+				rleakmag = RMSsin * rleakmag / (Gain*frdata.rmagadjval(freq_index));
 				% store leak values
 				leakmags{R}(freq_index, rep) = VtoPa*(rleakmag);
 				leakphis{R}(freq_index, rep) = rleakphi - frdata.rphiadjval(freq_index);
@@ -519,7 +519,7 @@ for freq = F(1):F(2):F(3)
 				leakdists{L}(freq_index, rep) = lleakdistmag / lleakmag;
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				lleakmag = RMSsin * lleakmag / (Gain(L)*frdata.lmagadjval(freq_index));
+				lleakmag = RMSsin * lleakmag / (Gain*frdata.lmagadjval(freq_index));
 				% convert to Pascals (rms) and adjust phase measurements
 				leakmags{L}(freq_index, rep) = VtoPa*(lleakmag);
 				leakphis{L}(freq_index, rep) = lleakphi - frdata.lphiadjval(freq_index);
@@ -606,7 +606,6 @@ for freq = F(1):F(2):F(3)
 	
 	% store leak data if collected
 	if handles.MeasureLeak
-		disp('Computing Leak Averages...')
 		% compute the averages for this frequency
 		leakmags{L}(freq_index, :) = dbspl(leakmags{L}(freq_index, :)) - dbspl(mags{R}(freq_index, :));
 		leakmags{R}(freq_index, :) = dbspl(leakmags{R}(freq_index, :)) - dbspl(mags{L}(freq_index, :));
