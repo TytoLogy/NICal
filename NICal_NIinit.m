@@ -37,10 +37,10 @@ iodev.NI = handles.initfunction('NI', iodev.Dnum);
 set(iodev.NI.ai, 'SampleRate', handles.cal.Fs);
 ActualRate = get(iodev.NI.ai, 'SampleRate');
 if handles.cal.Fs ~= ActualRate
-	warning('Requested ai Fs (%f) ~= ActualRate (%f)', handles.cal.Fs, ActualRate);
-	handles.cal.Fs = ActualRate;
+	warning('NICal:NIDAQ', 'Requested ai Fs (%f) ~= ActualRate (%f)', handles.cal.Fs, ActualRate);
 end
 iodev.Fs = ActualRate;
+handles.cal.Fs = ActualRate;
 
 %------------------------------------------------------
 % AO subsystem
@@ -48,8 +48,10 @@ iodev.Fs = ActualRate;
 set(iodev.NI.ao, 'SampleRate', iodev.Fs);
 ActualRate = get(iodev.NI.ao, 'SampleRate');
 if iodev.Fs ~= ActualRate
-	warning('ao: Requested SampleRate (%f) ~= ActualRate (%f)', iodev.Fs, ActualRate);
+	warning('NICAl:NIDAQ', 'ao: Requested SampleRate (%f) ~= ActualRate (%f)', iodev.Fs, ActualRate);
 end
+iodev.Fs = ActualRate;
+handles.cal.Fs = ActualRate;
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------

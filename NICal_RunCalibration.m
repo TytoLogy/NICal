@@ -80,6 +80,20 @@ end
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_NIinit;
+guidata(hObject, handles);
+
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% Define a bandpass filter for processing the data
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% Nyquist frequency
+fnyq = handles.cal.Fs/2;
+% passband definition
+handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
+% filter coefficients using type1 Chebyshev bandpass filter
+[handles.cal.fcoeffb, handles.cal.fcoeffa] = ...
+					cheby1(handles.cal.forder, handles.cal.fripple, handles.cal.fband, 's');
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -171,7 +185,8 @@ freq_index = 1;
 %*******************************LOOP through the frequencies
 for freq = F(1):F(2):F(3)
 	% update the frequency display value
-	update_ui_str(handles.FreqVal, sprintf('%d', freq));
+	update_ui_str(handles.FreqValText, sprintf('%d', freq));
+	update_ui_str(handles.RepNumText, sprintf('%d', rep));
 
 	% if we're collecting check data, print the frequency on the
 	% command line
@@ -208,8 +223,8 @@ for freq = F(1):F(2):F(3)
 			% do need to set the attenuators
 			Satt(1, :) = handles.attfunction(S(1, :), Latten);
 			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
-			update_ui_str(handles.LAttentext, Latten);
-			update_ui_str(handles.RAttentext, MAX_ATTEN);
+			update_ui_str(handles.LAttenText, Latten);
+			update_ui_str(handles.RAttenText, MAX_ATTEN);
 			% set retry to 0 to skip testing
 			retry = 0;
 		else
@@ -222,11 +237,20 @@ for freq = F(1):F(2):F(3)
 			Satt(1, :) = handles.attfunction(S(1, :), Latten);
 			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
 			% update ui
-			update_ui_str(handles.LAttentext, Latten);
-			update_ui_str(handles.RAttentext, MAX_ATTEN);
+			update_ui_str(handles.LAttenText, Latten);
+			update_ui_str(handles.RAttenText, MAX_ATTEN);
 
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
+			
+			% filter the data if asked
+			if handles.cal.InputFilter
+				tmp = sin2array(resp{L}, 1, iodev.Fs);
+				resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				tmp = sin2array(resp{R}, 1, iodev.Fs);
+				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				clear tmp
+			end
 			
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -236,8 +260,8 @@ for freq = F(1):F(2):F(3)
 			lmag = RMSsin * lmag / (Gain*frdata.lmagadjval(freq_index));
 			% compute dB SPL
 			lmagdB = dbspl(VtoPa*lmag);
-			update_ui_str(handles.LVal, sprintf('%.4f', lmag));
-			update_ui_str(handles.LSPL, sprintf('%.4f', lmagdB));
+			update_ui_str(handles.LValText, sprintf('%.4f', lmag));
+			update_ui_str(handles.LSPLText, sprintf('%.4f', lmagdB));
 
 			% check to see if the channel amplitude is in bounds
 			if lmagdB > cal.Maxlevel
@@ -273,6 +297,15 @@ for freq = F(1):F(2):F(3)
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
 
+			% filter the data if asked
+			if handles.cal.InputFilter
+				tmp = sin2array(resp{L}, 1, iodev.Fs);
+				resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				tmp = sin2array(resp{R}, 1, iodev.Fs);
+				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				clear tmp
+			end
+
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 			[ldistmag, ldistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);		
@@ -284,6 +317,10 @@ for freq = F(1):F(2):F(3)
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
 			lmag_adjusted = RMSsin * lmag / (Gain*frdata.lmagadjval(freq_index));
+
+			% update text display
+			update_ui_str(handles.LValText, sprintf('%.4f', lmag_adjusted));
+			update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(VtoPa*lmag_adjusted)));
 
 			% Store the values in the cell arrays for later averaging
 			% (we'll do the averages later in order to save time while
@@ -351,6 +388,9 @@ for freq = F(1):F(2):F(3)
 				leakmags{R}(freq_index, rep) = VtoPa*(rleakmag);
 				leakphis{R}(freq_index, rep) = rleakphi - frdata.rphiadjval(freq_index);
 				leakdistphis{R}(freq_index, rep) = rleakdistphi - frdata.rphiadjval(freq_index);
+				% update R text display
+				update_ui_str(handles.RValText, sprintf('%.4f', rleakmag));
+				update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*rleakmag)));
 			end
 			
 			% plot the response
@@ -410,11 +450,21 @@ for freq = F(1):F(2):F(3)
 			% need to set the attenuators
 			Satt(1, :) = handles.attfunction(S(1, :), Latten);
 			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
-			update_ui_str(handles.LAttentext, MAX_ATTEN);
-			update_ui_str(handles.RAttentext, Ratten);
+			update_ui_str(handles.LAttenText, MAX_ATTEN);
+			update_ui_str(handles.RAttenText, Ratten);
 
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
+			
+			% filter the data if asked
+			if handles.cal.InputFilter
+				tmp = sin2array(resp{L}, 1, iodev.Fs);
+				resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				tmp = sin2array(resp{R}, 1, iodev.Fs);
+				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				clear tmp
+			end
+			
 			% determine the magnitude and phase of the response
 			[rmag, rphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 			% adjust for the gain of the preamp and apply correction
@@ -422,8 +472,9 @@ for freq = F(1):F(2):F(3)
 			rmag = RMSsin * rmag / (Gain*frdata.rmagadjval(freq_index));
 			% compute dB SPL
 			rmagdB = dbspl(VtoPa*rmag);
-			update_ui_str(handles.RVal, sprintf('%.4f', rmag));
-			update_ui_str(handles.RSPL, sprintf('%.4f', rmagdB));
+			% update text display
+			update_ui_str(handles.RValText, sprintf('%.4f', rmag));
+			update_ui_str(handles.RSPLText, sprintf('%.4f', rmagdB));
 
 			% check to see if the channel amplitude is in bounds
 			if rmagdB > cal.Maxlevel
@@ -460,6 +511,15 @@ for freq = F(1):F(2):F(3)
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
 
+			% filter the data if asked
+			if handles.cal.InputFilter
+				tmp = sin2array(resp{L}, 1, iodev.Fs);
+				resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				tmp = sin2array(resp{R}, 1, iodev.Fs);
+				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				clear tmp
+			end
+			
 			% determine the magnitude and phase of the response
 			[rmag, rphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 			[rdistmag, rdistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);				
@@ -471,6 +531,10 @@ for freq = F(1):F(2):F(3)
 			% factors for RMS and microphone calibration
 			rmag_adjusted = RMSsin * rmag / (Gain*frdata.rmagadjval(freq_index));
 
+			% update text display
+			update_ui_str(handles.RValText, sprintf('%.4f', rmag_adjusted));
+			update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*rmag_adjusted)));
+			
 			% convert to Pascals (rms) and adjust phase measurements
 			mags{R}(freq_index, rep) = VtoPa*(rmag_adjusted);
 			phis{R}(freq_index, rep) = rphi - frdata.rphiadjval(freq_index);
@@ -524,6 +588,9 @@ for freq = F(1):F(2):F(3)
 				leakmags{L}(freq_index, rep) = VtoPa*(lleakmag);
 				leakphis{L}(freq_index, rep) = lleakphi - frdata.lphiadjval(freq_index);
 				leakdistphis{L}(freq_index, rep) = lleakdistphi - frdata.lphiadjval(freq_index);
+				% update L text display
+				update_ui_str(handles.LValText, sprintf('%.4f', lleakmag));
+				update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(VtoPa*lleakmag)));
 			end
 			
 			% plot the response

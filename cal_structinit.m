@@ -122,10 +122,28 @@ cal.SweepPeriod = cal.SweepDuration + cal.StimInterval;
 cal.StimRamp = 1;
 
 % for NI card, set default sampling rate here
-cal.Fs = 250000;
+cal.Fs = 300000;
 
 % Input Filter Fc
 cal.InputFilter = 1;
 cal.InputHPFc = 120;
 cal.InputLPFc = 120000;
+
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% Define a bandpass filter for processing the data
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% Nyquist frequency
+fnyq = cal.Fs/2;
+% filter order
+cal.forder = 2;
+% ripple in dB
+cal.fripple = 0.2;
+% passband definition
+cal.fband = [cal.InputHPFc cal.InputLPFc] ./ fnyq;
+% filter coefficients using type1 Chebyshev bandpass filter
+[cal.fcoeffb, cal.fcoeffa] = cheby1(cal.forder, cal.fripple, cal.fband, 's');
+
+
 
