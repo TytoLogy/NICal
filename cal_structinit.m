@@ -123,9 +123,10 @@ cal.StimRamp = 1;
 % for NI card, set default sampling rate here
 cal.Fs = 250000;
 
+
 % Input Filter Fc
 cal.InputFilter = 1;
-cal.InputHPFc = 120;
+cal.InputHPFc = 200;
 cal.InputLPFc = 120000;
 
 %------------------------------------------------------------------------
@@ -136,13 +137,12 @@ cal.InputLPFc = 120000;
 % Nyquist frequency
 fnyq = cal.Fs/2;
 % filter order
-cal.forder = 2;
-% ripple in dB
-cal.fripple = 0.2;
+cal.forder = 5;
 % passband definition
 cal.fband = [cal.InputHPFc cal.InputLPFc] ./ fnyq;
-% filter coefficients using type1 Chebyshev bandpass filter
-[cal.fcoeffb, cal.fcoeffa] = cheby1(cal.forder, cal.fripple, cal.fband, 's');
+
+% filter coefficients using a butterworth bandpass filter
+[cal.fcoeffb, cal.fcoeffa] = butter(cal.forder, cal.fband, 'bandpass');
 
 
 

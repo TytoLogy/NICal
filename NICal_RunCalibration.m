@@ -404,7 +404,7 @@ for freq = F(1):F(2):F(3)
 			% update display
 			update_ui_str(handles.LValText, sprintf('%.4f', lmag));
 			update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
-keyboard
+
 			pause(0.001*cal.ISI);
 		end
 	end

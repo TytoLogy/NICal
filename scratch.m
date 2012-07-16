@@ -1,19 +1,16 @@
+cal = cal_structinit;
 
-!bzr rename SpeakerCal_NIexit.m NICal_NIexit.m
 
-!bzr rename SpeakerCal_NIinit.m	NICal_NIinit.m
+s = normalize(synmononoise_fft(500, cal.Fs, 1, cal.Fs/2, 1, 0));
+s = sin2array(s, 1, cal.Fs);
 
-!bzr rename SpeakerCal_RunCalibration.m	NICal_RunCalibration.m
+% filter coefficients using butterworth bandpass filter
+S = filtfilt(cal.fcoeffb, cal.fcoeffa, s);
 
-!bzr rename SpeakerCal_RunCalibration_NoFR.m	NICal_RunCalibration_NoFR.m
+t = ((1:length(s)) - 1) / cal.Fs;
 
-!bzr rename SpeakerCal_settings.m	NICal_settings.m
-
-!bzr rename SpeakerCal_tdtexit.m	NICal_tdtexit.m
-
-!bzr rename SpeakerCal_tdtinit.m	NICal_tdtinit.m
-
-!bzr rename SpeakerCal_Configuration_unused.m	NICal_Configuration_unused.m
-
-!bzr rename SpeakerCal_Defaults.m	NICal_Defaults.m
-
+figure(1)
+plot(t, s, t, S)
+legend({'s', 'S'});
+fftplot(s, cal.Fs, figure(2));
+fftplot(S, cal.Fs, figure(3));
