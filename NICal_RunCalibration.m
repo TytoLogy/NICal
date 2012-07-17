@@ -182,6 +182,7 @@ end
 stopFlag = 0;
 rep = 1;
 freq_index = 1;
+Nfreqs = length(F(1):F(2):F(3));
 %*******************************LOOP through the frequencies
 for freq = F(1):F(2):F(3)
 	% update the frequency and reps display value
@@ -624,7 +625,7 @@ end %********************End of Cal loop
 %-----------------------------------------------------------------------
 NICal_NIexit;
 
-if freq == F(3)
+if freq_index == Nfreqs+1
 	COMPLETE = 1;
 else
 	return
