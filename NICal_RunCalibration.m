@@ -184,7 +184,7 @@ rep = 1;
 freq_index = 1;
 %*******************************LOOP through the frequencies
 for freq = F(1):F(2):F(3)
-	% update the frequency display value
+	% update the frequency and reps display value
 	update_ui_str(handles.FreqValText, sprintf('%d', freq));
 	update_ui_str(handles.RepNumText, sprintf('%d', rep));
 
@@ -237,7 +237,7 @@ for freq = F(1):F(2):F(3)
 			% L channel, set the R channel attenuator to MAX attenuation
 			Satt(1, :) = handles.attfunction(S(1, :), Latten);
 			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
-			% update ui
+			% update atten val display
 			update_ui_str(handles.LAttenText, Latten);
 			update_ui_str(handles.RAttenText, MAX_ATTEN);
 
@@ -255,13 +255,12 @@ for freq = F(1):F(2):F(3)
 			
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
+			update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
-
 			lmag = RMSsin * lmag / (Gain*frdata.lmagadjval(freq_index));
 			% compute dB SPL
 			lmagdB = dbspl(VtoPa*lmag);
-			update_ui_str(handles.LValText, sprintf('%.4f', lmag));
 			update_ui_str(handles.LSPLText, sprintf('%.4f', lmagdB));
 
 			% check to see if the channel amplitude is in bounds
@@ -311,6 +310,7 @@ for freq = F(1):F(2):F(3)
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 			[ldistmag, ldistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);		
+			update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
 
 			% compute harmonic distortion measures before 
 			% applying corrections for the knowles mic response
@@ -326,6 +326,7 @@ for freq = F(1):F(2):F(3)
 			% adjust for the gain of the preamp and convert to Pascals
 			mags{L}(freq_index, rep) = VtoPa*(lmag_adjusted);
 			phis{L}(freq_index, rep) = lphi - frdata.lphiadjval(freq_index);
+			update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
 
 			% store distortion and leak values
 			distphis{L}(freq_index, rep) = ldistphi - frdata.lphiadjval(freq_index);
@@ -374,6 +375,7 @@ for freq = F(1):F(2):F(3)
 				% determine magnitude and phase of the response in the
 				% opposite channel - this is the leak magnitude and phase
 				[rleakmag, rleakphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, freq);
+				update_ui_str(handles.RValText, sprintf('%.4f', 1000*rleakmag));
 				% compute leak distortion (1st harmonic)
 				[rleakdistmag, rleakdistphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				% compute harmonic distortion measures before 
@@ -387,8 +389,7 @@ for freq = F(1):F(2):F(3)
 				leakphis{R}(freq_index, rep) = rleakphi - frdata.rphiadjval(freq_index);
 				leakdistphis{R}(freq_index, rep) = rleakdistphi - frdata.rphiadjval(freq_index);
 				% update R text display
-				update_ui_str(handles.RValText, sprintf('%.4f', rleakmag));
-				update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*rleakmag)));
+				update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(leakmags{R}(freq_index, rep))));
 			else
 				update_ui_str(handles.RValText, '---');
 				update_ui_str(handles.RSPLText, '---');
@@ -401,10 +402,7 @@ for freq = F(1):F(2):F(3)
 			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
 			drawnow
 			
-			% update display
-			update_ui_str(handles.LValText, sprintf('%.4f', lmag));
-			update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
-
+			% Pause for ISI
 			pause(0.001*cal.ISI);
 		end
 	end
@@ -468,13 +466,13 @@ for freq = F(1):F(2):F(3)
 			
 			% determine the magnitude and phase of the response
 			[rmag, rphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
+			% update text display
+			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag));
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
 			rmag = RMSsin * rmag / (Gain*frdata.rmagadjval(freq_index));
 			% compute dB SPL
 			rmagdB = dbspl(VtoPa*rmag);
-			% update text display
-			update_ui_str(handles.RValText, sprintf('%.4f', rmag));
 			update_ui_str(handles.RSPLText, sprintf('%.4f', rmagdB));
 
 			% check to see if the channel amplitude is in bounds
@@ -525,6 +523,9 @@ for freq = F(1):F(2):F(3)
 			[rmag, rphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
 			[rdistmag, rdistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);				
 
+			% update values in text fields
+			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag));
+
 			% compute distortion measures before applying corrections
 			dists{R}(freq_index, rep) = rdistmag / rmag;
 
@@ -533,13 +534,14 @@ for freq = F(1):F(2):F(3)
 			rmag_adjusted = RMSsin * rmag / (Gain*frdata.rmagadjval(freq_index));
 
 			% update text display
-			update_ui_str(handles.RValText, sprintf('%.4f', rmag_adjusted));
+			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag_adjusted));
 			update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*rmag_adjusted)));
 			
 			% convert to Pascals (rms) and adjust phase measurements
 			mags{R}(freq_index, rep) = VtoPa*(rmag_adjusted);
 			phis{R}(freq_index, rep) = rphi - frdata.rphiadjval(freq_index);
 			distphis{R}(freq_index, rep) = rdistphi - frdata.rphiadjval(freq_index);
+			update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(mags{R}(freq_index, rep))));
 
 			% store attenuation
 			atten{R}(freq_index, rep) = Ratten;
@@ -580,6 +582,8 @@ for freq = F(1):F(2):F(3)
 			if handles.MeasureLeak
 				[lleakmag, lleakphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, freq);
 				[lleakdistmag, lleakdistphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				% update L text display
+				update_ui_str(handles.LValText, sprintf('%.4f', 1000*lleakmag));
 				% compute distortion measures before applying corrections
 				leakdists{L}(freq_index, rep) = lleakdistmag / lleakmag;
 				% adjust for the gain of the preamp and apply correction
@@ -589,9 +593,7 @@ for freq = F(1):F(2):F(3)
 				leakmags{L}(freq_index, rep) = VtoPa*(lleakmag);
 				leakphis{L}(freq_index, rep) = lleakphi - frdata.lphiadjval(freq_index);
 				leakdistphis{L}(freq_index, rep) = lleakdistphi - frdata.lphiadjval(freq_index);
-				% update L text display
-				update_ui_str(handles.LValText, sprintf('%.4f', lleakmag));
-				update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(VtoPa*lleakmag)));
+				update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(leakmags{L}(freq_index, rep))));
 			else
 				update_ui_str(handles.LValText, '---');
 				update_ui_str(handles.LSPLText, '---');				
@@ -602,9 +604,6 @@ for freq = F(1):F(2):F(3)
 			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
 			% axes(handles.Rmicplot);
 			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
-			% update values in text fields
-			update_ui_str(handles.RValText, sprintf('%.4f', rmag));
-			update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(mags{R}(freq_index, rep))));
 
 			pause(0.001*cal.ISI);
 		end
@@ -676,8 +675,16 @@ for freq = F(1):F(2):F(3)
 	% store leak data if collected
 	if handles.MeasureLeak
 		% compute the averages for this frequency
+		%{
 		leakmags{L}(freq_index, :) = dbspl(leakmags{L}(freq_index, :)) - dbspl(mags{R}(freq_index, :));
 		leakmags{R}(freq_index, :) = dbspl(leakmags{R}(freq_index, :)) - dbspl(mags{L}(freq_index, :));
+
+		leakphis{L}(freq_index, :) = leakphis{L}(freq_index, :) - phis{R}(freq_index, :);
+		leakphis{R}(freq_index, :) = leakphis{R}(freq_index, :) - phis{L}(freq_index, :);
+		%}
+		
+		leakmags{L}(freq_index, :) = dbspl(leakmags{L}(freq_index, :));
+		leakmags{R}(freq_index, :) = dbspl(leakmags{R}(freq_index, :));
 
 		leakphis{L}(freq_index, :) = leakphis{L}(freq_index, :) - phis{R}(freq_index, :);
 		leakphis{R}(freq_index, :) = leakphis{R}(freq_index, :) - phis{L}(freq_index, :);
