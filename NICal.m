@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 13-Jul-2012 18:45:32
+% Last Modified by GUIDE v2.5 16-Jul-2012 18:29:40
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -130,10 +130,10 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	
 	handles.defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat']);
 	if exist(handles.defaultsfile, 'file') && (INITDEFAULT == 0)
+		cal = [];
 		fprintf('Loading cal settings from defaults file %s ...\n', handles.defaultsfile)
-		load(handles.defaultsfile, 'cal');
+		load(handles.defaultsfile);
 		handles.cal = cal;
-		clear cal
 	else
 		cal = cal_structinit;
 		if INITDEFAULT
@@ -231,15 +231,15 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 %-------------------------------------------------------------------------
 % Run Calibration callback
 %-------------------------------------------------------------------------
-function RunCalibration_ctrl_Callback(hObject, eventdata, handles)
+function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
 	%---------------------------------------------------------------
 	% turn off calibration ctrl, enable abort ctrl
 	%---------------------------------------------------------------
-	set(handles.RunCalibration_ctrl, 'Enable', 'off');
-	set(handles.Abort_ctrl, 'Enable', 'on');
-	set(handles.Abort_ctrl, 'Visible', 'on');
-	set(handles.Abort_ctrl, 'HitTest', 'on');
-	set(handles.Abort_ctrl, 'Value', 0);
+	set(handles.RunCalibrationCtrl, 'Enable', 'off');
+	set(handles.AbortCtrl, 'Enable', 'on');
+	set(handles.AbortCtrl, 'Visible', 'on');
+	set(handles.AbortCtrl, 'HitTest', 'on');
+	set(handles.AbortCtrl, 'Value', 0);
 	%---------------------------------------------------------------
 	% initialize complete flag
 	%---------------------------------------------------------------
@@ -253,11 +253,11 @@ function RunCalibration_ctrl_Callback(hObject, eventdata, handles)
 	%---------------------------------------------------------------
 	% enable Calibration ctrl, disable abort ctrl
 	%---------------------------------------------------------------
-	set(handles.RunCalibration_ctrl, 'Enable', 'on');
-	set(handles.Abort_ctrl, 'Enable', 'off');
-	set(handles.Abort_ctrl, 'Visible', 'off');
-	set(handles.Abort_ctrl, 'HitTest', 'off');
-	set(handles.Abort_ctrl, 'Value', 0);
+	set(handles.RunCalibrationCtrl, 'Enable', 'on');
+	set(handles.AbortCtrl, 'Enable', 'off');
+	set(handles.AbortCtrl, 'Visible', 'off');
+	set(handles.AbortCtrl, 'HitTest', 'off');
+	set(handles.AbortCtrl, 'Value', 0);
 	%---------------------------------------------------------------
 	% save cal settings
 	%---------------------------------------------------------------
@@ -271,7 +271,7 @@ function RunCalibration_ctrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 % Abort running calibration
 %--------------------------------------------------------------------------
-function Abort_ctrl_Callback(hObject, eventdata, handles)
+function AbortCtrl_Callback(hObject, eventdata, handles)
 	disp('ABORTING Calibration!')
 %--------------------------------------------------------------------------
 
@@ -285,56 +285,90 @@ function Abort_ctrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
-% --- Executes on selection change in Side.
+% --- Executes on selection change in SideCtrl.
 %--------------------------------------------------------------------------
-function Side_Callback(hObject, eventdata, handles)
-	newVal = read_ui_val(hObject);
-	handles.cal.Side = newVal;
+function SideCtrl_Callback(hObject, eventdata, handles)
+	handles.cal.Side = read_ui_val(hObject);
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
-function Fmin_Callback(hObject, eventdata, handles)
+function FminCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
-	if ~between(tmp, 0, handles.cal.Fmax)
-		tmpstr = sprintf('Min Freq must be between 0 & Fmax (%d)', handles.cal.Fmax);
+	% check to make sure range of Fmin is 
+	if ~between(tmp, 1e-3, handles.cal.Fmax)
+		tmpstr = sprintf('Min Freq must be greater than 0 & less than Fmax (%d)', handles.cal.Fmax);
 		warndlg(	tmpstr, 'Invalid Min Freq');
 		update_ui_str(hObject, handles.cal.Fmin);
 	else
+		% build temporary list of test frequencies and keep max value
+		tmpMax = max(tmp : handles.cal.Fstep : handles.cal.Fmax);
+		% check if max test freq is same as new Fmax
+		if tmpMax ~= tmp
+			% if not, set Fmax to the max test freq
+			handles.cal.Fmax = tmpMax;
+			% update Fmax control
+			update_ui_str(handles.FmaxCtrl, handles.cal.Fmax);
+		end
+		% store the new Fmin value
 		handles.cal.Fmin = tmp;
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
 	
 %-------------------------------------------------------------------------
-function Fmax_Callback(hObject, eventdata, handles)
+function FmaxCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
-	if ~between(tmp, handles.cal.Fmin, 125000)
-		tmpstr = sprintf('Max Freq must be between Fmin (%d) & 125,000 Hz', ...
-								handles.cal.Fmin);
+	if ~between(tmp, handles.cal.Fmin,(handles.cal.Fs / 2))
+		tmpstr = sprintf('Max Freq must be between Fmin (%d) & Fs / 2 (%f) Hz', ...
+								handles.cal.Fmin, handles.cal.Fs);
 		warndlg(tmpstr, 'Invalid Max Freq');
 		update_ui_str(hObject, handles.cal.Fmax);
 	else
-		handles.cal.Fmax = tmp;
+		% build temporary list of test frequencies and keep max value
+		newMax = max(handles.cal.Fmin : handles.cal.Fstep : tmp);
+		% check if max test freq is same as new Fmax
+		if newMax == tmp
+			% if so, keep the new value
+			handles.cal.Fmax = tmp;
+		else
+			% if not, set Fmax to the max test freq
+			handles.cal.Fmax = newMax;
+			% update Fmax control
+			update_ui_str(handles.FmaxCtrl, handles.cal.Fmax);
+		end
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
-function Fstep_Callback(hObject, eventdata, handles)
+function FstepCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	maxstep = handles.cal.Fmax - handles.cal.Fmin;
-	if ~between(tmp, 1, maxstep)
-		warndlg('FreqStep must be between 1 & Fmax-Fmin', 'Invalid FreqStep');
+	if ~between(tmp, 0.001, maxstep)
+		warndlg('FreqStep must be between 0.001 & Fmax-Fmin', 'Invalid FreqStep');
 		update_ui_str(hObject, handles.cal.Fstep);
 	else
+		% build temporary list of test frequencies and keep max value
+		newMax = max(handles.cal.Fmin : tmp : handles.cal.Fmax);
+		% check if max test freq is same as new Fmax
+		if newMax == tmp
+			% if so, keep the new value
+			handles.cal.Fmax = tmp;
+		else
+			% if not, set Fmax to the max test freq
+			handles.cal.Fmax = newMax;
+			% update Fmax control
+			update_ui_str(handles.FmaxCtrl, handles.cal.Fmax);
+		end
+		% store the new Fstep value
 		handles.cal.Fstep = tmp;
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
 	
 %-------------------------------------------------------------------------
-function Nreps_Callback(hObject, eventdata, handles)
+function NrepsCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	if ~between(tmp, 1, 30)
 		warndlg('# reps must be between 1 & 30', 'Invalid # Reps');
@@ -346,62 +380,104 @@ function Nreps_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
-function Minlevel_Callback(hObject, eventdata, handles)
+function MinlevelCltr_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
-	if ~between(tmp, 1, handles.cal.Maxlevel)
-		warndlg('Min Level must be between 0 & Max Level', 'Invalid Min Level');
+	if ~between(tmp, 0, handles.cal.Maxlevel)
+		s = sprintf('Min Level must be between 0 & Max Level (%.1f) dB', handles.cal.Maxlevel);
+		warndlg(s, 'Invalid Min Level');
 		update_ui_str(hObject, handles.cal.Minlevel);
 	else
+		% build temporary list of test levels, keep max
+		newMax = max(tmp : handles.cal.AttenStep : handles.cal.Maxlevel);
+		% check if final level is same as new Maxlevel
+		if newMax ~= tmp
+			% if not, set Maxlevel to the max test level
+			handles.cal.Maxlevel = newMax;
+			update_ui_str(handles.MaxlevelCtrl, handles.cal.Maxlevel);
+		end
+		% store new Minlevel
 		handles.cal.Minlevel = tmp;
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
-function Maxlevel_Callback(hObject, eventdata, handles)
+function MaxlevelCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	if ~between(tmp, handles.cal.Minlevel, 120)
-		warndlg('Max Level must be between Min Level & 120 dB', 'Invalid Max Level');
+		s = sprintf('Max Level must be between Min Level (%.1f) & 120 dB', handles.cal.Minlevel);
+		warndlg(s, 'Invalid Max Level');
 		update_ui_str(hObject, handles.cal.Maxlevel);
 	else
-		handles.cal.Maxlevel = tmp;
+		% build temporary list of test levels, keep max level
+		newMax = max(handles.cal.Minlevel : handles.cal.AttenStep : tmp);
+		% check if final level is same as new Maxlevel
+		if newMax == tmp
+			% if so, keep the new Maxlevel
+			handles.cal.Maxlevel = tmp;
+		else
+			% if not, set Maxlevel to the computed max test level
+			handles.cal.Maxlevel = newMax;
+			update_ui_str(handles.MaxlevelCtrl, handles.cal.Maxlevel);
+		end		
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
-function AttenStep_Callback(hObject, eventdata, handles)
+function AttenStepCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	maxstep = handles.cal.Maxlevel - handles.cal.Minlevel;
-	if ~between(tmp, 1, maxstep)
-		warndlg('Atten Step must be between 1 & Max Level - Min Level', 'Invalid AttenStep');
+	if ~between(tmp, 0.1, maxstep)
+		s = sprintf('Atten Step must be between 0.1 & Max Level - Min Level (%.1f) dB', ...
+							handles.cal.Maxlevel - handles.cal.Minlevel);
+		warndlg(s, 'Invalid AttenStep');
+		% reset Attenstep to original value
 		update_ui_str(hObject, handles.cal.AttenStep);
 	else
+		% build temporary list of test levels
+		newMax = max(handles.cal.Minlevel : tmp : handles.cal.Maxlevel);
+		% check if final level is same as new Maxlevel
+		if newMax ~= tmp
+			% if not, set Maxlevel to the max test level
+			handles.cal.Maxlevel = newMax;
+			update_ui_str(handles.MaxlevelCtrl, handles.cal.Maxlevel);
+		end
+		% store new AttenStep value
 		handles.cal.AttenStep = tmp;
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
+% runs when AttenFixCtrl is checked or unchecked
+%--------------------------------------------------------------------------
 function AttenFixCtrl_Callback(hObject, eventdata, handles)
+	%--------------------------------------------------------
+	% set cal.AttenFix to the value of the control object
+	%--------------------------------------------------------
 	handles.cal.AttenFix = read_ui_val(hObject);
-	% update user interface
+	%--------------------------------------------------------
+	% update user interface depending on AttenFix value
+	%--------------------------------------------------------
 	if handles.cal.AttenFix
-		% update settings for fixed attenuation routine
-		set(handles.AttenFixValueCtrl, 'HitTest', 'on');
-		set(handles.AttenFixValueCtrl, 'Enable', 'on');
-		set(handles.AttenFixValueCtrl, 'Visible', 'on');
-		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
-		set(handles.AttenFixValueCtrlText, 'Enable', 'on');
-		set(handles.AttenFixValueCtrlText, 'Visible', 'on');
+		%--------------------------------------------------------
+		% use fixed attenuation 
+		%--------------------------------------------------------
+		% first, read the fixed attenuation value from AttenFixValueCtrl, store
+		% in cal.AttenFixValue parameter
 		handles.cal.AttenFixValue = read_ui_str(handles.AttenFixValueCtrl, 'n');
+		% enable the AttenFixValueCtrl
+		show_uictrl(handles.AttenFixValueCtrl);
+		% make the text label for AttenFixValueCtrl visable
+		set(handles.AttenFixValueCtrlText, 'Visible', 'on');
 	else
+		%--------------------------------------------------------
 		% update settings for normal routine
-		set(handles.AttenFixValueCtrl, 'HitTest', 'off');
-		set(handles.AttenFixValueCtrl, 'Enable', 'on');
-		set(handles.AttenFixValueCtrl, 'Visible', 'off');
-		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
-		set(handles.AttenFixValueCtrlText, 'Enable', 'off');
+		%--------------------------------------------------------
+		% disable the AttenFixValueCtrl
+		hide_uictrl(handles.AttenFixValueCtrl);
+		% make the text label for AttenFixValueCtrl hidden
 		set(handles.AttenFixValueCtrlText, 'Visible', 'off');
 	end
 	guidata(hObject, handles);
@@ -420,7 +496,7 @@ function AttenFixValueCtrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
-function ISI_Callback(hObject, eventdata, handles)
+function ISICtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	if ~between(tmp, 0, 1000)
 		warndlg('Interval between stimuli must be between 0 & 1000', 'Invalid Interval');
@@ -504,6 +580,26 @@ function CheckCalCtrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 function InputFilterCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.InputFilter = read_ui_val(hObject);
+	if handles.cal.InputFilter
+		% make filter freqs enabled
+		show_uictrl(handles.HiPassFcCtrl);
+		show_uictrl(handles.LoPassFcCtrl);
+		set(handles.HiPassFcText, 'Visible', 'on');
+		set(handles.LoPassFcText, 'Visible', 'on');
+		set(handles.HiPassFcCtrlText, 'Visible', 'on');
+		set(handles.LoPassFcCtrlText, 'Visible', 'on');
+		% read values (might be redundant, but be sure)
+		handles.cal.InputHPFc = read_ui_str(handles.HiPassFcCtrl, 'n');
+		handles.cal.InputLPFc = read_ui_str(handles.LoPassFcCtrl, 'n');
+	else
+		hide_uictrl(handles.HiPassFcCtrl);
+		hide_uictrl(handles.LoPassFcCtrl);
+		set(handles.HiPassFcText, 'Visible', 'off');
+		set(handles.LoPassFcText, 'Visible', 'off');
+		set(handles.HiPassFcCtrlText, 'Visible', 'off');
+		set(handles.LoPassFcCtrlText, 'Visible', 'off');
+	end
+		
 	guidata(hObject, handles);
 %-------------------------------------------------------------------------
 
@@ -538,10 +634,13 @@ function HiPassFcCtrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
+% runs when LoPassFc engaged
 %-------------------------------------------------------------------------
 function LoPassFcCtrl_Callback(hObject, eventdata, handles)
 	newVal = read_ui_str(hObject, 'n');
-	% some checks first
+	%-------------------------------------------------
+	% perform some checks on values
+	%-------------------------------------------------
 	if isempty(newVal)
 		% newVal is empty
 		warndlg(sprintf('%s: invalid LoPass Fc %.2f', mfilename, newVal));
@@ -665,9 +764,11 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 % get file to save data to
 %--------------------------------------------------------------------------
 function CalFileCtrl_Callback(hObject, eventdata, handles)
-	oldfile = handles.cal.calfile;
+% 	oldfile = handles.cal.calfile;
+	oldfile = read_ui_str(hObject);
 	[filename, pathname] = uiputfile('*_cal.mat','Save calibration data to file', oldfile);
 	if isequal(filename, 0) || isequal(pathname, 0)
+		update_ui_str(hObject, handles.cal.calfile);
 		return
 	else
 		handles.cal.calfile = fullfile(pathname, filename);
@@ -678,7 +779,7 @@ function CalFileCtrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
-function AutoSave_Callback(hObject, eventdata, handles)
+function AutoSaveCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.AutoSave = read_ui_val(hObject);
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
@@ -721,6 +822,61 @@ function Menu_Close_Callback(hObject, eventdata, handles)
  	CloseRequestFcn(handles.figure1, eventdata, handles);
 %--------------------------------------------------------------------------
 
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function Menu_LoadSettings_Callback(hObject, eventdata, handles)
+	% get the settings file name
+	[sfilename, sfilepath] = uigetfile(	'*_settings.mat', ...
+													'Load Calibration Settings...'	);
+	if sfilename ~= 0
+		cal = [];
+		load(fullfile(sfilepath, sfilename));
+		handles.cal = cal;
+		guidata(hObject, handles);
+	end
+	% update user interface
+	UpdateUIFromCal(handles, handles.cal);		
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function Menu_SaveSettings_Callback(hObject, eventdata, handles)
+	% get the settings file name
+	[sfilename, sfilepath] = uiputfile(	'*_settings.mat', ...
+													'Save Calibration Settings...'	);
+	if sfilename ~= 0
+		cal = handles.cal;
+		save(fullfile(sfilepath, sfilename), '-MAT', 'cal');
+	end
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% Load default cal settings
+%--------------------------------------------------------------------------
+function Menu_ReloadDefaults_Callback(hObject, eventdata, handles)
+	fprintf('Reloading cal settings from defaults file %s ...\n', handles.defaultsfile)
+	load(handles.defaultsfile, 'cal');
+	handles.cal = cal;
+	clear cal
+	guidata(hObject, handles);
+	% update user interface
+	UpdateUIFromCal(handles, handles.cal);
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% save cal settings as default
+%--------------------------------------------------------------------------
+function Menu_SaveAsDefaultSettings_Callback(hObject, eventdata, handles)
+	s = sprintf('Saving cal defaults in file %s', handles.defaultsfile);
+	msgbox(s, 'NICal: Save Defaults', 'non-modal');
+	cal = handles.cal;
+	save(handles.defaultsfile, 'cal');
+	clear cal
+%--------------------------------------------------------------------------
+
+
+
+
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
@@ -746,47 +902,50 @@ function CloseRequestFcn(hObject, eventdata, handles)
 % updates UI from settings in cal
 %--------------------------------------------------------------------------
 function UpdateUIFromCal(handles, cal)
-	update_ui_str(handles.Fmin, cal.Fmin);
-	update_ui_str(handles.Fmax, cal.Fmax);
-	update_ui_str(handles.Fstep, cal.Fstep);
-	update_ui_str(handles.Minlevel, cal.Minlevel);
-	update_ui_str(handles.Maxlevel, cal.Maxlevel);
-	update_ui_str(handles.AttenStep, cal.AttenStep);
-	update_ui_str(handles.Nreps, cal.Nreps);
-	update_ui_str(handles.ISI, cal.ISI);
-	update_ui_val(handles.Side, cal.Side);
-	update_ui_val(handles.AutoSave, cal.AutoSave);
+	update_ui_str(handles.FminCtrl, cal.Fmin);
+	update_ui_str(handles.FmaxCtrl, cal.Fmax);
+	update_ui_str(handles.FstepCtrl, cal.Fstep);
+	update_ui_str(handles.MinlevelCltr, cal.Minlevel);
+	update_ui_str(handles.MaxlevelCtrl, cal.Maxlevel);
+	update_ui_str(handles.AttenStepCtrl, cal.AttenStep);
+	update_ui_str(handles.NrepsCtrl, cal.Nreps);
+	update_ui_str(handles.ISICtrl, cal.ISI);
+	update_ui_val(handles.SideCtrl, cal.Side);
+	update_ui_val(handles.AutoSaveCtrl, cal.AutoSave);
 	update_ui_val(handles.CheckCalCtrl, cal.CheckCal + 1);
 	update_ui_val(handles.AttenFixCtrl, cal.AttenFix);
 	update_ui_str(handles.AttenFixValueCtrl, cal.AttenFixValue);
-	set(handles.AttenFixCtrl, 'HitTest', 'on');
-	set(handles.AttenFixCtrl, 'Enable', 'on');
-	set(handles.AttenFixCtrl, 'Visible', 'on');
 	if cal.AttenFix
-		set(handles.AttenFixValueCtrl, 'HitTest', 'on');
-		set(handles.AttenFixValueCtrl, 'Enable', 'on');
-		set(handles.AttenFixValueCtrl, 'Visible', 'on');
-		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
-		set(handles.AttenFixValueCtrlText, 'Enable', 'on');
+		show_uictrl(handles.AttenFixValueCtrl);
 		set(handles.AttenFixValueCtrlText, 'Visible', 'on');
 	else
-		set(handles.AttenFixValueCtrl, 'HitTest', 'off');
-		set(handles.AttenFixValueCtrl, 'Enable', 'on');
-		set(handles.AttenFixValueCtrl, 'Visible', 'off');
-		set(handles.AttenFixValueCtrlText, 'HitTest', 'off');
-		set(handles.AttenFixValueCtrlText, 'Enable', 'off');
+		hide_uictrl(handles.AttenFixValueCtrl);
 		set(handles.AttenFixValueCtrlText, 'Visible', 'off');
 	end
 	update_ui_str(handles.MicFRFileCtrl, cal.mic_fr_file);
 	update_ui_str(handles.CalFileCtrl, cal.calfile);
-
 	update_ui_val(handles.InputChannelCtrl, cal.InputChannel);
 	update_ui_str(handles.MicGainCtrl, cal.MicGain);
 	update_ui_str(handles.MicSensitivityCtrl, cal.MicSensitivity);
 	update_ui_str(handles.DAscaleCtrl, cal.DAscale);
-	
+	update_ui_val(handles.InputFilterCtrl, cal.InputFilter);
 	update_ui_str(handles.HiPassFcCtrl, cal.InputHPFc);
 	update_ui_str(handles.LoPassFcCtrl, cal.InputLPFc);
+	if cal.InputFilter
+		enable_ui(handles.HiPassFcCtrl);
+		enable_ui(handles.LoPassFcCtrl);
+		set(handles.HiPassFcText, 'Visible', 'on');
+		set(handles.LoPassFcText, 'Visible', 'on');
+		set(handles.HiPassFcCtrlText, 'Visible', 'on');
+		set(handles.LoPassFcCtrlText, 'Visible', 'on');
+	else
+		disable_ui(handles.HiPassFcCtrl);
+		disable_ui(handles.LoPassFcCtrl);
+		set(handles.HiPassFcText, 'Visible', 'off');
+		set(handles.LoPassFcText, 'Visible', 'off');
+		set(handles.HiPassFcCtrlText, 'Visible', 'off');
+		set(handles.LoPassFcCtrlText, 'Visible', 'off');
+	end
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 
@@ -818,32 +977,32 @@ function RSPLText_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function Fmin_CreateFcn(hObject, eventdata, handles)
+function FminCtrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function Fmax_CreateFcn(hObject, eventdata, handles)
+function FmaxCtrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function Fstep_CreateFcn(hObject, eventdata, handles)
-function Minlevel_CreateFcn(hObject, eventdata, handles)
+function FstepCtrl_CreateFcn(hObject, eventdata, handles)
+function MinlevelCltr_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function Maxlevel_CreateFcn(hObject, eventdata, handles)
+function MaxlevelCtrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function AttenStep_CreateFcn(hObject, eventdata, handles)
+function AttenStepCtrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function Nreps_CreateFcn(hObject, eventdata, handles)
+function NrepsCtrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function ISI_CreateFcn(hObject, eventdata, handles)
+function ISICtrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
@@ -855,7 +1014,7 @@ function RAttenText_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		set(hObject,'BackgroundColor','white');
 	end
-function Side_CreateFcn(hObject, eventdata, handles)
+function SideCtrl_CreateFcn(hObject, eventdata, handles)
 	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
 		 set(hObject,'BackgroundColor','white');
 	end
@@ -905,8 +1064,3 @@ function LoPassFcCtrl_CreateFcn(hObject, eventdata, handles)
 
 
 
-% --------------------------------------------------------------------
-function Menu_SaveLastDatum_Callback(hObject, eventdata, handles)
-% hObject    handle to Menu_SaveLastDatum (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)

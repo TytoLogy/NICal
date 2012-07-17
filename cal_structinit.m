@@ -140,9 +140,6 @@ fnyq = cal.Fs/2;
 cal.forder = 5;
 % passband definition
 cal.fband = [cal.InputHPFc cal.InputLPFc] ./ fnyq;
-
 % filter coefficients using a butterworth bandpass filter
 [cal.fcoeffb, cal.fcoeffa] = butter(cal.forder, cal.fband, 'bandpass');
-
-
 

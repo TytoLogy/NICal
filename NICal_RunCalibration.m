@@ -91,9 +91,9 @@ guidata(hObject, handles);
 fnyq = handles.cal.Fs/2;
 % passband definition
 handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
-% filter coefficients using type1 Chebyshev bandpass filter
+% filter coefficients using a butterworth bandpass filter
 [handles.cal.fcoeffb, handles.cal.fcoeffa] = ...
-					cheby1(handles.cal.forder, handles.cal.fripple, handles.cal.fband, 's');
+					butter(handles.cal.forder, handles.cal.fband, 'bandpass');
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -439,8 +439,8 @@ for freq = F(1):F(2):F(3)
 			% do need to set the attenuators
 			Satt(1, :) = handles.attfunction(S(1, :), Latten);
 			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
-			update_ui_str(handles.LAttentext, MAX_ATTEN);
-			update_ui_str(handles.RAttentext, Ratten);
+			update_ui_str(handles.LAttenText, MAX_ATTEN);
+			update_ui_str(handles.RAttenText, Ratten);
 			% set retry to 0 to skip testing
 			retry = 0;
 		else
@@ -610,7 +610,7 @@ for freq = F(1):F(2):F(3)
 		end
 	end
 
-	if read_ui_val(handles.Abort_ctrl) == 1
+	if read_ui_val(handles.AbortCtrl) == 1
 		disp('abortion detected')
 		break
 	end
@@ -695,6 +695,7 @@ for freq = F(1):F(2):F(3)
 			caldata.leakdistphis(channel, freq_index) = mean( leakdistphis{channel}(freq_index, :) );
 			caldata.leakdistphis_stderr(channel, freq_index) = std( leakdistphis{channel}(freq_index, :) );
 		end
+		caldata.leakmags = leakmags;
 	end
 	freq_index = freq_index + 1;
 end
@@ -702,6 +703,10 @@ end
 caldata.magsraw = magsraw;
 caldata.atten = atten;
 caldata.calibration_settings = cal;
+% store leak data if collected
+if handles.MeasureLeak
+	caldata.leakmags = leakmags;
+end
 
 if DEBUG
 	caldata.magsdbug = magsdbug;
@@ -730,6 +735,4 @@ end
 
 disp('Finished.')
 
-
-save test.mat resp indx
 
