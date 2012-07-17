@@ -47,7 +47,6 @@ guidata(hObject, handles);
 
 % make a local copy of the cal settings structure
 cal = handles.cal;
-	
 
 % KLUDGE!!!!!!!
 handles.Nchannels = 2;

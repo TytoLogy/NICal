@@ -1,16 +1,34 @@
-cal = cal_structinit;
 
 
-s = normalize(synmononoise_fft(500, cal.Fs, 1, cal.Fs/2, 1, 0));
-s = sin2array(s, 1, cal.Fs);
+freqlist = [];
 
-% filter coefficients using butterworth bandpass filter
-S = filtfilt(cal.fcoeffb, cal.fcoeffa, s);
+%--------------------------------------------------------------------------
+% get filename and path to frequency list file (.m or .txt)
+%--------------------------------------------------------------------------
+[filename, pathname] = uigetfile(	...
+												{	...
+													'*.txt', 'text files (*.txt)'; ...
+													'*.m', 'Matlab m-files (*.m)'; ...
+													'*.*', 'All Files (*.*)'	...
+												}, ...
+												'Pick a file', ...
+												pwd	...
+											);
+% return empty freqlist if user pressed "Cancel" button
+if any([(filename == 0), (pathname == 0)])
+	return
+end
 
-t = ((1:length(s)) - 1) / cal.Fs;
+% load the numbers, store in tmp
+try
+	tmp = load(fullfile(pathname, filename));
+catch errObj
+	disp(errObj.message)
+	return
+end
 
-figure(1)
-plot(t, s, t, S)
-legend({'s', 'S'});
-fftplot(s, cal.Fs, figure(2));
-fftplot(S, cal.Fs, figure(3));
+
+freqlist = sort(unique(tmp))
+nfreq = length(freqlist)
+
+
