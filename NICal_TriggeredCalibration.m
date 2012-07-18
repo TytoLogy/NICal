@@ -101,7 +101,7 @@ guidata(hObject, handles);
 % binary output file
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-tmppath = fileparts(handles.cal.calfile)
+tmppath = fileparts(handles.cal.calfile);
 tmpname = sprintf('NICaldata-%s-1.daq', date);
 tmpfilename = fullfile(tmppath, tmpname);
 
@@ -118,7 +118,7 @@ else
 	OutputDataFile = filename;
 	[~, filebase] = fileparts(OutputDataFile);
 	filebase = filebase(1:(length(filebase)-2));
-	OutputMatFile = fullfile(OutputDataPath, [filebase '.mat']);
+	OutputMatFile = [filebase '.mat'];
 end
 
 %-----------------------------------------------------------------------
@@ -128,8 +128,6 @@ end
 %-----------------------------------------------------------------------
 NICal_NIinit_triggeredacq;
 guidata(hObject, handles);
-
-keyboard
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -149,34 +147,7 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 % Setup caldata struct for storing the calibration data
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-NICal_caldata_init;
-% set the FRANGE output scale value (usually 5 V)
-FRANGE = caldata.DAscale;
-
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-% Preallocate some arrays that are used locally
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-tmp = zeros(Nfreqs, cal.Nreps);
-tmpcell = cell(handles.Nchannels, 1);
-for i=1:handles.Nchannels
-	tmpcell{i} = tmp;
-end
-mags = tmpcell;
-magsraw = tmpcell;
-phis = tmpcell;
-phisraw = tmpcell;
-dists = tmpcell;
-distphis = tmpcell;
-atten = tmpcell;
-% add leak information if needed
-if handles.cal.MeasureLeak == 1
-	leakmags = tmpcell;
-	leakphis = tmpcell;
-	leakdists = tmpcell;
-	leakdistphis = tmpcell;
-end
+% NICal_caldata_init;
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -191,44 +162,23 @@ end_bin = start_bin + ms2bin(cal.StimDuration-cal.StimRamp, iodev.Fs);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% create null stimulus and time vector for plots, set up plots
+% create null response and time vector for plots, set up plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% create null stimulus
-zerostim = syn_null(cal.StimDuration, iodev.Fs, 0);
-% insert stim delay
-zerostim = insert_delay(zerostim, cal.StimDelay, iodev.Fs);
-% downsample (no need to plot all points)
-zerostim = downsample(zerostim, deciFactor);
-% downsample-factor adjusted sample interval
-dt = deciFactor/iodev.Fs;
-% # output points
-outpts = length(zerostim);
-% time vector for stimulus plots
-tvec_stim = 1000*dt*(0:(outpts-1));
-% stimulus start and end points
-stim_start = ms2bin(cal.StimDelay, iodev.Fs);
-stim_end = stim_start + outpts - 1;
+global Lacq Racq H acqpts
+
 % fake acquired data
 zeroacq = syn_null(cal.AcqDuration, iodev.Fs, 0);
 zeroacq = downsample(zeroacq, deciFactor);
 acqpts = length(zeroacq);
 % time vector for stimulus plots
-tvec_acq = 1000*dt*(0:(acqpts-1));
+tvec_acq = 1000*(1/iodev.Fs)*(0:(acqpts-1));
 %-------------------------------------------------------
 % create arrays for plotting and plot them
 %-------------------------------------------------------
-% stim
-Lstim = zerostim;
-Rstim = zerostim;
-% acq
 Lacq = zeroacq;
 Racq = zeroacq;
 
-H.Lstim = plot(handles.Lstimplot, tvec_stim, Lstim, 'g');
-set(H.Lstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Lstim');
-H.Rstim = plot(handles.Rstimplot, tvec_stim, Rstim, 'r');
-set(H.Rstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Rstim');
 H.Lacq = plot(handles.Lmicplot, tvec_acq, Lacq, 'g');
 set(H.Lacq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Lacq');
 H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
@@ -236,32 +186,40 @@ set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
 set(handles.Lstimplot, 'XTickLabel', '');
 set(handles.Lmicplot, 'XTickLabel', '');
 
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-% setup attenuation
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-if cal.AttenFix && between(cal.AttenFixValue, 0, MAX_ATTEN)
-	Latten = cal.AttenFixValue;
-	Ratten = cal.AttenFixValue;
-else
-	% set the adjustable starting attenuator values	
-	Latten = cal.StartAtten;
-	Ratten = cal.StartAtten;
-	if ~between(cal.AttenFixValue, 0, MAX_ATTEN)
-		warning('NICal:Atten', [mfilename ': AttenFixValue out of range, using default StartAtten value'])
-	end
-end
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% Acquire data
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+fprintf('Ready to acquire data...\n\n\n');
 
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-% Now initiate sweeps
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
 stopFlag = 0;
 rep = 1;
 freq_index = 1;
 
+userResp = menu('Acquiring Triggered Data', 'Start', 'Cancel');
+
+if userResp ~= 2
+	runFLAG = 1;
+	while runFLAG
+		%START ACQUIRING
+		start(iodev.NI.ai);
+		fprintf('Writing to file %s \n', iodev.NI.ai.LogFileName);
+		try
+			wait(iodev.NI.ai, handles.TriggerTimeout);
+		catch errEvent
+			disp('TIMEOUT!');
+			runFLAG = 0;
+		end
+	end
+	% stop acquiring
+	fprintf('... terminating\n')
+	stop(iodev.NI.ai);
+end
+
+
+
+%{
 %*******************************LOOP through the frequencies
 for F = 1:Nfreqs
 	freq = Freqs(F);
@@ -703,20 +661,49 @@ for F = 1:Nfreqs
 
 	freq_index = freq_index + 1;
 end %********************End of Cal loop
+%}
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Exit gracefully (close TDT objects, etc)
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-NICal_NIexit;
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% Clean up the RP circuits
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+disp('...closing NI devices...');
 
-if freq_index == Nfreqs+1
-	COMPLETE = 1;
-else
-	return
-end
+% get event log
+EventLogAI = showdaqevents(iodev.NI.ai);
 
+% delete and clear ai and ch0 object
+delete(iodev.NI.ai);
+delete(iodev.NI.chI);
+clear iodev.NI.ai iiodev.NI.chI
+
+% save settings information to mat file
+save(fullfile(pwd, 'NICal_EventLogs.mat'), ...
+		'EventLogAI'			, ...
+		'-MAT' );
+
+% save settings information to mat file
+Fs = iodev.Fs;
+InputChannel = cal.InputChannel;
+MicChannel = cal.Side;
+save(fullfile(OutputDataPath, OutputMatFile), ...
+		'InputChannel'			, ...
+		'MicChannel'			, ...
+		'acqpts'					, ...
+		'VtoPa'					, ...
+		'Fs'						, ...
+		'EventLogAI'			, ...
+		'-MAT' );
+
+COMPLETE = 1;
+
+%{
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Compute Averages
@@ -807,7 +794,9 @@ if DEBUG
 	caldata.magsdbug = magsdbug;
 	caldata.phisdbug = phisdbug;
 end
+%}
 
+%{
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % save handles and data
@@ -827,6 +816,7 @@ if cal.AutoSave
 	disp(['Saving calibration data in ' handles.cal.calfile ' ...']);
 	save(handles.cal.calfile, '-MAT', 'caldata');
 end
+%}
 
 disp('Finished.')
 

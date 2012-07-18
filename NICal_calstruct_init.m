@@ -124,7 +124,7 @@ cal.StimRamp = 1;
 cal.SweepDuration = 500;
 % some other derived variables (not user-settable)
 % Total time to acquire data (ms)
-cal.AcqDuration = cal.SweepDuration;
+%cal.AcqDuration = cal.SweepDuration;
 % Total sweep time = sweep duration + inter stimulus interval (ms)
 cal.SweepPeriod = cal.SweepDuration + cal.ISI;
 %----------------------------------------------------------------

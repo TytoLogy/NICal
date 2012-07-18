@@ -48,7 +48,7 @@ end
 %---------------------------------------------
 %---------------------------------------------
 % plot decimation factor
-deciFactor = 1;
+deciFactor = handles.deciFactor;
 % read in the gain on the mic preamp
 Gain_dB = handles.cal.MicGain;
 % convert dB to linear scale

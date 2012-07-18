@@ -23,7 +23,8 @@ disp('...starting NI hardware...');
 % Initialize the NI device
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-iodev.NI = handles.initfunction('NI', iodev.Dnum);
+%iodev.NI = handles.initfunction('NI', iodev.Dnum);
+iodev.NI = nidaq_aiao_init('NI', iodev.Dnum);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -82,7 +83,7 @@ set(iodev.NI.ai,'ManualTriggerHwOn','Trigger')
 set(iodev.NI.ai, 'TriggerRepeat', 0);
 % set SamplesPerTrigger to Inf for continous acquisition or 
 % to # of samples to collect for each trigger event
-set(iodev.NI.ai, 'SamplesPerTrigger', ms2samples(cal.AcqDuration, iodev.Fs));
+set(iodev.NI.ai, 'SamplesPerTrigger', ms2samples(cal.SweepDuration, iodev.Fs));
 
 %-------------------------------------------------------
 % set logging mode

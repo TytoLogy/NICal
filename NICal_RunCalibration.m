@@ -138,7 +138,7 @@ tvec_stim = 1000*dt*(0:(outpts-1));
 stim_start = ms2bin(cal.StimDelay, iodev.Fs);
 stim_end = stim_start + outpts - 1;
 % fake acquired data
-zeroacq = syn_null(cal.AcqDuration, iodev.Fs, 0);
+zeroacq = syn_null(cal.SweepDuration, iodev.Fs, 0);
 zeroacq = downsample(zeroacq, deciFactor);
 acqpts = length(zeroacq);
 % time vector for stimulus plots
@@ -180,6 +180,13 @@ else
 		warning('NICal:Atten', [mfilename ': AttenFixValue out of range, using default StartAtten value'])
 	end
 end
+
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% compute # of points per sweep
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+SweepPoints = ms2samples(cal.SweepDuration, iodev.Fs);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -257,7 +264,7 @@ for F = 1:Nfreqs
 			update_ui_str(handles.RAttenText, MAX_ATTEN);
 
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
+			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
 			
 			% filter the data if asked
 			if handles.cal.InputFilter
@@ -310,7 +317,7 @@ for F = 1:Nfreqs
 		% now, collect the data for frequency FREQ, LEFT channel
 		for rep = 1:cal.Nreps
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
+			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
 
 			% filter the data if asked
 			if handles.cal.InputFilter
@@ -467,7 +474,7 @@ for F = 1:Nfreqs
 			update_ui_str(handles.RAttenText, Ratten);
 
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
+			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
 			
 			% filter the data if asked
 			if handles.cal.InputFilter
@@ -522,7 +529,7 @@ for F = 1:Nfreqs
 		% now, collect the data for frequency FREQ, RIGHT headphone
 		for rep = 1:cal.Nreps
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, acqpts);
+			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
 
 			% filter the data if asked
 			if handles.cal.InputFilter

@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 18-Jul-2012 15:00:21
+% Last Modified by GUIDE v2.5 18-Jul-2012 18:58:31
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -180,7 +180,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% triggering level (Volts)
 	handles.TriggerLevel = 4;
 	% Decimation factor for rawdata plots
-	handles.deciFactor = 1;
+	handles.deciFactor = 10;
  
 	%----------------------------------------------------------
 	%----------------------------------------------------------
@@ -284,11 +284,14 @@ function SideCtrl_Callback(hObject, eventdata, handles)
 function TriggeredAcquisitionCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.TriggeredAcquisition = read_ui_val(hObject);
 	guidata(hObject, handles);
-	
+	% load list of handles to disable
+	trig_handles_list;
 	if handles.cal.TriggeredAcquisition == 1
-		handles.initfunction = @nidaq_triggeredacq_init;
+		handles.initfunction = @nidaq_ai_init;
+		disable_ui(trigger_handles);
 	else
-		handles.initfunction = handles.config.IOINITFUNCTION;
+		handles.initfunction = @nidaq_aiao_init;
+		enable_ui(trigger_handles);
 	end
 	guidata(hObject, handles);
 %-------------------------------------------------------------------------
@@ -978,12 +981,17 @@ function Menu_SaveAsDefaultSettings_Callback(hObject, eventdata, handles)
 	s = sprintf('Saving cal defaults in file %s', handles.defaultsfile);
 	msgbox(s, 'NICal: Save Defaults', 'non-modal');
 	cal = handles.cal;
-	uical = UpdateCalFromUI(handles);
+	uical = NICal_UpdateCalFromUI(handles);
 	save('calAB.mat', 'cal', 'uical', '-MAT');
 	save(handles.defaultsfile, 'cal');
 	clear cal
 %--------------------------------------------------------------------------
 
+
+%--------------------------------------------------------------------------
+function Menu_DumpHandles_Callback(hObject, eventdata, handles)
+	save('NICalhandles.mat', 'handles', '-MAT')
+%--------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
@@ -1137,6 +1145,7 @@ function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 		 set(hObject,'BackgroundColor','white');
 	end
 %-------------------------------------------------------------------------
+
 
 
 

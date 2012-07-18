@@ -86,6 +86,15 @@ set(iodev.NI.ai, 'TriggerRepeat', 0);
 set(iodev.NI.ai, 'SamplesPerTrigger', ms2samples(handles.cal.SweepDuration, iodev.Fs));
 
 %------------------------------------------------------------------------
+% EVENT and CALLBACK PARAMETERS
+%------------------------------------------------------------------------
+% first, set the object to call the SamplesAcquiredFunction when
+% BufferSize # of points are available
+set(iodev.NI.ai, 'SamplesAcquiredFcnCount', ms2samples(handles.cal.SweepDuration, iodev.Fs));
+% provide callback function handle (ai_plotpeek_callback.m)
+set(iodev.NI.ai, 'SamplesAcquiredFcn', {@plot_callback});
+
+%------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % file logging
 %------------------------------------------------------------------------

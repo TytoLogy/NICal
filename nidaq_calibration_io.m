@@ -24,7 +24,7 @@ function [resp, index] = nidaq_calibration_io(iodev, stim, inpts)
 
 putdata(iodev.NI.ao, stim');
 
-timeToWait = bin2seconds(inpts, iodev.Fs)*1.5;
+timeToWait = bin2seconds(inpts, iodev.Fs)*2;
 
 %START ACQUIRING
 start([iodev.NI.ai iodev.NI.ao]);
