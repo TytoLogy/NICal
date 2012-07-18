@@ -27,12 +27,58 @@ NICal_Constants;
 %-----------------------------------------------------------------------
 % set the COMPLETE flag to 0
 COMPLETE = 0;
+
 %---------------------------------------------
-% Load the settings and constants 
 %---------------------------------------------
-NICal_settings;
+% Global Constants
+%---------------------------------------------
+%---------------------------------------------
+NICal_Constants;
+
+%---------------------------------------------
+%---------------------------------------------
+% Load Microphone calibration data
+%---------------------------------------------
+%---------------------------------------------
+if read_ui_val(handles.FRenableCtrl) == 0
+	DAscale = read_ui_str(handles.DAscaleCtrl, 'n');
+	handles.cal.mic_fr = [];
+	handles.cal.DAscale = DAscale;
+else
+	load(handles.cal.mic_fr_file, 'frdata');
+	if ~isfield(frdata, 'DAscale')
+		frdata.DAscale = frdata.calsettings.DAscale;
+	end
+	handles.cal.mic_fr = frdata;
+end
 % save the GUI handle information
 guidata(hObject, handles);
+
+%---------------------------------------------
+%---------------------------------------------
+% settings
+%---------------------------------------------
+%---------------------------------------------
+% plot decimation factor
+deciFactor = handles.deciFactor;
+% read in the gain on the mic preamp
+Gain_dB = handles.cal.MicGain;
+% convert dB to linear scale
+Gain = invdb(Gain_dB);
+% this is the sensitivity of the calibration mic in V / Pa
+% if FR file is used, get sens. from there, 
+if read_ui_val(handles.FRenableCtrl) == 1
+	CalMic_sense = frdata.calsettings.CalMic_sense;
+else
+	% otherwise, use cal information
+	CalMic_sense = handles.cal.MicSensitivity;
+end
+% pre-compute the V -> Pa conversion factor
+VtoPa = (CalMic_sense^-1);
+% precompute the volts -> RMS conversion factor for sinusoids (0.7071)
+RMSsin = 1/sqrt(2);
+
+
 %---------------------------------------------
 % make a local copy of the cal settings structure
 %---------------------------------------------
@@ -48,13 +94,42 @@ iodev = handles.iodev;
 handles.Nchannels = 2;
 guidata(hObject, handles);
 
+
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% setup output files - automagic triggering will write data to
+% binary output file
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+tmppath = fileparts(handles.cal.calfile)
+tmpname = sprintf('NICaldata-%s-1.daq', date);
+tmpfilename = fullfile(tmppath, tmpname);
+
+[filename, pathname] = uiputfile(	{'*.daq', 'Matlab DAQ file (*.daq)'}, ...
+												'Save Triggered data', ...
+												tmpfilename );
+											
+if isequal(filename, 0) || isequal(pathname, 0)
+	disp('Cancelling')
+	return
+else
+	% parse filenames
+	OutputDataPath = pathname;
+	OutputDataFile = filename;
+	[~, filebase] = fileparts(OutputDataFile);
+	filebase = filebase(1:(length(filebase)-2));
+	OutputMatFile = fullfile(OutputDataPath, [filebase '.mat']);
+end
+
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Start DAQ things
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-NICal_NIinit;
+NICal_NIinit_triggeredacq;
 guidata(hObject, handles);
+
+keyboard
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------

@@ -108,6 +108,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 		addpath(['C:\TytoLogy\TytoSettings\' getenv('USERNAME')]);
 	end	
 	config = NICal_Configuration;
+	handles.config = config;
 	% save handles
 	guidata(hObject, handles);	
 	
@@ -167,13 +168,30 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	iodev.status = 0;
 	handles.iodev = iodev;
 	guidata(hObject, handles);
-
+	
+	%----------------------------------------------------------
+	%----------------------------------------------------------
+	% some IO constants - not sure where to put them , so 
+	% put them here
+	%----------------------------------------------------------
+	%----------------------------------------------------------
+	% time to wait for TTL trigger in seconds
+	handles.TriggerTimeout = 10;
+	% triggering level (Volts)
+	handles.TriggerLevel = 4;
+	% Decimation factor for rawdata plots
+	handles.deciFactor = 1;
+ 
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% set function handles from configuration data
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	handles.initfunction = config.IOINITFUNCTION;
+	if handles.cal.TriggeredAcquisition == 1
+		handles.initfunction = @nidaq_triggeredacq_init;
+	else
+		handles.initfunction = @nidaq_aiao_init;
+	end
 	handles.iofunction = config.IOFUNCTION;
 	handles.attfunction = config.ATTENFUNCTION;
 	guidata(hObject, handles);
@@ -264,7 +282,17 @@ function SideCtrl_Callback(hObject, eventdata, handles)
 % --- Executes on button press in TriggeredAcquisitionCtrl.
 %-------------------------------------------------------------------------
 function TriggeredAcquisitionCtrl_Callback(hObject, eventdata, handles)
-
+	handles.cal.TriggeredAcquisition = read_ui_val(hObject);
+	guidata(hObject, handles);
+	
+	if handles.cal.TriggeredAcquisition == 1
+		handles.initfunction = @nidaq_triggeredacq_init;
+	else
+		handles.initfunction = handles.config.IOINITFUNCTION;
+	end
+	guidata(hObject, handles);
+%-------------------------------------------------------------------------
+	
 %-------------------------------------------------------------------------
 % --- Executes on button press in FreqListCtrl.
 %-------------------------------------------------------------------------
@@ -551,8 +579,8 @@ function StimDurationCtrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 function SweepDurationCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
-	if ~between(tmp, 100, 2000)
-		warndlg('Sweep must be between 100 and 2000 ms', 'Invalid SweepDuration');
+	if ~between(tmp, 10, 5000)
+		warndlg('Sweep must be between 10 and 5000 ms', 'Invalid SweepDuration');
 		update_ui_str(hObject, handles.cal.SweepDuration);
 	else
 		handles.cal.SweepDuration = tmp;
