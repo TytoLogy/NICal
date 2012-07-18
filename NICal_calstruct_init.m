@@ -42,6 +42,14 @@ NICal_Constants;
 cal.Side = L;
 
 %----------------------------------------------------------------
+% Triggered Acquisition bypasses most of the 
+% settings and uses external TTL pulse to start
+% sweep
+%----------------------------------------------------------------
+cal.TriggeredAcquisition
+
+
+%----------------------------------------------------------------
 % # reps per frequency
 %----------------------------------------------------------------
 cal.Nreps = 3;

@@ -150,7 +150,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	% update user interface
 	%----------------------------------------------------------
-	UpdateUIFromCal(handles, handles.cal);
+	NICal_UpdateUIFromCal(handles, handles.cal);
 	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
@@ -659,7 +659,7 @@ function DAscaleCtrl_Callback(hObject, eventdata, handles)
 % --- Executes on button press in MeasureLeakCtrl. ("Measure Crosstalk")
 %--------------------------------------------------------------------------
 function MeasureLeakCtrl_Callback(hObject, eventdata, handles)
-	handles.MeasureLeak = read_ui_val(hObject);
+	handles.cal.MeasureLeak = read_ui_val(hObject);
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
@@ -947,7 +947,7 @@ function Menu_LoadSettings_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 	% update user interface
-	UpdateUIFromCal(handles, handles.cal);		
+	NICal_UpdateUIFromCal(handles, handles.cal);		
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
@@ -972,7 +972,7 @@ function Menu_ReloadDefaults_Callback(hObject, eventdata, handles)
 	clear cal
 	guidata(hObject, handles);
 	% update user interface
-	UpdateUIFromCal(handles, handles.cal);
+	NICal_UpdateUIFromCal(handles, handles.cal);
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
@@ -1010,165 +1010,6 @@ function CloseRequestFcn(hObject, eventdata, handles)
 	delete(hObject);
 %--------------------------------------------------------------------------
 
-%--------------------------------------------------------------------------
-%--------------------------------------------------------------------------
-% updates UI from settings in cal
-%--------------------------------------------------------------------------
-%--------------------------------------------------------------------------
-function UpdateUIFromCal(handles, cal)
-	%-----------------------------------------
-	% CALIBRATION SETTINGS
-	%-----------------------------------------
-	update_ui_val(handles.SideCtrl, cal.Side);
-	update_ui_str(handles.NrepsCtrl, cal.Nreps);
-	% Freq settings
-	update_ui_val(handles.FreqListCtrl, cal.UseFreqList);
-	if cal.UseFreqList
-		disable_ui(handles.FminCtrl);
-		disable_ui(handles.FmaxCtrl);
-		disable_ui(handles.FstepCtrl);
-	else
-		enable_ui(handles.FminCtrl);
-		enable_ui(handles.FmaxCtrl);
-		enable_ui(handles.FstepCtrl);
-	end
-	update_ui_str(handles.FminCtrl, cal.Fmin);
-	update_ui_str(handles.FmaxCtrl, cal.Fmax);
-	update_ui_str(handles.FstepCtrl, cal.Fstep);
-	% Attenuation settings
-	update_ui_val(handles.AttenFixCtrl, cal.AttenFix);
-	update_ui_str(handles.AttenFixValueCtrl, cal.AttenFixValue);
-	if cal.AttenFix
-		show_uictrl(handles.AttenFixValueCtrl);
-		set(handles.AttenFixValueCtrlText, 'Visible', 'on');
-		disable_ui(handles.MinlevelCtrl);
-		disable_ui(handles.MaxlevelCtrl);
-		disable_ui(handles.AttenStepCtrl);
-		disable_ui(handles.StartAttenCtrl);
-	else
-		hide_uictrl(handles.AttenFixValueCtrl);
-		set(handles.AttenFixValueCtrlText, 'Visible', 'off');
-		enable_ui(handles.MinlevelCtrl);
-		enable_ui(handles.MaxlevelCtrl);
-		enable_ui(handles.AttenStepCtrl);
-		enable_ui(handles.StartAttenCtrl);
-	end
-	update_ui_str(handles.MinlevelCtrl, cal.Minlevel);
-	update_ui_str(handles.MaxlevelCtrl, cal.Maxlevel);
-	update_ui_str(handles.AttenStepCtrl, cal.AttenStep);
-	update_ui_str(handles.StartAttenCtrl, cal.StartAtten);
-	%  Check Cal setting
-	update_ui_val(handles.CheckCalCtrl, cal.CheckCal + 1);
-	%-----------------------------------------
-	% INPUT/OUTPUT SETTINGS
-	%-----------------------------------------
-	update_ui_str(handles.ISICtrl, cal.ISI);
-	update_ui_str(handles.StimDurationCtrl, cal.StimDuration);
-	update_ui_str(handles.StimDelayCtrl, cal.StimDelay);
-	update_ui_str(handles.StimRampCtrl, cal.StimRamp);
-	update_ui_str(handles.SweepDurationCtrl, cal.SweepDuration);
-	update_ui_str(handles.DAscaleCtrl, cal.DAscale);
-	update_ui_val(handles.MeasureLeakCtrl, cal.MeasureLeak);
-	% input bandpass filter
-	update_ui_val(handles.InputFilterCtrl, cal.InputFilter);
-	update_ui_str(handles.HiPassFcCtrl, cal.InputHPFc);
-	update_ui_str(handles.LoPassFcCtrl, cal.InputLPFc);
-	if cal.InputFilter
-		enable_ui(handles.HiPassFcCtrl);
-		enable_ui(handles.LoPassFcCtrl);
-	else
-		disable_ui(handles.HiPassFcCtrl);
-		disable_ui(handles.LoPassFcCtrl);
-	end
-	%-----------------------------------------
-	% MICROPHONE SETTINGS
-	%-----------------------------------------
-	update_ui_val(handles.FRenableCtrl, cal.FRenable);
-	update_ui_val(handles.InputChannelCtrl, cal.InputChannel);
-	update_ui_str(handles.MicGainCtrl, cal.MicGain);
-	update_ui_str(handles.MicSensitivityCtrl, cal.MicSensitivity);		
-	%-----------------------------------------
-	% FILE SETTINGS
-	%-----------------------------------------
-	update_ui_str(handles.MicFRFileCtrl, cal.mic_fr_file);
-	update_ui_str(handles.CalFileCtrl, cal.calfile);
-	update_ui_val(handles.AutoSaveCtrl, cal.AutoSave);
-%-------------------------------------------------------------------------
-%-------------------------------------------------------------------------
-
-
-
-%--------------------------------------------------------------------------
-%--------------------------------------------------------------------------
-% updates CAL from settings in UI controls
-%--------------------------------------------------------------------------
-%--------------------------------------------------------------------------
-function cal = UpdateCalFromUI(handles)
-	%-----------------------------------------
-	% CALIBRATION SETTINGS
-	%-----------------------------------------
-	cal.Side = read_ui_val(handles.SideCtrl);
-	cal.Nreps = read_ui_str(handles.NrepsCtrl, 'n');
-	% Freq settings
-	cal.UseFreqList = read_ui_val(handles.FreqListCtrl);
-	cal.Fmin = read_ui_str(handles.FminCtrl, 'n');
-	cal.Fmax = read_ui_str(handles.FmaxCtrl, 'n');
-	cal.Fstep = read_ui_str(handles.FstepCtrl, 'n');
-	% update Freqs and Nfreqs
-	cal.Freqs = cal.Fmin:cal.Fstep:cal.Fmax;
-	cal.Nfreqs = length(cal.Freqs);
-	% Attenuation settings
-	cal.AttenFix = read_ui_val(handles.AttenFixCtrl);
-	cal.AttenFixValue = read_ui_str(handles.AttenFixValueCtrl, 'n');
-	cal.Minlevel = read_ui_str(handles.MinlevelCtrl, 'n');
-	cal.Maxlevel = read_ui_str(handles.MaxlevelCtrl, 'n');
-	cal.AttenStep = read_ui_str(handles.AttenStepCtrl, 'n');
-	cal.StartAtten = read_ui_str(handles.StartAttenCtrl, 'n');
-	%  Check Cal setting
-	cal.CheckCal = read_ui_val(handles.CheckCalCtrl) - 1;
-	%-----------------------------------------
-	% INPUT/OUTPUT SETTINGS
-	%-----------------------------------------
-	cal.ISI = read_ui_str(handles.ISICtrl, 'n');
-	cal.StimDuration = read_ui_str(handles.StimDurationCtrl, 'n');
-	cal.StimDelay = read_ui_str(handles.StimDelayCtrl, 'n');
-	cal.StimRamp = read_ui_str(handles.StimRampCtrl, 'n');
-	cal.SweepDuration = read_ui_str(handles.SweepDurationCtrl, 'n');
-	cal.DAscale = read_ui_str(handles.DAscaleCtrl, 'n');
-	cal.MeasureLeak = read_ui_val(handles.MeasureLeakCtrl);
-	% some other derived variables (not user-settable)
-	% Total time to acquire data (ms)
-	cal.AcqDuration = cal.SweepDuration;
-	% Total sweep time = sweep duration + inter stimulus interval (ms)
-	cal.SweepPeriod = cal.SweepDuration + cal.ISI;
-	% input bandpass filter
-	cal.InputFilter = read_ui_val(handles.InputFilterCtrl);
-	cal.InputHPFc = read_ui_str(handles.HiPassFcCtrl, 'n');
-	cal.InputLPFc = read_ui_str(handles.LoPassFcCtrl, 'n');
-	cal.Fs = handles.cal.Fs;
-	% Nyquist frequency
-	fnyq = cal.Fs/2;
-	% filter order
-	cal.forder = 5;
-	% passband definition
-	cal.fband = [cal.InputHPFc cal.InputLPFc] ./ fnyq;
-	% filter coefficients using a butterworth bandpass filter
-	[cal.fcoeffb, cal.fcoeffa] = butter(cal.forder, cal.fband, 'bandpass');
-	%-----------------------------------------
-	% MICROPHONE SETTINGS
-	%-----------------------------------------
-	cal.FRenable = read_ui_val(handles.FRenableCtrl);
-	cal.InputChannel = read_ui_val(handles.InputChannelCtrl);
-	cal.MicGain = read_ui_str(handles.MicGainCtrl, 'n');
-	cal.MicSensitivity = read_ui_str(handles.MicSensitivityCtrl, 'n');		
-	%-----------------------------------------
-	% FILE SETTINGS
-	%-----------------------------------------
-	cal.mic_fr_file = read_ui_str(handles.MicFRFileCtrl);
-	cal.calfile = read_ui_str(handles.CalFileCtrl);
-	cal.AutoSave = read_ui_val(handles.AutoSaveCtrl);
-%-------------------------------------------------------------------------
-%-------------------------------------------------------------------------
 
 
 %--------------------------------------------------------------------------

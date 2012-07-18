@@ -40,6 +40,8 @@ guidata(hObject, handles);
 % make a local copy of the cal settings structure
 %---------------------------------------------
 cal = handles.cal;
+
+cal
 %---------------------------------------------
 % make local copy of iodev TDT control struct
 %---------------------------------------------
@@ -118,20 +120,50 @@ end_bin = start_bin + ms2bin(cal.StimDuration-cal.StimRamp, iodev.Fs);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% create null stimulus and time vector for plots
+% create null stimulus and time vector for plots, set up plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% create null stimulus
 zerostim = syn_null(cal.StimDuration, iodev.Fs, 0);
+% insert stim delay
 zerostim = insert_delay(zerostim, cal.StimDelay, iodev.Fs);
+% downsample (no need to plot all points)
 zerostim = downsample(zerostim, deciFactor);
+% downsample-factor adjusted sample interval
 dt = deciFactor/iodev.Fs;
-outpts = length(zerostim);		
-% time vector for plots
-tvec = 1000*dt*(0:(outpts-1));
-zerostim = [0 0];		
-acqpts = ms2bin(cal.AcqDuration, iodev.Fs);
+% # output points
+outpts = length(zerostim);
+% time vector for stimulus plots
+tvec_stim = 1000*dt*(0:(outpts-1));
+% stimulus start and end points
 stim_start = ms2bin(cal.StimDelay, iodev.Fs);
 stim_end = stim_start + outpts - 1;
+% fake acquired data
+zeroacq = syn_null(cal.AcqDuration, iodev.Fs, 0);
+zeroacq = downsample(zeroacq, deciFactor);
+acqpts = length(zeroacq);
+% time vector for stimulus plots
+tvec_acq = 1000*dt*(0:(acqpts-1));
+%-------------------------------------------------------
+% create arrays for plotting and plot them
+%-------------------------------------------------------
+% stim
+Lstim = zerostim;
+Rstim = zerostim;
+% acq
+Lacq = zeroacq;
+Racq = zeroacq;
+
+H.Lstim = plot(handles.Lstimplot, tvec_stim, Lstim, 'g');
+set(H.Lstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Lstim');
+H.Rstim = plot(handles.Rstimplot, tvec_stim, Rstim, 'r');
+set(H.Rstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Rstim');
+H.Lacq = plot(handles.Lmicplot, tvec_acq, Lacq, 'g');
+set(H.Lacq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Lacq');
+H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
+set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
+set(handles.Lstimplot, 'XTickLabel', '');
+set(handles.Lmicplot, 'XTickLabel', '');
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -196,12 +228,11 @@ for F = 1:Nfreqs
 		S = insert_delay(S, cal.StimDelay, iodev.Fs);
 		% save in Satt
 		Satt = S;
-		% plot the array
-		% axes(handles.Lstimplot);
-		plot(handles.Lstimplot, tvec, downsample(S(1, :), deciFactor), 'g');
-		% axes(handles.Rstimplot);
-		plot(handles.Rstimplot, zerostim, 'r');
-		drawnow
+		% plot the stimuli - set R stim to zero
+		Lstim = downsample(S(1, :), deciFactor);
+		Rstim = zerostim;
+		refreshdata(H.Lstim, 'caller');
+		refreshdata(H.Rstim, 'caller');
 		
 		%loop while figuring out the L attenuator value.
 		if cal.AttenFix
@@ -269,11 +300,10 @@ for F = 1:Nfreqs
 			end
 
 			% plot the response
-			% axes(handles.Lmicplot);
-			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
-			% axes(handles.Rmicplot);
-			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
-			drawnow
+			Lacq = downsample(resp{L}, deciFactor);
+			Racq = downsample(resp{R}, deciFactor);
+			refreshdata(H.Lacq, 'caller');
+			refreshdata(H.Racq, 'caller');
 		end
 
 		pause(0.001*cal.ISI);
@@ -357,6 +387,7 @@ for F = 1:Nfreqs
 
 			% if MeasureLeak is requested, measure it!
 			if handles.cal.MeasureLeak
+				disp('computing leak')
 				% determine magnitude and phase of the response in the
 				% opposite channel - this is the leak magnitude and phase
 				[rleakmag, rleakphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -381,11 +412,10 @@ for F = 1:Nfreqs
 			end
 			
 			% plot the response
-			% axes(handles.Lmicplot);
-			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
-			% axes(handles.Rmicplot);
-			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
-			drawnow
+			Lacq = downsample(resp{L}, deciFactor);
+			Racq = downsample(resp{R}, deciFactor);
+			refreshdata(H.Lacq, 'caller');
+			refreshdata(H.Racq, 'caller');
 			
 			% Pause for ISI
 			pause(0.001*cal.ISI);
@@ -410,11 +440,11 @@ for F = 1:Nfreqs
 		S = insert_delay(S, cal.StimDelay, iodev.Fs);
 		% save in Satt
 		Satt = S;
-		% plot the array
-		% axes(handles.Lstimplot);	
-		plot(handles.Lstimplot, zerostim, 'g');
-		% axes(handles.Rstimplot);
-		plot(handles.Rstimplot, tvec, downsample(S(2, :), deciFactor), 'r');
+		% plot the stimulus arrays
+		Lstim = zerostim;
+		Rstim = downsample(S(2, :), deciFactor);
+		refreshdata(H.Lstim, 'caller');
+		refreshdata(H.Rstim, 'caller');
 
 		%loop while figuring out the R attenuator value.
 		if cal.AttenFix
@@ -482,10 +512,10 @@ for F = 1:Nfreqs
 			end
 
 			% plot the response
-			% axes(handles.Lmicplot);
-			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
-			% axes(handles.Rmicplot);
-			plot(handles.Lmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
+			Lacq = downsample(resp{L}, deciFactor);
+			Racq = downsample(resp{R}, deciFactor);
+			refreshdata(H.Lacq, 'caller');
+			refreshdata(H.Racq, 'caller');
 		end
 
 		pause(0.001*cal.ISI);
@@ -585,11 +615,12 @@ for F = 1:Nfreqs
 			end
 			
 			% plot the response
-			% axes(handles.Lmicplot);
-			plot(handles.Lmicplot, downsample(resp{L}(stim_start:stim_end), deciFactor), 'g');
-			% axes(handles.Rmicplot);
-			plot(handles.Rmicplot, downsample(resp{R}(stim_start:stim_end), deciFactor), 'r');
-
+			Lacq = downsample(resp{L}, deciFactor);
+			Racq = downsample(resp{R}, deciFactor);
+			refreshdata(H.Lacq, 'caller');
+			refreshdata(H.Racq, 'caller');
+	
+			% pause for ISI (convert to seconds)
 			pause(0.001*cal.ISI);
 		end
 	end
