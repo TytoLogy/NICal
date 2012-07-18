@@ -1,19 +1,16 @@
 %--------------------------------------------------------------------------
-% NICal_RunCalibration.m
+% NICal_TriggeredCalibration.m
 %--------------------------------------------------------------------------
-% Runs the speaker calibration
-% if FR Correction is selected, apply mic correction using data from
-% MicrophoneCal program (earphone fr data)
+% Runs the TTL triggered speaker calibration
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
 % Sharad Shanbhag
 % sshanbhag@neomed.edu
 %--------------------------------------------------------------------------
-% Created:	March 2012 from HeadphoneCal_RunCalibration,	SJS
+% Created:	18 July, 2012 from NICal_RunCalibration
 %
 % Revisions:
-%	9 July, 2012 (SJS) renamed for NICal project
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------

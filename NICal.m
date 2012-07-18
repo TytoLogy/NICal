@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 17-Jul-2012 15:50:14
+% Last Modified by GUIDE v2.5 18-Jul-2012 15:00:21
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -178,32 +178,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	handles.attfunction = config.ATTENFUNCTION;
 	guidata(hObject, handles);
 	
-	%{
-	%----------------------------------------------------------
-	%----------------------------------------------------------
-	% setup for not using FR file
-	%----------------------------------------------------------
-	%----------------------------------------------------------
-	disable_ui(handles.MicFRFileCtrl);
-	%%% whatever needs to be done to disable mic FR use
-	disable_ui(handles.MicFRFileCtrl);
-	enable_ui(handles.InputChannelCtrl);
-	enable_ui(handles.MicGainCtrl);
-	enable_ui(handles.MicSensitivityCtrl);
-	enable_ui(handles.DAscaleCtrl);
-	handles.cal.FRenable = 0;
-	guidata(hObject, handles);
-	
-	%----------------------------------------------------------
-	%----------------------------------------------------------
-	% default is no leak (crosstalk) measurement
-	%----------------------------------------------------------
-	%----------------------------------------------------------
-	handles.cal.MeasureLeak = 0;
-	update_ui_val(handles.MeasureLeakCtrl, handles.cal.MeasureLeak);
-	guidata(hObject, handles);
-	%}
-	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% Update handles structure
@@ -212,13 +186,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	handles.CalComplete = 0;
 	handles.output = hObject;
 	guidata(hObject, handles);		
-		
-	%----------------------------------------------------------
-	%----------------------------------------------------------
-	% UIWAIT makes NICal wait for user response (see UIRESUME)
-	%----------------------------------------------------------
-	%----------------------------------------------------------
-	% uiwait(handles.figure1);
 %--------------------------------------------------------------------------
 
 
@@ -247,25 +214,20 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
 	COMPLETE = 0;
 	guidata(hObject, handles);
 	%---------------------------------------------------------------
-	% run calibration script
+	% run appropriate calibration script
  	%---------------------------------------------------------------
-	NICal_RunCalibration
+	switch read_ui_val(handles.TriggeredAcquisitionCtrl) 
+		case 0
+			NICal_RunCalibration
+		case 1
+			NICal_TriggeredCalibration			
+	end
 	%---------------------------------------------------------------
 	% enable Calibration ctrl, disable abort ctrl
 	%---------------------------------------------------------------
 	enable_ui(handles.RunCalibrationCtrl);
 	hide_uictrl(handles.AbortCtrl);
 	set(handles.AbortCtrl, 'Value', 0);
-
-	%{
-	%---------------------------------------------------------------
-	% save cal settings to defaults
-	%---------------------------------------------------------------
-	if COMPLETE
-		handles.CalComplete = 1;
-		save(handles.defaultsfile, 'cal');
-	end
-	%}
 
 	%---------------------------------------------------------------
 	% save handles
@@ -296,6 +258,12 @@ function SideCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.Side = read_ui_val(hObject);
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
+
+
+%-------------------------------------------------------------------------
+% --- Executes on button press in TriggeredAcquisitionCtrl.
+%-------------------------------------------------------------------------
+function TriggeredAcquisitionCtrl_Callback(hObject, eventdata, handles)
 
 %-------------------------------------------------------------------------
 % --- Executes on button press in FreqListCtrl.
