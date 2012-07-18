@@ -31,7 +31,7 @@ caldata.timestamp = now;							% timestamp
 caldata.adFc = iodev.Fs;							% analog input rate
 caldata.daFc = iodev.Fs;							% analog output rate
 caldata.nrasters = Nfreqs;							% number of freqs to collect
-caldata.range = F;									% freq range (matlab string)
+caldata.range = [min(Freqs) max(Freqs)];		% freq range (matlab string)
 caldata.reps = cal.Nreps;							% reps per frequency
 caldata.settings = cal;
 caldata.atten = cal.StartAtten;					% initial attenuator setting
@@ -52,7 +52,7 @@ caldata.dist = tmparr;
 caldata.mag_stderr = tmparr;
 caldata.phase_stderr = tmparr;
 % if leak is to be measured, create storage space
-if handles.MeasureLeak
+if handles.cal.MeasureLeak
 	caldata.leakmag = tmparr;
 	caldata.leakmad_stderr = tmparr;
 	caldata.leakphase = tmparr;
@@ -64,7 +64,7 @@ if handles.MeasureLeak
 end
 
 % if a non-reference mic (e.g., B&K) is not used, add some other stuff
-if ~handles.FRenable
+if ~handles.cal.FRenable
 	caldata.Side = handles.cal.Side;
 	caldata.InputChannel = handles.cal.InputChannel;
 	caldata.DAscale = handles.cal.DAscale;
@@ -82,7 +82,7 @@ end
 % calibration frequencies using interpolation 
 %------------------------------------------------------------------
 %------------------------------------------------------------------
-if ~handles.FRenable
+if ~handles.cal.FRenable
 	frdata.lmagadjval = ones(size(caldata.freq));
 	frdata.rmagadjval = ones(size(caldata.freq));
 	frdata.lphiadjval = zeros(size(caldata.freq));

@@ -21,15 +21,7 @@
 % Global Constants
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-L = 1;
-R = 2;
-REF = 3;
-BOTH = 3;
-REFL = 3;
-REFR = 4;
-MAX_ATTEN = 120;
-
-DEBUG = 0;
+NICal_Constants;
 	
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -38,40 +30,25 @@ DEBUG = 0;
 %-----------------------------------------------------------------------
 % set the COMPLETE flag to 0
 COMPLETE = 0;
-
+%---------------------------------------------
 % Load the settings and constants 
+%---------------------------------------------
 NICal_settings;
-
 % save the GUI handle information
 guidata(hObject, handles);
-
+%---------------------------------------------
 % make a local copy of the cal settings structure
+%---------------------------------------------
 cal = handles.cal;
-
+%---------------------------------------------
+% make local copy of iodev TDT control struct
+%---------------------------------------------
+iodev = handles.iodev;
+%---------------------------------------------
 % KLUDGE!!!!!!!
+%---------------------------------------------
 handles.Nchannels = 2;
 guidata(hObject, handles);
-
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-% Some checks and balances
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-% check calibration frequency range
-%------------------------------------------------
-if handles.FRenable
-	% is frequency in range of the fr data for the headphones?
-	% check low freq limit
-	if F(1) < frdata.range(1)
-		warning('NICal:Freq', [mfilename ': requested LF calibration limit is out of FR file bounds']);
-		return
-	end
-	% check high freq limit
-	if F(3) > frdata.range(3)
-		warning('NICal:Freq', [mfilename ': requested HF calibration limit is out of FR file bounds']);
-		return
-	end
-end
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -121,7 +98,7 @@ dists = tmpcell;
 distphis = tmpcell;
 atten = tmpcell;
 % add leak information if needed
-if handles.MeasureLeak == 1
+if handles.cal.MeasureLeak == 1
 	leakmags = tmpcell;
 	leakphis = tmpcell;
 	leakdists = tmpcell;
@@ -161,14 +138,14 @@ stim_end = stim_start + outpts - 1;
 % setup attenuation
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-if cal.AttenFix && between(cal.AttenFixValue, 0, 120)
+if cal.AttenFix && between(cal.AttenFixValue, 0, MAX_ATTEN)
 	Latten = cal.AttenFixValue;
 	Ratten = cal.AttenFixValue;
 else
 	% set the adjustable starting attenuator values	
 	Latten = cal.StartAtten;
 	Ratten = cal.StartAtten;
-	if ~between(cal.AttenFixValue, 0, 120)
+	if ~between(cal.AttenFixValue, 0, MAX_ATTEN)
 		warning('NICal:Atten', [mfilename ': AttenFixValue out of range, using default StartAtten value'])
 	end
 end
@@ -181,12 +158,20 @@ end
 stopFlag = 0;
 rep = 1;
 freq_index = 1;
-Nfreqs = length(F(1):F(2):F(3));
+
 %*******************************LOOP through the frequencies
-for freq = F(1):F(2):F(3)
+for F = 1:Nfreqs
+	freq = Freqs(F);
+	
 	% update the frequency and reps display value
 	update_ui_str(handles.FreqValText, sprintf('%d', freq));
 	update_ui_str(handles.RepNumText, sprintf('%d', rep));
+
+	% check for abort
+	if read_ui_val(handles.AbortCtrl) == 1
+		disp('abortion detected')
+		break
+	end
 
 	% if we're collecting check data, print the frequency on the
 	% command line
@@ -371,7 +356,7 @@ for freq = F(1):F(2):F(3)
 			end
 
 			% if MeasureLeak is requested, measure it!
-			if handles.MeasureLeak
+			if handles.cal.MeasureLeak
 				% determine magnitude and phase of the response in the
 				% opposite channel - this is the leak magnitude and phase
 				[rleakmag, rleakphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -579,7 +564,7 @@ for freq = F(1):F(2):F(3)
 			end
 
 			% if MeasureLeak is requested, measure it!
-			if handles.MeasureLeak
+			if handles.cal.MeasureLeak
 				[lleakmag, lleakphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, freq);
 				[lleakdistmag, lleakdistphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				% update L text display
@@ -637,7 +622,8 @@ end
 %-----------------------------------------------------------------------
 freq_index = 1;
 %*******************************LOOP through the frequencies
-for freq = F(1):F(2):F(3)
+for F = 1:Nfreqs
+	freq = Freqs(F);
 	% compute the averages for this frequency
 
 	% magnitude (dB) = db(rms) + atten
@@ -673,7 +659,7 @@ for freq = F(1):F(2):F(3)
 	end
 	
 	% store leak data if collected
-	if handles.MeasureLeak
+	if handles.cal.MeasureLeak
 		% compute the averages for this frequency
 		%{
 		leakmags{L}(freq_index, :) = dbspl(leakmags{L}(freq_index, :)) - dbspl(mags{R}(freq_index, :));
@@ -711,7 +697,7 @@ caldata.magsraw = magsraw;
 caldata.atten = atten;
 caldata.calibration_settings = cal;
 % store leak data if collected
-if handles.MeasureLeak
+if handles.cal.MeasureLeak
 	caldata.leakmags = leakmags;
 end
 

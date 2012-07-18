@@ -33,7 +33,7 @@ NICal_Constants;
 if read_ui_val(handles.FRenableCtrl) == 0
 	DAscale = read_ui_str(handles.DAscaleCtrl, 'n');
 	handles.cal.mic_fr = [];
-	cal.DAscale = DAscale;
+	handles.cal.DAscale = DAscale;
 else
 	load(handles.cal.mic_fr_file, 'frdata');
 	if ~isfield(frdata, 'DAscale')
@@ -71,14 +71,23 @@ RMSsin = 1/sqrt(2);
 % set up the calibration frequency range
 %---------------------------------------------
 %---------------------------------------------
-Freqs = handles.cal.Fmin:handles.cal.Fstep:handles.cal.Fmax;
-F = [handles.cal.Fmin handles.cal.Fstep handles.cal.Fmax];
+Freqs = handles.cal.Freqs;
 Nfreqs = length(Freqs);
+%-----------------------------------------------------------------------
+% check calibration frequency range
+%------------------------------------------------
+if handles.cal.FRenable
+	% is frequency in range of the fr data for the headphones?
+	% check low freq limit
+	if Freqs(1) < frdata.range(1)
+		warning('NICal:Freq', [mfilename ': requested Min calibration frequency is out of FR file bounds']);
+		return
+	end
+	% check high freq limit
+	if Freqs(end) > frdata.range(3)
+		warning('NICal:Freq', [mfilename ': requested MAx calibration frequency is out of FR file bounds']);
+		return
+	end
+end
 
-%---------------------------------------------
-%---------------------------------------------
-% make local copy of iodev TDT control struct
-%---------------------------------------------
-%---------------------------------------------
-iodev = handles.iodev;
 
