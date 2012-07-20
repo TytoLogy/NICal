@@ -1,9 +1,21 @@
-function varargout = processNICal(basename, basepath)
+function varargout = processNICal(varargin)
 %------------------------------------------------------------------------
-% dbvals = processDAQdB(basename)
+% dbvals = processDAQdB(basename, basepath, calmode)
 %------------------------------------------------------------------------
 % 
-% 
+% 	If basename and basepath are provided, program will use those values 
+% 	to search for .daq files.
+% 	
+% 	Otherwise, a GUI dialog will pop up to ask user for file
+% 	
+% 	calmode = 'tones'  (default) will look for tone magnitudes in
+% 					each .daq file and compute a freq-dB SPL curve
+% 					
+% 	calmode = 'rms'	will simply compute the overall db SPL level
+% 							for each file
+%	calmode = 'window' will compute db SPL levels for each file 
+% 							broken up into 100 msec windows
+% 								
 %------------------------------------------------------------------------
 % See also: DAQ Toolbox 
 %------------------------------------------------------------------------
@@ -27,7 +39,7 @@ function varargout = processNICal(basename, basepath)
 rms_windowsize_ms = 100;
 
 % highpass cutoff frequency (Hz)
-fcutoff = 500;
+fcutoff = 90;
 % filter order
 forder = 3;
 
@@ -35,10 +47,39 @@ forder = 3;
 % and sampling rate will be Fs / DeciFactor
 DeciFactor = 10;
 
-%--------------------------------------------------------
-% find data files
-%--------------------------------------------------------
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% parse inputs
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+
 if nargin == 0
+	basepath = '';
+	basename = '';
+	calmode = 'tones';
+elseif nargin == 1
+	[~, basename] = fileparts(varargin{1});
+	basepath = pwd;
+	calmode = 'tones';
+elseif nargin == 2
+	[~, basename] = fileparts(varargin{1});
+	basepath = varargin{2};
+	calmode = 'tones';
+elseif nargin == 3
+	[~, basename] = fileparts(varargin{1});
+	basepath = varargin{2};
+	calmode = varargin{3};
+	if ~any(strcmpi(calmode, {'tones', 'rms', 'window'}))
+		error('%s: invalid calmode %s', mfilename, calmode);
+	end
+end
+
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% find data files
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+if length(basename) == 0
 	% output data path and file
 	% DefaultPath = 'C:\Users\Calibrate\Matlab\Calibration\Data';
 	DefaultPath = pwd;
@@ -63,6 +104,10 @@ end
 [daqFiles, daqNumbers] = find_daq_files(basename, basepath);
 nDaqFiles = length(daqFiles);
 
+if ~nDaqFiles
+	error('%s: no daq files found (%s, %s)', mfilename, basename, basepath);
+end
+
 % load .mat file for this calibration session
 load(fullfile(basepath, [basename '.mat']), '-MAT');
 
@@ -71,8 +116,6 @@ load(fullfile(basepath, [basename '.mat']), '-MAT');
 % PROCESS DATA
 %--------------------------------------------------------
 %--------------------------------------------------------
-
-
 %--------------------------------
 % loop through daqfiles
 %--------------------------------
@@ -112,72 +155,93 @@ for n = 1:nDaqFiles
 	% window and filter the data
 	micdata = sin2array(micdata', 1, Fs);
 	micdata = filter(fcoeffb, fcoeffa, micdata);
-
-	% convert rms_windowsize from msec into samples
-	rms_windowsize = ms2samples(rms_windowsize_ms, Fs);
-	% calculate rms_window indices into data
-	rms_windows = 1:rms_windowsize:length(micdata);
-	Nwindows = length(rms_windows);
-	% compute rms values for all windows of data
-	rms_vals = zeros(Nwindows, 1);
-	rmsIndex = 0;
-	for w = 2:Nwindows
-		rmsIndex = rmsIndex + 1;
-		rms_vals(rmsIndex) = rms(micdata(rms_windows(w-1):rms_windows(w)));
-	end
-	% convert to dB SPL
-	dbvals{n} = dbspl(VtoPa * rms_vals);
-	% decimate data for plotting
-	micdata_reduced = decimate(micdata, DeciFactor);
-	Fs_reduced = Fs / 10;
-	% build time vectors for plotting
-	t1 = ((1:length(micdata_reduced)) - 1) / Fs_reduced;
-	t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
-	% plot!
-
-	subplot(211)
-	plot(t1, micdata_reduced);
-	grid
-	ylabel('Volts');
-
-	subplot(212)
-	plot(t2, dbvals{n}, 'Marker', '.', 'Color', 'r');
-	ylabel('dB SPL')
-	xlabel('Time (seconds)');
-	grid
-
 	
-	[tmpfreqs, tmpmags, fmax, magmax] = daqdbfft(micdata, Fs, length(micdata));
+	switch lower(calmode)
+		case 'window'
+			% convert rms_windowsize from msec into samples
+			rms_windowsize = ms2samples(rms_windowsize_ms, Fs);
+			% calculate rms_window indices into data
+			rms_windows = 1:rms_windowsize:length(micdata);
+			Nwindows = length(rms_windows);
+			% compute rms values for all windows of data
+			rms_vals = zeros(Nwindows, 1);
+			rmsIndex = 0;
+			for w = 2:Nwindows
+				rmsIndex = rmsIndex + 1;
+				rms_vals(rmsIndex) = rms(micdata(rms_windows(w-1):rms_windows(w)));
+			end
+			% convert to dB SPL
+			dbvals{n} = dbspl(VtoPa * rms_vals);
+			% decimate data for plotting
+			micdata_reduced = decimate(micdata, DeciFactor);
+			Fs_reduced = Fs / 10;
+			% build time vectors for plotting
+			t1 = ((1:length(micdata_reduced)) - 1) / Fs_reduced;
+			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
+			% plot!
 
-	freqs(n) = fmax;
-	[mags(n), phis(n)] = fitsinvec(micdata, 1, Fs, fmax);
+			subplot(211)
+			plot(t1, micdata_reduced);
+			grid
+			ylabel('Volts');
+
+			subplot(212)
+			plot(t2, dbvals{n}, 'Marker', '.', 'Color', 'r');
+			ylabel('dB SPL')
+			xlabel('Time (seconds)');
+			grid
+
+		case 'tones'
+			[tmpfreqs, tmpmags, fmax, magmax] = daqdbfft(micdata, Fs, length(micdata));
+			calfreqs(n) = fmax;
+			[mags(n), phis(n)] = fitsinvec(micdata, 1, Fs, fmax);
+	end
+	
 end
 
-ndatums = length(freqs);
-out.freqs = freqs;
-out.mags = mags;
-out.phis = phis;
-out.dbvals = dbvals;
+switch lower(calmode)
+	case 'tones'
+		ndatums = length(calfreqs);
+		out.freqs = calfreqs;
+		out.mags = mags;
+		out.phis = phis;
+		out.dbvals = dbspl(VtoPa * rmssin * out.mags);
+
+		figure
+		subplot(211)
+		plot(dbspl(VtoPa * rmssin * out.mags), '.-')
+		set(gca, 'XTick', 1:ndatums);
+		set(gca, 'XTickLabel', '');
+		xlim([0 ndatums+1])
+		grid
+		title(basename);
+		ylabel('dB SPL')
+
+		subplot(212)
+		plot(unwrap(out.phis), '.-')
+		set(gca, 'XTick', 1:ndatums);
+		for n = 1:ndatums
+			labels{n} = sprintf('%.1f', 0.001*calfreqs(n));
+		end
+		set(gca, 'XTickLabel', labels);
+		xlim([0 ndatums+1])
+		grid
+		ylabel('phase (rad)');
+		xlabel('frequency (kHz)');
+
+	case 'window'
+		out.dbvals = dbvals
+		out.rms_windowsize_ms = rms_windowsize_ms;
+
+end
+
+out.Fs = Fs;
+out.files = daqFiles;
+out.path = basepath;
+out.fcutoff = fcutoff;
+out.forder = forder;
+out.DeciFactor = DeciFactor;
+out.fcoeff.a = fcoeffa;
+out.fcoeff.b = fcoeffb;
+
 varargout{1} = out;
-
-figure
-subplot(211)
-plot(dbspl(VtoPa * rmssin * out.mags), '.-')
-set(gca, 'XTick', 1:ndatums);
-set(gca, 'XTickLabel', '');
-xlim([0 ndatums+1])
-grid
-title(basename);
-ylabel('dB SPL')
-
-subplot(212)
-plot(unwrap(out.phis), '.-')
-set(gca, 'XTick', 1:ndatums);
-for n = 1:ndatums
-	labels{n} = sprintf('%.1f', 0.001*freqs(n));
-end
-set(gca, 'XTickLabel', labels);
-xlim([0 ndatums+1])
-grid
-ylabel('phase (rad)');
-xlabel('frequency (kHz)');

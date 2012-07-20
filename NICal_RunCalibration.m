@@ -423,6 +423,11 @@ for F = 1:Nfreqs
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
 			
+			figure(10)
+			[tmpf, tmpm] = daqdbfft(resp{L}, iodev.Fs, length(resp{L}));
+			plot(tmpf, tmpm);
+			
+			
 			% Pause for ISI
 			pause(0.001*cal.ISI);
 		end
@@ -759,6 +764,23 @@ guidata(hObject, handles);
 PlotCal(caldata);
 
 if cal.AutoSave
+% check output  file - if it exists, append a number to it
+	if exist(handles.cal.calfile, 'file')
+		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
+		findx = 1;
+		loopFlag = 1;
+		while loopFlag
+			OutputDataFile = sprintf('%s_%d%s', fname, findx, fext);
+			if ~exist(fullfile(pathstr, OutputDataFile), 'file')
+				loopFlag = 0;
+			else
+				findx = findx + 1;
+			end
+		end
+		handles.cal.calfile = OutputDataFile;
+		guidata(hObject, handles);
+		update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
+	end
 	disp(['Saving calibration data in ' handles.cal.calfile ' ...']);
 	save(handles.cal.calfile, '-MAT', 'caldata');
 end
