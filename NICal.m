@@ -336,7 +336,7 @@ function FreqListCtrl_Callback(hObject, eventdata, handles)
 			disable_ui(handles.FmaxCtrl);
 			disable_ui(handles.FstepCtrl);
 			% update Freqs, F and Nfreqs from freq file
-			handles.cal.Freqs = freqs;
+			handles.cal.Freqs = freqs';
 			handles.cal.Nfreqs = nfreqs;
 		end
 		
@@ -797,9 +797,15 @@ function InputChannelCtrl_Callback(hObject, eventdata, handles)
 	newVal = read_ui_val(hObject);
 	if newVal == 1
 		handles.cal.InputChannel = 1;
-	else
+	elseif newVal == 2
 		handles.cal.InputChannel = 2;
+	elseif newVal == 3
+		handles.cal.InputChannel = 3;
+	else
+		error('%s: unknown input channel %d', mfilename, newVal);
+		update_ui_val(hObject, handles.cal.InputChannel);
 	end
+	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 	
 %--------------------------------------------------------------------------

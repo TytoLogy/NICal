@@ -52,6 +52,24 @@ handles.Nchannels = 2;
 guidata(hObject, handles);
 
 %-----------------------------------------------------------------------
+% check output  file - if it exists, check with user
+%-----------------------------------------------------------------------
+if exist(handles.cal.calfile, 'file')
+	resp = uiyesno('title', 'Save File', 'string', 'File exists! Overwrite?', 'default', 'No');
+	if strcmpi(resp, 'No')
+		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
+		[newname, newpath] = uiputfile('*_cal.mat','Save calibration data to file', fullfile(pathstr, [fname '_1' fext]));
+		if isequal(newname, 0) || isequal(newpath, 0)
+			update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
+		else
+			handles.cal.calfile = fullfile(newpath, newname);
+			update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
+			guidata(hObject, handles);
+		end
+	end
+end
+
+%-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Start DAQ things
 %-----------------------------------------------------------------------
@@ -224,6 +242,15 @@ for F = 1:Nfreqs
 	% 		cal.Side == 3 is BOTH channels, 
 	%------------------------------------------------------------------
 	if cal.Side == 1 || cal.Side == 3
+		%LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+		% set input channel: if INputChannel is set to 3 (both), use left
+		if handles.cal.InputChannel == 3
+			inChan = 1;
+		else
+			inChan = handles.cal.InputChannel;
+		end
+		
+		
 		% synthesize the L sine wave;
 		[S, stimspec.RMS, stimspec.phi] = syn_calibrationtone2(cal.StimDuration, iodev.Fs, freq, 0, 'L');
 		% scale the sound
@@ -276,7 +303,7 @@ for F = 1:Nfreqs
 			end
 			
 			% determine the magnitude and phase of the response
-			[lmag, lphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
+			[lmag, lphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
 			update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
@@ -329,8 +356,8 @@ for F = 1:Nfreqs
 			end
 
 			% determine the magnitude and phase of the response
-			[lmag, lphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
-			[ldistmag, ldistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);		
+			[lmag, lphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+			[ldistmag, ldistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);		
 			update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
 
 			% compute harmonic distortion measures before 
@@ -360,18 +387,18 @@ for F = 1:Nfreqs
 			% microphone (i.e., B & K calibration mic), we have a few
 			% more things to do...
 			if cal.CheckCal == L
-				[tmpmag, tmpphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
 				mags{REF}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
 				phis{REF}(freq_index, rep) = tmpphi;
-				[tmpdistmag, tmpdistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[tmpdistmag, tmpdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				dists{REF}(freq_index, rep) = tmpdistmag;
 				distphis{REF}(freq_index, rep) = tmpdistphi;
 				fprintf('ref mag: %f    L mag: %f', dbspl(mags{REF}(freq_index, rep)), dbspl(mags{L}(freq_index, rep)) );
 			elseif cal.CheckCal == BOTH
-				[tmpmag, tmpphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
 				mags{REFL}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
 				phis{REFL}(freq_index, rep) = tmpphi;
-				[tmpdistmag, tmpdistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[tmpdistmag, tmpdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				dists{REFL}(freq_index, rep) = tmpdistmag;
 				distphis{REFL}(freq_index, rep) = tmpdistphi;
 				fprintf('refL mag: %f    L mag: %f', dbspl(mags{REFL}(freq_index, rep)), dbspl(mags{L}(freq_index, rep)) );
@@ -393,7 +420,6 @@ for F = 1:Nfreqs
 
 			% if MeasureLeak is requested, measure it!
 			if handles.cal.MeasureLeak
-				disp('computing leak')
 				% determine magnitude and phase of the response in the
 				% opposite channel - this is the leak magnitude and phase
 				[rleakmag, rleakphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -422,11 +448,10 @@ for F = 1:Nfreqs
 			Racq = downsample(resp{R}, deciFactor);
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
-			
+			% plot fft
 			figure(10)
-			[tmpf, tmpm] = daqdbfft(resp{L}, iodev.Fs, length(resp{L}));
+			[tmpf, tmpm] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
 			plot(tmpf, tmpm);
-			
 			
 			% Pause for ISI
 			pause(0.001*cal.ISI);
@@ -441,6 +466,13 @@ for F = 1:Nfreqs
 	%------------------------------------------------------------------	
 	if cal.Side == 2 || cal.Side == 3
 		%RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+		% set input channel: if INputChannel is set to 3 (both), use right
+		if handles.cal.InputChannel == 3
+			inChan = 2;
+		else
+			inChan = handles.cal.InputChannel;
+		end
+		
 		% synthesize the R sine wave;
 		[S, stimspec.RMS, stimspec.phi] = syn_calibrationtone2(cal.StimDuration, iodev.Fs, freq, 0, 'R');
 		% scale the sound
@@ -461,8 +493,8 @@ for F = 1:Nfreqs
 		if cal.AttenFix
 			% no need to test attenuation but, 
 			% do need to set the attenuators
-			Satt(1, :) = handles.attfunction(S(1, :), Latten);
-			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
+			Satt(1, :) = handles.attfunction(S(1, :), MAX_ATTEN);
+			Satt(2, :) = handles.attfunction(S(2, :), Ratten);
 			update_ui_str(handles.LAttenText, MAX_ATTEN);
 			update_ui_str(handles.RAttenText, Ratten);
 			% set retry to 0 to skip testing
@@ -473,8 +505,8 @@ for F = 1:Nfreqs
 
 		while retry
 			% need to set the attenuators
-			Satt(1, :) = handles.attfunction(S(1, :), Latten);
-			Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
+			Satt(1, :) = handles.attfunction(S(1, :), MAX_ATTEN);
+			Satt(2, :) = handles.attfunction(S(2, :), Ratten);
 			update_ui_str(handles.LAttenText, MAX_ATTEN);
 			update_ui_str(handles.RAttenText, Ratten);
 
@@ -491,7 +523,7 @@ for F = 1:Nfreqs
 			end
 			
 			% determine the magnitude and phase of the response
-			[rmag, rphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
+			[rmag, rphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
 			% update text display
 			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag));
 			% adjust for the gain of the preamp and apply correction
@@ -546,8 +578,8 @@ for F = 1:Nfreqs
 			end
 			
 			% determine the magnitude and phase of the response
-			[rmag, rphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
-			[rdistmag, rdistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);				
+			[rmag, rphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+			[rdistmag, rdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);				
 
 			% update values in text fields
 			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag));
@@ -573,18 +605,18 @@ for F = 1:Nfreqs
 			atten{R}(freq_index, rep) = Ratten;
 
 			if cal.CheckCal == R
-				[tmpmag, tmpphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
 				mags{REF}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
 				phis{REF}(freq_index, rep) = tmpphi;
-				[tmpdistmag, tmpdistphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[tmpdistmag, tmpdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				dists{REF}(freq_index, rep) = tmpdistmag;
 				distphis{REF}(freq_index, rep) = tmpdistphi;					
 				fprintf('ref mag: %f    R mag: %f', dbspl(mags{REF}(freq_index, rep)), dbspl(mags{R}(freq_index, rep)) );
 			elseif cal.CheckCal == BOTH
-				[tmpmag, tmpphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
 				mags{REFR}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
 				phis{REFR}(freq_index, rep) = tmpphi;
-				[tmpdistmag, tmpphi] = fitsinvec(resp{handles.cal.InputChannel}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[tmpdistmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				dists{REFR}(freq_index, rep) = tmpdistmag;
 				distphis{REFR}(freq_index, rep) = tmpdistphi;
 				fprintf('refR mag: %f    R mag: %f', dbspl(mags{REFR}(freq_index, rep)), dbspl(mags{R}(freq_index, rep)) );
@@ -630,6 +662,10 @@ for F = 1:Nfreqs
 			Racq = downsample(resp{R}, deciFactor);
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
+			% plot fft
+			figure(10)
+			[tmpf, tmpm] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
+			plot(tmpf, tmpm);
 	
 			% pause for ISI (convert to seconds)
 			pause(0.001*cal.ISI);
@@ -755,35 +791,23 @@ end
 %-----------------------------------------------------------------------
 handles.caldata = caldata;
 guidata(hObject, handles);
+if cal.AutoSave
+	disp(['Saving calibration data in ' handles.cal.calfile ' ...']);
+	save(handles.cal.calfile, '-MAT', 'caldata');
+end
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % plot the calibration data
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-PlotCal(caldata);
-
-if cal.AutoSave
-% check output  file - if it exists, append a number to it
-	if exist(handles.cal.calfile, 'file')
-		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
-		findx = 1;
-		loopFlag = 1;
-		while loopFlag
-			OutputDataFile = sprintf('%s_%d%s', fname, findx, fext);
-			if ~exist(fullfile(pathstr, OutputDataFile), 'file')
-				loopFlag = 0;
-			else
-				findx = findx + 1;
-			end
-		end
-		handles.cal.calfile = OutputDataFile;
-		guidata(hObject, handles);
-		update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
-	end
-	disp(['Saving calibration data in ' handles.cal.calfile ' ...']);
-	save(handles.cal.calfile, '-MAT', 'caldata');
+try
+	PlotCal(caldata);
+catch errMsg
+	errMsg
+	errMsg.stack
 end
+
 
 disp('Finished.')
 
