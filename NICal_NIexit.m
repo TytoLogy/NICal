@@ -27,15 +27,15 @@ disp('...closing NI devices...');
 
 
 % get event log
-EventLogAI = showdaqevents(iodev.NI.ai);
-EventLogAO = showdaqevents(iodev.NI.ao);
+EventLogAI = showdaqevents(handles.iodev.NI.ai);
+EventLogAO = showdaqevents(handles.iodev.NI.ao);
 
 % delete and clear ai and ch0 object
-delete(iodev.NI.ai);
-delete(iodev.NI.ao);
-delete(iodev.NI.chI);
-delete(iodev.NI.chO);
-clear iodev.NI.ai iodev.NI.ao iodev.NI.chI iodev.NI.chO
+delete(handles.iodev.NI.ai);
+delete(handles.iodev.NI.ao);
+delete(handles.iodev.NI.chI);
+delete(handles.iodev.NI.chO);
+clear handles.iodev.NI.ai handles.iodev.NI.ao handles.iodev.NI.chI handles.iodev.NI.chO
 
 % save settings information to mat file
 save(fullfile(pwd, 'NICal_EventLogs.mat'), ...

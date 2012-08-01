@@ -75,6 +75,8 @@ end
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_NIinit;
+% refresh local copy of iodev NI control struct
+iodev = handles.iodev;
 guidata(hObject, handles);
 
 %------------------------------------------------------------------------
@@ -214,14 +216,15 @@ SweepPoints = ms2samples(cal.SweepDuration, iodev.Fs);
 stopFlag = 0;
 rep = 1;
 freq_index = 1;
+% refresh local copy of iodev NI control struct
+iodev = handles.iodev;
 
 %*******************************LOOP through the frequencies
 for F = 1:Nfreqs
 	freq = Freqs(F);
 	
-	% update the frequency and reps display value
+	% update the frequency display value
 	update_ui_str(handles.FreqValText, sprintf('%d', freq));
-	update_ui_str(handles.RepNumText, sprintf('%d', rep));
 
 	% check for abort
 	if read_ui_val(handles.AbortCtrl) == 1
@@ -343,6 +346,9 @@ for F = 1:Nfreqs
 
 		% now, collect the data for frequency FREQ, LEFT channel
 		for rep = 1:cal.Nreps
+			% update the reps display value
+			update_ui_str(handles.RepNumText, sprintf('%d L', rep));
+			
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
 
@@ -565,6 +571,9 @@ for F = 1:Nfreqs
 
 		% now, collect the data for frequency FREQ, RIGHT headphone
 		for rep = 1:cal.Nreps
+			% update the reps display value
+			update_ui_str(handles.RepNumText, sprintf('%d R', rep));
+
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
 
@@ -583,16 +592,12 @@ for F = 1:Nfreqs
 
 			% update values in text fields
 			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag));
-
 			% compute distortion measures before applying corrections
 			dists{R}(freq_index, rep) = rdistmag / rmag;
-
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
 			rmag_adjusted = RMSsin * rmag / (Gain*frdata.rmagadjval(freq_index));
-
 			% update text display
-			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag_adjusted));
 			update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*rmag_adjusted)));
 			
 			% convert to Pascals (rms) and adjust phase measurements
@@ -686,6 +691,9 @@ end %********************End of Cal loop
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_NIexit;
+
+% % update the reps display value
+% update_ui_str(handles.RepNumText, sprintf('%d R', rep));
 
 if freq_index == Nfreqs+1
 	COMPLETE = 1;

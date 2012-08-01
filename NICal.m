@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 18-Jul-2012 18:58:31
+% Last Modified by GUIDE v2.5 01-Aug-2012 15:39:14
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -999,6 +999,42 @@ function Menu_DumpHandles_Callback(hObject, eventdata, handles)
 	save('NICalhandles.mat', 'handles', '-MAT')
 %--------------------------------------------------------------------------
 
+
+%--------------------------------------------------------------------------
+function Menu_DumpNISettings_Callback(hObject, eventdata, handles)
+	% Load the settings and constants
+	NICal_Constants;
+	NICal_settings;
+	% make a local copy of the cal settings structure
+	cal = handles.cal;
+	% save the GUI handle information
+	guidata(hObject, handles);
+	% make local copy of iodev struct
+	iodev = handles.iodev;
+	handles.Nchannels = 2;
+	guidata(hObject, handles);
+
+	% Start DAQ things
+	NICal_NIinit;
+	guidata(hObject, handles);
+	
+	% save handles
+	fname = fullfile(pwd, 'aiao.mat');
+	[fname, pname] = uiputfile('*.mat', 'Save ai and ao structs to file', fname);
+	if isequal(fname, 0) || isequal(pname, 0)
+		fname = 'aiao.mat';
+		pname = pwd;
+	end
+
+	ai = handles.iodev.NI.ai;
+	ao = handles.iodev.NI.ao;
+	iodev = handles.iodev;
+	save(fullfile(pname, fname), 'ai', 'ao', 'iodev', '-MAT');
+	clear ai ao
+	NICal_NIexit;
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
@@ -1151,7 +1187,6 @@ function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 		 set(hObject,'BackgroundColor','white');
 	end
 %-------------------------------------------------------------------------
-
 
 
 
