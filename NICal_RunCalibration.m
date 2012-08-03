@@ -14,6 +14,7 @@
 %
 % Revisions:
 %	9 July, 2012 (SJS) renamed for NICal project
+%	2 July, 2012 (SJS): added background calculation
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -41,10 +42,13 @@ guidata(hObject, handles);
 %---------------------------------------------
 cal = handles.cal;
 
+cal.Fs
+
 %---------------------------------------------
 % make local copy of iodev TDT control struct
 %---------------------------------------------
 iodev = handles.iodev;
+
 %---------------------------------------------
 % KLUDGE!!!!!!!
 %---------------------------------------------
@@ -79,6 +83,7 @@ NICal_NIinit;
 iodev = handles.iodev;
 guidata(hObject, handles);
 
+iodev.Fs
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Define a bandpass filter for processing the data
@@ -124,6 +129,11 @@ if handles.cal.MeasureLeak == 1
 	leakphis = tmpcell;
 	leakdists = tmpcell;
 	leakdistphis = tmpcell;
+end
+% if CollectBackground
+if handles.cal.CollectBackground == 1
+	bgmags = tmpcell;
+	bgdb = bgmags;
 end
 
 %-----------------------------------------------------------------------
@@ -210,7 +220,22 @@ SweepPoints = ms2samples(cal.SweepDuration, iodev.Fs);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% Build null output array for this frequency
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% synthesize the L sine wave;
+Nullstim = syn_null(cal.StimDuration, iodev.Fs, 1);
+% scale the sound
+Nullstim = 0 * Nullstim;
+% insert delay
+Nullstim = insert_delay(Nullstim, cal.StimDelay, iodev.Fs);
+Nullstim_downsample =  downsample(Nullstim(1, :), deciFactor);
+
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % Now initiate sweeps
+%-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 stopFlag = 0;
@@ -221,13 +246,15 @@ iodev = handles.iodev;
 
 %*******************************LOOP through the frequencies
 for F = 1:Nfreqs
+	% assign current frequency from Freqs list to freq
 	freq = Freqs(F);
 	
 	% update the frequency display value
-	update_ui_str(handles.FreqValText, sprintf('%d', freq));
+	update_ui_str(handles.FreqValText, sprintf('%d', round(freq)));
 
-	% check for abort
+	% check for abort button press
 	if read_ui_val(handles.AbortCtrl) == 1
+		% if so, stop
 		disp('abortion detected')
 		break
 	end
@@ -253,7 +280,9 @@ for F = 1:Nfreqs
 			inChan = handles.cal.InputChannel;
 		end
 		
-		
+		%-------------------------------------------------------
+		% Build stimulus output array for this frequency
+		%-------------------------------------------------------
 		% synthesize the L sine wave;
 		[S, stimspec.RMS, stimspec.phi] = syn_calibrationtone2(cal.StimDuration, iodev.Fs, freq, 0, 'L');
 		% scale the sound
@@ -270,7 +299,9 @@ for F = 1:Nfreqs
 		refreshdata(H.Lstim, 'caller');
 		refreshdata(H.Rstim, 'caller');
 		
-		%loop while figuring out the L attenuator value.
+		%-------------------------------------------------------
+		% loop while figuring out the L attenuator value.
+		%-------------------------------------------------------
 		if cal.AttenFix
 			% no need to test attenuation but, 
 			% do need to set the attenuators
@@ -344,7 +375,9 @@ for F = 1:Nfreqs
 
 		pause(0.001*cal.ISI);
 
+		%-------------------------------------------------------
 		% now, collect the data for frequency FREQ, LEFT channel
+		%-------------------------------------------------------
 		for rep = 1:cal.Nreps
 			% update the reps display value
 			update_ui_str(handles.RepNumText, sprintf('%d L', rep));
@@ -458,10 +491,62 @@ for F = 1:Nfreqs
 			figure(10)
 			[tmpf, tmpm] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
 			plot(tmpf, tmpm);
-			
+			title('Left')
 			% Pause for ISI
 			pause(0.001*cal.ISI);
 		end
+		
+		%---------------------------------------------------------------------
+		% now, collect the background data for frequency FREQ, LEFT channel
+		%---------------------------------------------------------------------
+		if handles.cal.CollectBackground
+			Lstim = Nullstim_downsample;
+			Rstim = Nullstim_downsample;
+			refreshdata(H.Lstim, 'caller');
+			refreshdata(H.Rstim, 'caller');
+			for rep = 1:cal.Nreps
+				% update the reps display value
+				update_ui_str(handles.RepNumText, sprintf('%d L (bg)', rep));
+				% play the sound;
+				[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+				% filter the data if asked
+				if handles.cal.InputFilter
+					tmp = sin2array(resp{L}, 1, iodev.Fs);
+					resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					tmp = sin2array(resp{R}, 1, iodev.Fs);
+					resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					clear tmp
+				end
+				% determine the magnitude and phase of the response
+				bgmag = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				% update LValText
+				update_ui_str(handles.LValText, sprintf('%.4f', 1000*bgmag));
+				% adjust for the gain of the preamp and apply correction
+				% factors for RMS and microphone calibration
+				bgmag_adjusted = RMSsin * bgmag / (Gain*frdata.lmagadjval(freq_index));
+				% Store the values in the cell arrays for later averaging
+				% (we'll do the averages later in order to save time while
+				%  running the calibration curves)
+				% adjust for the gain of the preamp and convert to Pascals
+				bgmags{L}(freq_index, rep) = VtoPa*(bgmag_adjusted);
+				update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(bgmags{L}(freq_index, rep))));			
+				update_ui_str(handles.RValText, '---');
+				update_ui_str(handles.RSPLText, '---');
+				% plot the response
+				Lacq = downsample(resp{L}, deciFactor);
+				Racq = downsample(resp{R}, deciFactor);
+				refreshdata(H.Lacq, 'caller');
+				refreshdata(H.Racq, 'caller');
+				% plot fft
+				figure(10)
+				[tmpf, tmpm] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
+				plot(tmpf, tmpm);
+				title('Left Background')
+				% Pause for ISI
+				pause(0.001*cal.ISI);
+			end		
+		end
+	% END OF L CHANNEL	
 	end
 	
 	% pause for ISI
@@ -671,10 +756,64 @@ for F = 1:Nfreqs
 			figure(10)
 			[tmpf, tmpm] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
 			plot(tmpf, tmpm);
+			title('Right')
 	
 			% pause for ISI (convert to seconds)
 			pause(0.001*cal.ISI);
 		end
+		
+		%---------------------------------------------------------------------
+		% now, collect the background data for frequency FREQ, RIGHT channel
+		%---------------------------------------------------------------------
+		if handles.cal.CollectBackground
+			Lstim = Nullstim_downsample;
+			Rstim = Nullstim_downsample;
+			refreshdata(H.Lstim, 'caller');
+			refreshdata(H.Rstim, 'caller');
+
+			for rep = 1:cal.Nreps
+				% update the reps display value
+				update_ui_str(handles.RepNumText, sprintf('%d R (bg)', rep));
+				% play the sound;
+				[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+				% filter the data if asked
+				if handles.cal.InputFilter
+					tmp = sin2array(resp{L}, 1, iodev.Fs);
+					resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					tmp = sin2array(resp{R}, 1, iodev.Fs);
+					resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					clear tmp
+				end
+				% determine the magnitude and phase of the response
+				bgmag = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				% update RValText
+				update_ui_str(handles.RValText, sprintf('%.4f', 1000*bgmag));
+				% adjust for the gain of the preamp and apply correction
+				% factors for RMS and microphone calibration
+				bgmag_adjusted = RMSsin * bgmag / (Gain*frdata.rmagadjval(freq_index));
+				% Store the values in the cell arrays for later averaging
+				% (we'll do the averages later in order to save time while
+				%  running the calibration curves)
+				% adjust for the gain of the preamp and convert to Pascals
+				bgmags{R}(freq_index, rep) = VtoPa*(bgmag_adjusted);
+				update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(bgmags{R}(freq_index, rep))));			
+				update_ui_str(handles.LValText, '---');
+				update_ui_str(handles.LSPLText, '---');
+				% plot the response
+				Lacq = downsample(resp{L}, deciFactor);
+				Racq = downsample(resp{R}, deciFactor);
+				refreshdata(H.Lacq, 'caller');
+				refreshdata(H.Racq, 'caller');
+				% plot fft
+				figure(10)
+				[tmpf, tmpm] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
+				plot(tmpf, tmpm);
+				title('Right Background')
+				% Pause for ISI
+				pause(0.001*cal.ISI);
+			end
+		end
+	% END OF R CAL
 	end
 
 	if read_ui_val(handles.AbortCtrl) == 1
@@ -695,9 +834,15 @@ NICal_NIexit;
 % % update the reps display value
 % update_ui_str(handles.RepNumText, sprintf('%d R', rep));
 
+
+%-------------------------------------------------------
+% set COMPLETE if we made it to the last frequency, 
+% otherwise, assume that ABORT was engaged and exit the run
+%-------------------------------------------------------
 if freq_index == Nfreqs+1
 	COMPLETE = 1;
 else
+	COMPLETE = 0;
 	return
 end
 
@@ -717,7 +862,7 @@ for F = 1:Nfreqs
 	magsraw{R}(freq_index, :) = dbspl(mags{R}(freq_index, :));
 	mags{L}(freq_index, :) = dbspl(mags{L}(freq_index, :)) + atten{L}(freq_index, :);
 	mags{R}(freq_index, :) = dbspl(mags{R}(freq_index, :)) + atten{R}(freq_index, :);
-
+	
 	% if Check data, save it
 	if cal.CheckCal == L
 		magsraw{REF}(freq_index, :) = dbspl(mags{REF}(freq_index, :));
@@ -776,6 +921,16 @@ for F = 1:Nfreqs
 		end
 		caldata.leakmags = leakmags;
 	end
+	
+	if handles.cal.CollectBackground
+		bgdb{L}(freq_index, :) = dbspl(bgmags{L}(freq_index, :));
+		bgdb{R}(freq_index, :) = dbspl(bgmags{R}(freq_index, :));		
+		for channel = 1:handles.Nchannels
+			caldata.background(channel, freq_index) = mean( bgdb{channel}(freq_index, :) );
+			caldata.background_stderr(channel, freq_index) = std( bgdb{channel}(freq_index, :) );
+		end
+	end
+
 	freq_index = freq_index + 1;
 end
 
@@ -786,7 +941,10 @@ caldata.calibration_settings = cal;
 if handles.cal.MeasureLeak
 	caldata.leakmags = leakmags;
 end
-
+% save raw background data if collected
+if handles.cal.CollectBackground
+	caldata.bgmagsraw = bgmags;
+end
 if DEBUG
 	caldata.magsdbug = magsdbug;
 	caldata.phisdbug = phisdbug;
@@ -812,10 +970,9 @@ end
 try
 	PlotCal(caldata);
 catch errMsg
-	errMsg
+	save('NICal_RunCalibration.err', 'errMsg', '-MAT')
 	errMsg.stack
 end
-
 
 disp('Finished.')
 

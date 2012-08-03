@@ -19,6 +19,8 @@
 %	12 Jul 2012 (SJS)
 %	 -	added comments
 %	 -	added leak variables for measuring crosstalk
+%	2 Aug 2012 (SJS)
+%	 - added background variable
 %--------------------------------------------------------------------------
 
 %------------------------------------------------------------
@@ -38,7 +40,6 @@ caldata.atten = cal.StartAtten;					% initial attenuator setting
 caldata.max_spl = cal.Maxlevel;					% maximum spl
 caldata.min_spl = cal.Minlevel;					% minimum spl
 
-
 %------------------------------------------------------------------
 %------------------------------------------------------------------
 % initialize the caldata structure arrays for the calibration data
@@ -51,6 +52,9 @@ caldata.phase = tmparr;
 caldata.dist = tmparr;
 caldata.mag_stderr = tmparr;
 caldata.phase_stderr = tmparr;
+caldata.background = tmparr;
+caldata.background_stderr = tmparr;
+
 % if leak is to be measured, create storage space
 if handles.cal.MeasureLeak
 	caldata.leakmag = tmparr;

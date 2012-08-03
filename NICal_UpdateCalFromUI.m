@@ -23,6 +23,7 @@ function cal = UpdateCalFromUI(handles)
 % Created: 18 July 2012 (SJS)
 % 
 % Revisions:
+% 2 Aug 2012 (SJS): added CollectBackground to calibration settings
 %--------------------------------------------------------------------------
 
 %-----------------------------------------
@@ -47,6 +48,8 @@ cal.AttenStep = read_ui_str(handles.AttenStepCtrl, 'n');
 cal.StartAtten = read_ui_str(handles.StartAttenCtrl, 'n');
 %  Check Cal setting
 cal.CheckCal = read_ui_val(handles.CheckCalCtrl) - 1;
+% background data
+cal.CollectBackground = read_ui_val(handles.CollectBackgroundCtrl);
 %-----------------------------------------
 % INPUT/OUTPUT SETTINGS
 %-----------------------------------------

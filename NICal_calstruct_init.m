@@ -13,6 +13,7 @@ function cal = NICal_calstruct_init()
 % Created: 13 July, 2012
 %
 % Revisions:
+% 	2 Aug 2012 (SJS): added CollectBackground
 %--------------------------------------------------------------------------
 
 %----------------------------------------------------------------
@@ -203,7 +204,7 @@ cal.mic_fr_file = '..\CalibrationData\FFamp_CIThp_24-Sep-2009_fr.mat';
 % default output file
 cal.calfile = fullfile(pwd, 'ear_cal.mat');
 
-
+cal.CollectBackground = 1;
 
 
 
