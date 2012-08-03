@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 01-Aug-2012 15:39:14
+% Last Modified by GUIDE v2.5 02-Aug-2012 18:52:49
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -558,6 +558,12 @@ function CheckCalCtrl_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
+%--------------------------------------------------------------------------
+function CollectBackgroundCtrl_Callback(hObject, eventdata, handles)
+	handles.cal.CollectBackground = read_ui_val(hObject);
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
 
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
@@ -911,6 +917,12 @@ function AutoSaveCtrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+% File Menu
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
 function Menu_SaveCal_Callback(hObject, eventdata, handles)
 	[calfile, calpath] = uiputfile('*_cal.mat','Save headphone calibration data in file');
 	if calfile ~= 0
@@ -939,7 +951,13 @@ function Menu_Close_Callback(hObject, eventdata, handles)
  	CloseRequestFcn(handles.figure1, eventdata, handles);
 %--------------------------------------------------------------------------
 
+
 %--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+% Settings Menu
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+
 %--------------------------------------------------------------------------
 function Menu_LoadSettings_Callback(hObject, eventdata, handles)
 	% get the settings file name
@@ -964,6 +982,35 @@ function Menu_SaveSettings_Callback(hObject, eventdata, handles)
 	if sfilename ~= 0
 		cal = handles.cal;
 		save(fullfile(sfilepath, sfilename), '-MAT', 'cal');
+	end
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+function Menu_EditCalibrationSettings_Callback(hObject, eventdata, handles)
+	% make local copy of cal
+	existing_cal = handles.cal;
+	% open StructDlg to edit cal
+	try
+		new_cal = StructDlg(	existing_cal, ...
+									'Cal Struct Settings', ...
+									[], [], [], [], ...
+									'vert_spacing', 0.5, ...
+									'font_size', 8 );
+	catch errMsg
+		save('NICal.err', 'errMsg', '-MAT');
+		errMsg.stack
+		new_cal = [];
+	end
+	
+	if isempty(new_cal)
+		% user closed window so do nothing
+		disp('Reverting to original cal settings...')
+		return
+	else
+		handles.cal = new_cal;
+		guidata(hObject, handles);
+		% update user interface
+		NICal_UpdateUIFromCal(handles, handles.cal);
 	end
 %--------------------------------------------------------------------------
 
@@ -1187,6 +1234,9 @@ function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 		 set(hObject,'BackgroundColor','white');
 	end
 %-------------------------------------------------------------------------
+
+
+
 
 
 

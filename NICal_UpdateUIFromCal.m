@@ -24,6 +24,7 @@ function NICal_UpdateUIFromCal(handles, cal)
 % Created: 18 July 2012 (SJS)
 % 
 % Revisions:
+% 2 Aug 2012 (SJS): added CollectBackground to calibration settings
 %--------------------------------------------------------------------------
 
 %-----------------------------------------
@@ -69,6 +70,8 @@ update_ui_str(handles.AttenStepCtrl, cal.AttenStep);
 update_ui_str(handles.StartAttenCtrl, cal.StartAtten);
 %  Check Cal setting
 update_ui_val(handles.CheckCalCtrl, cal.CheckCal + 1);
+% Background
+update_ui_val(handles.CollectBackgroundCtrl, cal.CollectBackground);
 %-----------------------------------------
 % INPUT/OUTPUT SETTINGS
 %-----------------------------------------
