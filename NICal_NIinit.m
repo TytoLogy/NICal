@@ -93,7 +93,7 @@ set(handles.iodev.NI.ai,'ManualTriggerHwOn','Trigger')
 set(handles.iodev.NI.ai, 'TriggerRepeat', 0);
 % set SamplesPerTrigger to Inf for continous acquisition or 
 % to # of samples to collect for each trigger event
-set(handles.iodev.NI.ai, 'SamplesPerTrigger', ms2samples(cal.SweepDuration, handles.iodev.Fs));
+set(handles.iodev.NI.ai, 'SamplesPerTrigger', ms2samples(handles.cal.SweepDuration, handles.iodev.Fs));
 
 %-------------------------------------------------------
 % set logging mode

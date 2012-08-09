@@ -102,13 +102,38 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% <tytology path>\TytoSettings\<username\ directory
 	%----------------------------------------------------------
 	%----------------------------------------------------------
+	% define user config path
+	userconfigpath = ['C:\TytoLogy\TytoSettings\' getenv('USERNAME') '\NICal\'];
+
 	% load the configuration information, store in config structure
 	if isempty(which('NICal_Configuration'))
-		% need to add user config path
-		addpath(['C:\TytoLogy\TytoSettings\' getenv('USERNAME')]);
-	end	
-	config = NICal_Configuration;
+		if ~exist(userconfigpath, 'dir')
+			qstr = sprintf('User config directory %s does not exist!', userconfigpath);
+			uresp = questdlg(	{qstr, 'Shall I create it?'}, ...
+									'Configuration Not Found', ...
+									'Yes', 'No', ...
+									'Yes' );
+								
+			switch uresp,
+				case 'Yes'
+					mkdir(userconfigpath);
+					addpath(userconfigpath);
+					disp('Loading Defaults...');
+					config = NICal_DefaultConfiguration;
+				case 'No'
+					disp('Loading Defaults...');
+					config = NICal_DefaultConfiguration;
+			end
+		else
+			addpath(userconfigpath);
+			config = NICal_Configuration;
+		end
+	else
+		config = NICal_Configuration;
+	end
+	% store configuration in handles;
 	handles.config = config;
+	handles.userconfigpath = userconfigpath;
 	% save handles
 	guidata(hObject, handles);	
 	
@@ -129,7 +154,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 		end
 	end
 	
-	handles.defaultsfile = fullfile(pdir, [mfilename '_Defaults.mat']);
+	handles.defaultsfile = fullfile(userconfigpath, [mfilename '_Defaults.mat']);
 	if exist(handles.defaultsfile, 'file') && (INITDEFAULT == 0)
 		cal = [];
 		fprintf('Loading cal settings from defaults file %s ...\n', handles.defaultsfile)
@@ -308,10 +333,37 @@ function FreqListCtrl_Callback(hObject, eventdata, handles)
 	% act accordingly
 	%------------------------------------------------------
 	if newVal
-		%------------------------------------------------------
-		% User checked the box, so load freq list
-		%------------------------------------------------------
-		[freqs, nfreqs, freqfile] = NICal_LoadFreqList;
+
+		% get filename and path to frequency list file (.m or .txt)
+		[filename, pathname] = uigetfile(	...
+														{	...
+															'*.txt', 'text files (*.txt)'; ...
+															'*.m', 'Matlab m-files (*.m)'; ...
+															'*.*', 'All Files (*.*)'	...
+														}, ...
+														'Pick a file', ...
+														handles.userconfigpath	...
+													);
+		% return if user pressed "Cancel" button
+		if any([(filename == 0), (pathname == 0)])
+			% uncheck box, set UseFreqList in handles to 0
+			update_ui_val(hObject, 0);
+			handles.cal.UseFreqList = 0;
+			% Enable fmin, fmax, fstep
+			enable_ui(handles.FminCtrl);
+			enable_ui(handles.FmaxCtrl);
+			enable_ui(handles.FstepCtrl);
+			% set freqs, nfreqs to empty
+			freqs = [];
+			nfreqs = [];
+		else
+			%------------------------------------------------------
+			% User selected file, so load freq list
+			%------------------------------------------------------
+			freqfile = fullfile(pathname, filename);
+			[freqs, nfreqs] = NICal_LoadFreqList(freqfile);
+		end
+	
 		
 		if isempty(freqs)
 			%------------------------------------------------------
@@ -338,6 +390,9 @@ function FreqListCtrl_Callback(hObject, eventdata, handles)
 			% update Freqs, F and Nfreqs from freq file
 			handles.cal.Freqs = freqs';
 			handles.cal.Nfreqs = nfreqs;
+			fprintf('\n\n*************\nFreqs:\n');
+			fprintf('\t%.2f\n', handles.cal.Freqs);
+			fprintf('*************\n\n');
 		end
 		
 	else
@@ -962,7 +1017,8 @@ function Menu_Close_Callback(hObject, eventdata, handles)
 function Menu_LoadSettings_Callback(hObject, eventdata, handles)
 	% get the settings file name
 	[sfilename, sfilepath] = uigetfile(	'*_settings.mat', ...
-													'Load Calibration Settings...'	);
+													'Load Calibration Settings...', ...
+													handles.userconfigpath );
 	if sfilename ~= 0
 		cal = [];
 		load(fullfile(sfilepath, sfilename));
@@ -978,7 +1034,8 @@ function Menu_LoadSettings_Callback(hObject, eventdata, handles)
 function Menu_SaveSettings_Callback(hObject, eventdata, handles)
 	% get the settings file name
 	[sfilename, sfilepath] = uiputfile(	'*_settings.mat', ...
-													'Save Calibration Settings...'	);
+													'Save Calibration Settings...', ...
+													handles.userconfigpath );
 	if sfilename ~= 0
 		cal = handles.cal;
 		save(fullfile(sfilepath, sfilename), '-MAT', 'cal');

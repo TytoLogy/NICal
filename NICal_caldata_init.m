@@ -30,15 +30,15 @@
 %------------------------------------------------------------
 caldata.time_str = datestr(now, 31);			% date and time
 caldata.timestamp = now;							% timestamp
-caldata.adFc = iodev.Fs;							% analog input rate
-caldata.daFc = iodev.Fs;							% analog output rate
+caldata.adFc = handles.iodev.Fs;					% analog input rate
+caldata.daFc = handles.iodev.Fs;					% analog output rate
 caldata.nrasters = Nfreqs;							% number of freqs to collect
 caldata.range = [min(Freqs) max(Freqs)];		% freq range (matlab string)
-caldata.reps = cal.Nreps;							% reps per frequency
-caldata.settings = cal;								% cal struct
-caldata.atten = cal.StartAtten;					% initial attenuator setting
-caldata.max_spl = cal.Maxlevel;					% maximum spl
-caldata.min_spl = cal.Minlevel;					% minimum spl
+caldata.reps = handles.cal.Nreps;							% reps per frequency
+caldata.settings = handles.cal;								% cal struct
+caldata.atten = handles.cal.StartAtten;					% initial attenuator setting
+caldata.max_spl = handles.cal.Maxlevel;					% maximum spl
+caldata.min_spl = handles.cal.Minlevel;					% minimum spl
 
 %------------------------------------------------------------------
 %------------------------------------------------------------------
