@@ -199,12 +199,13 @@ cal.AutoSave = 1;
 % default files
 %----------------------------------------------------------------
 %----------------------------------------------------------------
+datadir = ['C:\Users\' getenv('USERNAME')];
 % default fr response file for Knowles mics
-cal.mic_fr_file = '..\CalibrationData\FFamp_CIThp_24-Sep-2009_fr.mat';
+cal.mic_fr_file = fullfile(datadir, 'default_fr.mat');
 % default output file
-cal.calfile = fullfile(pwd, 'ear_cal.mat');
+cal.calfile = fullfile(datadir, 'ear_cal.mat');
 
-cal.CollectBackground = 1;
+cal.CollectBackground = 0;
 
 
 
