@@ -23,31 +23,23 @@
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_Constants;
-	
+
+% local settings
+% set the COMPLETE flag to 0
+COMPLETE = 0;
+
+
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Initialization Scripts
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% set the COMPLETE flag to 0
-COMPLETE = 0;
 %---------------------------------------------
 % Load the settings and constants 
 %---------------------------------------------
 NICal_settings;
 % save the GUI handle information
 guidata(hObject, handles);
-%---------------------------------------------
-% make a local copy of the cal settings structure
-%---------------------------------------------
-cal = handles.cal;
-
-cal.Fs
-
-%---------------------------------------------
-% make local copy of iodev TDT control struct
-%---------------------------------------------
-iodev = handles.iodev;
 
 %---------------------------------------------
 % KLUDGE!!!!!!!
@@ -64,7 +56,7 @@ if exist(handles.cal.calfile, 'file')
 		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
 		[newname, newpath] = uiputfile('*_cal.mat','Save calibration data to file', fullfile(pathstr, [fname '_1' fext]));
 		if isequal(newname, 0) || isequal(newpath, 0)
-			update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
+			return
 		else
 			handles.cal.calfile = fullfile(newpath, newname);
 			update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
@@ -79,18 +71,15 @@ end
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_NIinit;
-% refresh local copy of iodev NI control struct
-iodev = handles.iodev;
 guidata(hObject, handles);
 
-iodev.Fs
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Define a bandpass filter for processing the data
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Nyquist frequency
-fnyq = handles.cal.Fs/2;
+fnyq = handles.iodev.Fs / 2;
 % passband definition
 handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 % filter coefficients using a butterworth bandpass filter
@@ -103,15 +92,13 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_caldata_init;
-% set the FRANGE output scale value (usually 5 V)
-FRANGE = caldata.DAscale;
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Preallocate some arrays that are used locally
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-tmp = zeros(Nfreqs, cal.Nreps);
+tmp = zeros(Nfreqs, handles.cal.Nreps);
 tmpcell = cell(handles.Nchannels, 1);
 for i=1:handles.Nchannels
 	tmpcell{i} = tmp;
@@ -123,6 +110,7 @@ phisraw = tmpcell;
 dists = tmpcell;
 distphis = tmpcell;
 atten = tmpcell;
+magsV = tmpcell;
 % add leak information if needed
 if handles.cal.MeasureLeak == 1
 	leakmags = tmpcell;
@@ -141,11 +129,11 @@ end
 % set the start and end bins for the calibration
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-start_bin = ms2bin(cal.StimDelay + cal.StimRamp, iodev.Fs);
+start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, handles.iodev.Fs);
 if ~start_bin
 	start_bin = 1;
 end
-end_bin = start_bin + ms2bin(cal.StimDuration-cal.StimRamp, iodev.Fs);
+end_bin = start_bin + ms2bin(handles.cal.StimDuration - handles.cal.StimRamp, handles.iodev.Fs);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -153,22 +141,22 @@ end_bin = start_bin + ms2bin(cal.StimDuration-cal.StimRamp, iodev.Fs);
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % create null stimulus
-zerostim = syn_null(cal.StimDuration, iodev.Fs, 0);
+zerostim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 0);
 % insert stim delay
-zerostim = insert_delay(zerostim, cal.StimDelay, iodev.Fs);
+zerostim = insert_delay(zerostim, handles.cal.StimDelay, handles.iodev.Fs);
 % downsample (no need to plot all points)
 zerostim = downsample(zerostim, deciFactor);
 % downsample-factor adjusted sample interval
-dt = deciFactor/iodev.Fs;
+dt = deciFactor/handles.iodev.Fs;
 % # output points
 outpts = length(zerostim);
 % time vector for stimulus plots
 tvec_stim = 1000*dt*(0:(outpts-1));
 % stimulus start and end points
-stim_start = ms2bin(cal.StimDelay, iodev.Fs);
+stim_start = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
 stim_end = stim_start + outpts - 1;
 % fake acquired data
-zeroacq = syn_null(cal.SweepDuration, iodev.Fs, 0);
+zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
 zeroacq = downsample(zeroacq, deciFactor);
 acqpts = length(zeroacq);
 % time vector for stimulus plots
@@ -199,14 +187,14 @@ set(handles.Lmicplot, 'XTickLabel', '');
 % setup attenuation
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-if cal.AttenFix && between(cal.AttenFixValue, 0, MAX_ATTEN)
-	Latten = cal.AttenFixValue;
-	Ratten = cal.AttenFixValue;
+if handles.cal.AttenFix && between(handles.cal.AttenFixValue, 0, MAX_ATTEN)
+	Latten = handles.cal.AttenFixValue;
+	Ratten = handles.cal.AttenFixValue;
 else
 	% set the adjustable starting attenuator values	
-	Latten = cal.StartAtten;
-	Ratten = cal.StartAtten;
-	if ~between(cal.AttenFixValue, 0, MAX_ATTEN)
+	Latten = handles.cal.StartAtten;
+	Ratten = handles.cal.StartAtten;
+	if ~between(handles.cal.AttenFixValue, 0, MAX_ATTEN)
 		warning('NICal:Atten', [mfilename ': AttenFixValue out of range, using default StartAtten value'])
 	end
 end
@@ -216,19 +204,19 @@ end
 % compute # of points per sweep
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-SweepPoints = ms2samples(cal.SweepDuration, iodev.Fs);
+SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% Build null output array for this frequency
+% Build null output array
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % synthesize the L sine wave;
-Nullstim = syn_null(cal.StimDuration, iodev.Fs, 1);
+Nullstim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 1);
 % scale the sound
 Nullstim = 0 * Nullstim;
 % insert delay
-Nullstim = insert_delay(Nullstim, cal.StimDelay, iodev.Fs);
+Nullstim = insert_delay(Nullstim, handles.cal.StimDelay, handles.iodev.Fs);
 Nullstim_downsample =  downsample(Nullstim(1, :), deciFactor);
 
 %-----------------------------------------------------------------------
@@ -241,7 +229,13 @@ Nullstim_downsample =  downsample(Nullstim(1, :), deciFactor);
 stopFlag = 0;
 rep = 1;
 freq_index = 1;
-% refresh local copy of iodev NI control struct
+%---------------------------------------------------
+% make a local copy of the cal settings structure
+%---------------------------------------------------
+cal = handles.cal;
+%---------------------------------------------------
+% make local copy of iodev TDT control struct
+%---------------------------------------------------
 iodev = handles.iodev;
 
 %*******************************LOOP through the frequencies
@@ -286,7 +280,7 @@ for F = 1:Nfreqs
 		% synthesize the L sine wave;
 		[S, stimspec.RMS, stimspec.phi] = syn_calibrationtone2(cal.StimDuration, iodev.Fs, freq, 0, 'L');
 		% scale the sound
-		S = FRANGE * S;
+		S = cal.DAscale * S;
 		% apply the sin^2 amplitude envelope to the stimulus
 		S = sin2array(S, cal.StimRamp, iodev.Fs);
 		% insert delay
@@ -399,6 +393,9 @@ for F = 1:Nfreqs
 			[ldistmag, ldistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);		
 			update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
 
+			% store peak mag (in Volts) in magsV 
+			magsV{L}(freq_index, rep) = lmag;
+			
 			% compute harmonic distortion measures before 
 			% applying corrections for the knowles mic response
 			dists{L}(freq_index, rep) = ldistmag / lmag;
@@ -549,6 +546,13 @@ for F = 1:Nfreqs
 	% END OF L CHANNEL	
 	end
 	
+	% check for abort button press
+	if read_ui_val(handles.AbortCtrl) == 1
+		% if so, stop
+		disp('abortion detected')
+		break
+	end
+
 	% pause for ISI
 	pause(0.001*cal.ISI);
 
@@ -567,7 +571,7 @@ for F = 1:Nfreqs
 		% synthesize the R sine wave;
 		[S, stimspec.RMS, stimspec.phi] = syn_calibrationtone2(cal.StimDuration, iodev.Fs, freq, 0, 'R');
 		% scale the sound
-		S = FRANGE * S;
+		S = cal.DAscale * S;
 		% apply the sin^2 amplitude envelope to the stimulus
 		S = sin2array(S, cal.StimRamp, iodev.Fs);
 		% insert delay
@@ -674,6 +678,9 @@ for F = 1:Nfreqs
 			% determine the magnitude and phase of the response
 			[rmag, rphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
 			[rdistmag, rdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);				
+
+			% store peak mag (in Volts) in magsV 
+			magsV{R}(freq_index, rep) = rmag;
 
 			% update values in text fields
 			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag));
@@ -816,10 +823,13 @@ for F = 1:Nfreqs
 	% END OF R CAL
 	end
 
+	% check for abort button press
 	if read_ui_val(handles.AbortCtrl) == 1
+		% if so, stop
 		disp('abortion detected')
 		break
 	end
+
 
 	freq_index = freq_index + 1;
 end %********************End of Cal loop
@@ -892,17 +902,8 @@ for F = 1:Nfreqs
 	% store leak data if collected
 	if handles.cal.MeasureLeak
 		% compute the averages for this frequency
-		%{
-		leakmags{L}(freq_index, :) = dbspl(leakmags{L}(freq_index, :)) - dbspl(mags{R}(freq_index, :));
-		leakmags{R}(freq_index, :) = dbspl(leakmags{R}(freq_index, :)) - dbspl(mags{L}(freq_index, :));
-
-		leakphis{L}(freq_index, :) = leakphis{L}(freq_index, :) - phis{R}(freq_index, :);
-		leakphis{R}(freq_index, :) = leakphis{R}(freq_index, :) - phis{L}(freq_index, :);
-		%}
-		
 		leakmags{L}(freq_index, :) = dbspl(leakmags{L}(freq_index, :));
 		leakmags{R}(freq_index, :) = dbspl(leakmags{R}(freq_index, :));
-
 		leakphis{L}(freq_index, :) = leakphis{L}(freq_index, :) - phis{R}(freq_index, :);
 		leakphis{R}(freq_index, :) = leakphis{R}(freq_index, :) - phis{L}(freq_index, :);
 		
@@ -935,6 +936,7 @@ for F = 1:Nfreqs
 end
 
 caldata.magsraw = magsraw;
+caldata.magsV = magsV;
 caldata.atten = atten;
 caldata.calibration_settings = cal;
 % store leak data if collected
