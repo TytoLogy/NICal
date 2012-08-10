@@ -491,6 +491,13 @@ for F = 1:Nfreqs
 			title('Left')
 			% Pause for ISI
 			pause(0.001*cal.ISI);
+			
+			% check for abort button press
+			if read_ui_val(handles.AbortCtrl) == 1
+				% if so, stop
+				disp('abortion detected')
+				break
+			end
 		end
 		
 		%---------------------------------------------------------------------
@@ -541,6 +548,13 @@ for F = 1:Nfreqs
 				title('Left Background')
 				% Pause for ISI
 				pause(0.001*cal.ISI);
+				% check for abort button press
+				if read_ui_val(handles.AbortCtrl) == 1
+					% if so, stop
+					disp('abortion detected')
+					break
+				end
+
 			end		
 		end
 	% END OF L CHANNEL	
@@ -767,6 +781,13 @@ for F = 1:Nfreqs
 	
 			% pause for ISI (convert to seconds)
 			pause(0.001*cal.ISI);
+			% check for abort button press
+			if read_ui_val(handles.AbortCtrl) == 1
+				% if so, stop
+				disp('abortion detected')
+				break
+			end
+
 		end
 		
 		%---------------------------------------------------------------------
@@ -818,6 +839,13 @@ for F = 1:Nfreqs
 				title('Right Background')
 				% Pause for ISI
 				pause(0.001*cal.ISI);
+				% check for abort button press
+				if read_ui_val(handles.AbortCtrl) == 1
+					% if so, stop
+					disp('abortion detected')
+					break
+				end
+				
 			end
 		end
 	% END OF R CAL
