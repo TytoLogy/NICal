@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 02-Aug-2012 18:52:49
+% Last Modified by GUIDE v2.5 13-Aug-2012 19:19:34
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -863,7 +863,7 @@ function InputChannelCtrl_Callback(hObject, eventdata, handles)
 	elseif newVal == 3
 		handles.cal.InputChannel = 3;
 	else
-		error('%s: unknown input channel %d', mfilename, newVal);
+		warning('NICal:ValueOutOfRange', '%s: unknown input channel %d', mfilename, newVal);
 		update_ui_val(hObject, handles.cal.InputChannel);
 	end
 	guidata(hObject, handles);
@@ -1004,6 +1004,45 @@ function Menu_LoadFRData_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 function Menu_Close_Callback(hObject, eventdata, handles)
  	CloseRequestFcn(handles.figure1, eventdata, handles);
+%--------------------------------------------------------------------------
+
+
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+% RUN Menu
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function Menu_CalibrateMicrophone_Callback(hObject, eventdata, handles)
+	%---------------------------------------------------------------
+	% turn off calibration ctrl, enable abort ctrl
+	%---------------------------------------------------------------
+	disable_ui(handles.RunCalibrationCtrl);
+	show_uictrl(handles.AbortCtrl);
+	set(handles.AbortCtrl, 'Value', 0);
+	%---------------------------------------------------------------
+	% initialize complete flag
+	%---------------------------------------------------------------
+	handles.CalComplete = 0;
+	COMPLETE = 0;
+	guidata(hObject, handles);
+	%---------------------------------------------------------------
+	% run microphone calibration script
+ 	%---------------------------------------------------------------
+	NICal_MicrophoneCalibrate;
+	%---------------------------------------------------------------
+	% enable Calibration ctrl, disable abort ctrl
+	%---------------------------------------------------------------
+	enable_ui(handles.RunCalibrationCtrl);
+	hide_uictrl(handles.AbortCtrl);
+	set(handles.AbortCtrl, 'Value', 0);
+	%---------------------------------------------------------------
+	% save handles
+	%---------------------------------------------------------------
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 
 
@@ -1291,8 +1330,6 @@ function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 		 set(hObject,'BackgroundColor','white');
 	end
 %-------------------------------------------------------------------------
-
-
 
 
 
