@@ -161,6 +161,21 @@ zeroacq = downsample(zeroacq, deciFactor);
 acqpts = length(zeroacq);
 % time vector for stimulus plots
 tvec_acq = 1000*dt*(0:(acqpts-1));
+% compute # of points per sweep
+SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% Build null output array
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% synthesize the L sine wave;
+Nullstim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 1);
+% scale the sound
+Nullstim = 0 * Nullstim;
+% insert delay
+Nullstim = insert_delay(Nullstim, handles.cal.StimDelay, handles.iodev.Fs);
+Nullstim_downsample =  downsample(Nullstim(1, :), deciFactor);
+
 %-------------------------------------------------------
 % create arrays for plotting and plot them
 %-------------------------------------------------------
@@ -201,26 +216,6 @@ end
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% compute # of points per sweep
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
-
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-% Build null output array
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-% synthesize the L sine wave;
-Nullstim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 1);
-% scale the sound
-Nullstim = 0 * Nullstim;
-% insert delay
-Nullstim = insert_delay(Nullstim, handles.cal.StimDelay, handles.iodev.Fs);
-Nullstim_downsample =  downsample(Nullstim(1, :), deciFactor);
-
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Now initiate sweeps
 %-----------------------------------------------------------------------
@@ -234,7 +229,7 @@ freq_index = 1;
 %---------------------------------------------------
 cal = handles.cal;
 %---------------------------------------------------
-% make local copy of iodev TDT control struct
+% make local copy of iodev  control struct
 %---------------------------------------------------
 iodev = handles.iodev;
 
