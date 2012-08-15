@@ -873,16 +873,16 @@ function InputChannelCtrl_Callback(hObject, eventdata, handles)
 % sets mic Gain
 %--------------------------------------------------------------------------
 function MicGainCtrl_Callback(hObject, eventdata, handles)
-	newVal = read_ui_str(hObject, 'n');
+	newVal = read_ui_str(hObject, 'n')
 	if isempty(newVal)
 		warning('NICal:ValueOutOfRange', '%s: invalid MicGain value %f', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.MicGain);
 	elseif ~all(isnumeric(newVal))
 		warning('NICal:ValueOutOfRange', '%s: invalid MicGain value %f', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.MicGain);
-	elseif length(newVal) ~= 1
-		handles.cal.MicGain = newVal(1);
-		update_ui_str(hObject, handles.cal.MicGain);
+% 	elseif length(newVal) ~= 1
+% 		handles.cal.MicGain = newVal(1);
+% 		update_ui_str(hObject, handles.cal.MicGain);
 	else
 		handles.cal.MicGain = newVal;
 	end

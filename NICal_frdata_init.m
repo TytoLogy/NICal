@@ -54,44 +54,44 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	frdata.time_str = datestr(now, 31);		% date and time
 	frdata.timestamp = now;						% timestamp
-	frdata.adFc = iodev.Fs;						% analog input rate
-	frdata.daFc = iodev.Fs;						% analog output rate
-	frdata.nrasters = Nfreqs;					% number of freqs to collect
-	frdata.range = F;								% freq range (matlab string)
-	frdata.reps = Nreps;							% reps per frequency
-	frdata.calsettings = cal;					% parameters for calibration session
-	frdata.atten = cal.Atten;					% initial attenuator setting
+	frdata.adFc = handles.iodev.Fs;						% analog input rate
+	frdata.daFc = handles.iodev.Fs;						% analog output rate
+	frdata.nrasters = handles.cal.Nfreqs;					% number of freqs to collect
+	frdata.range = [min(Freqs) max(Freqs)];								% freq range (matlab string)
+	frdata.reps = handles.cal.Nreps;							% reps per frequency
+	frdata.calsettings = handles.cal;					% parameters for calibration session
+	frdata.atten = handles.cal.AttenFixValue;					% initial attenuator setting
 	frdata.max_spl = 0;							% maximum spl (will be determined in program)
 	frdata.min_spl = 0;							% minimum spl (will be determined in program)
-	frdata.DAscale = cal.DAscale;				% output peak voltage level
+	frdata.DAscale = handles.cal.DAscale;				% output peak voltage level
 
 	% set up the arrays to hold the data
-	tmp = zeros(Nfreqs, Nreps);
-	tmpcell = cell(Nchannels, 1);
+	tmp = zeros(handles.cal.Nfreqs, handles.cal.Nreps);
+	tmpcell = cell(handles.cal.Nchannels, 1);
 	background = tmpcell;
-	for i=1:Nchannels
+	for i=1:handles.cal.Nchannels
 		tmpcell{i} = tmp;
-		background{i} = zeros(1, Nreps);
+		background{i} = zeros(1, handles.cal.Nreps);
 	end
 	mags = tmpcell;
 	phis = tmpcell;
 	dists = tmpcell;
 	
 	%initialize the frdata structure arrays for the calibration data
-	tmpcell = cell(Nchannels, Nfreqs);
-	tmparr = zeros(Nchannels, Nfreqs);
+	tmpcell = cell(handles.cal.Nchannels, handles.cal.Nfreqs);
+	tmparr = zeros(handles.cal.Nchannels, handles.cal.Nfreqs);
 	frdata.freq = Freqs;
 	frdata.mag = tmparr;
 	frdata.phase = tmparr;
 	frdata.dist = tmparr;
 	frdata.mag_stderr = tmparr;
 	frdata.phase_stderr = tmparr;
-	frdata.background = zeros(Nchannels, 2);
-	if cal.FieldType == 2
+	frdata.background = zeros(handles.cal.Nchannels, 2);
+	if handles.cal.FieldType == 2
 		frdata.rawmags = tmp;
 	end
 
 	% setup cell for raw data 
-	rawdata.background = cell(Nreps, 1);
-	rawdata.resp = cell(Nfreqs, Nreps);
+	rawdata.background = cell(handles.cal.Nreps, 1);
+	rawdata.resp = cell(handles.cal.Nfreqs, handles.cal.Nreps);
 	rawdata.Freqs = Freqs;

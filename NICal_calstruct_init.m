@@ -14,7 +14,7 @@ function cal = NICal_calstruct_init()
 %
 % Revisions:
 % 	2 Aug 2012 (SJS): added CollectBackground
-%	17 Aug 2012 (SJS): added FieldType for mic calibration
+%	17 Aug 2012 (SJS): added FieldType for mic calibration, Nchannels
 %--------------------------------------------------------------------------
 
 %----------------------------------------------------------------
@@ -187,6 +187,7 @@ cal.MicSensitivity = 0.1;
 % recording type (1 = freefield, 2 = pressure field (closed field)
 %----------------------------------------------------------------
 cal.FieldType = 1;
+cal.Nchannels = 2;
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
