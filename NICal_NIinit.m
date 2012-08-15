@@ -1,3 +1,5 @@
+
+function [handles, init_status] = NICal_NIinit(handles)
 %--------------------------------------------------------------------------
 % NICal_NIinit.m
 %--------------------------------------------------------------------------
@@ -16,9 +18,18 @@
 %	9 July, 2012 (SJS) renamed for NICal project
 %	1 Aug, 2012 (SJS)	added channel skew mode setting, use Equisample
 % 			instead of 'Minimum" default value
+%	15 Aug 2012 (SJS) updated comments, functionalized
 %--------------------------------------------------------------------------
 
-disp('...starting NI hardware...');
+fprintf('%s: starting NI hardware...\n', mfilename);
+
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% Settings/Constants
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+NICal_Constants;
+init_status = 0;
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -26,7 +37,12 @@ disp('...starting NI hardware...');
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %handles.iodev.NI = handles.initfunction('NI', iodev.Dnum);
-handles.iodev.NI = nidaq_aiao_init('NI', handles.iodev.Dnum);
+try
+	handles.iodev.NI = nidaq_aiao_init('NI', handles.iodev.Dnum);
+catch
+	init_status = 0;
+	return
+end
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -61,26 +77,20 @@ handles.cal.Fs = ActualRate;
 % set input range
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% range needs to be in [RangeMin RangeMax] format
 aiaoRange = 5 * [-1 1];
+% set analog input range (might be overkill to set 
+% InputRange, SensorRange and UnitsRange, but is seems to work)
 for n = 1:length(handles.iodev.NI.ai.Channel)
 	handles.iodev.NI.ai.Channel(n).InputRange = aiaoRange;
 	handles.iodev.NI.ai.Channel(n).SensorRange = aiaoRange;
 	handles.iodev.NI.ai.Channel(n).UnitsRange = aiaoRange;
 end
-
+% set analog output range
 for n = 1:length(handles.iodev.NI.ao.Channel)
 	handles.iodev.NI.ao.Channel(n).OutputRange = aiaoRange;
 	handles.iodev.NI.ao.Channel(n).UnitsRange = aiaoRange;
 end
-
-%------------------------------------------------------------------------
-% EVENT and CALLBACK PARAMETERS
-%------------------------------------------------------------------------
-% % first, set the object to call the SamplesAcquiredFunction when
-% % BufferSize # of points are available
-% set(handles.iodev.NI.ai, 'SamplesAcquiredFcnCount', AcqSamples);
-% % provide callback function handle (ai_plotpeek_callback.m)
-% set(handles.iodev.NI.ai, 'SamplesAcquiredFcn', {@ai_plotpeek_2chan_callback});
 
 %------------------------------------------------------------------------
 % HARDWARE TRIGGERING
@@ -111,6 +121,9 @@ set(handles.iodev.NI.ai, 'ChannelSkewMode', 'Equisample');
 %set(handles.iodev.NI.ai, 'ChannelSkewMode', 'Manual');
 %set(handles.iodev.NI.ai, 'ChannelSkew', 3.0e-06);
 
-TDTINIT = 1;
+%-------------------------------------------------------
+% set init_status to 1
+%-------------------------------------------------------
+init_status = 1;
 
 

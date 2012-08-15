@@ -1,8 +1,11 @@
+function [handles, init_status] = NICal_NIinit_triggeredacq(handles)
 %--------------------------------------------------------------------------
-% NICal_NIinit_triggeredacq.m
+% [handles, init_status] = NICal_NIinit_triggeredacq(handles)
 %--------------------------------------------------------------------------
 % sets up NI data acquisition toolbox parameters
 %
+%	This is used for situations in which only acquisition is needed and is
+%	triggered by external TTL pulse
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
@@ -14,9 +17,10 @@
 % 
 % Revisions:
 %	9 July, 2012 (SJS) renamed for NICal project
+%	15 Aug 2012 (SJS) updated comments, functionalized
 %--------------------------------------------------------------------------
 
-disp('...starting NI hardware...');
+fprintf('%s: starting NI hardware...\n', mfilename);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -24,14 +28,19 @@ disp('...starting NI hardware...');
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_Constants;
+init_status = 0;
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Initialize the NI device
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-iodev.NI = nidaq_ai_init('NI', iodev.Dnum);
-
+try
+	handles.iodev.NI = nidaq_ai_init('NI', handles.iodev.Dnum);
+catch
+	init_status = 0;
+	return
+end
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % set sample rate to value specified in cal settings
@@ -41,12 +50,12 @@ iodev.NI = nidaq_ai_init('NI', iodev.Dnum);
 %------------------------------------------------------
 % AI subsystem
 %------------------------------------------------------
-set(iodev.NI.ai, 'SampleRate', handles.cal.Fs);
-ActualRate = get(iodev.NI.ai, 'SampleRate');
+set(handles.iodev.NI.ai, 'SampleRate', handles.cal.Fs);
+ActualRate = get(handles.iodev.NI.ai, 'SampleRate');
 if handles.cal.Fs ~= ActualRate
 	warning('NICal:NIDAQ', 'Requested ai Fs (%f) ~= ActualRate (%f)', handles.cal.Fs, ActualRate);
 end
-iodev.Fs = ActualRate;
+handles.iodev.Fs = ActualRate;
 handles.cal.Fs = ActualRate;
 
 %-----------------------------------------------------------------------
@@ -54,45 +63,35 @@ handles.cal.Fs = ActualRate;
 % set input range
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-for n = 1:length(iodev.NI.ai.Channel)
-	iodev.NI.ai.Channel(n).InputRange = [-5 5];
+for n = 1:length(handles.iodev.NI.ai.Channel)
+	handles.iodev.NI.ai.Channel(n).InputRange = [-5 5];
 end
-
-%------------------------------------------------------------------------
-% EVENT and CALLBACK PARAMETERS
-%------------------------------------------------------------------------
-% % first, set the object to call the SamplesAcquiredFunction when
-% % BufferSize # of points are available
-% set(iodev.NI.ai, 'SamplesAcquiredFcnCount', AcqSamples);
-% % provide callback function handle (ai_plotpeek_callback.m)
-% set(iodev.NI.ai, 'SamplesAcquiredFcn', {@ai_plotpeek_2chan_callback});
-
 
 %------------------------------------------------------------------------
 % HARDWARE TRIGGERING
 %------------------------------------------------------------------------
 % set TriggerType to HwDigital which sets triggering to
 % digital type for NI hardware
-set(iodev.NI.ai, 'TriggerType', 'HwDigital');
+set(handles.iodev.NI.ai, 'TriggerType', 'HwDigital');
 % set trigger source to the PFI0 trigger/counter input
-set(iodev.NI.ai, 'HwDigitalTriggerSource', 'PFI0');
+set(handles.iodev.NI.ai, 'HwDigitalTriggerSource', 'PFI0');
 % trigger on positive-going part of signal
-set(iodev.NI.ai, 'TriggerCondition', 'PositiveEdge');
+set(handles.iodev.NI.ai, 'TriggerCondition', 'PositiveEdge');
 % use 4 Volt trigger level
-set(iodev.NI.ai, 'TriggerConditionValue', handles.TriggerLevel);
+set(handles.iodev.NI.ai, 'TriggerConditionValue', handles.TriggerLevel);
 % only 1 "sweep" per trigger event 
-set(iodev.NI.ai, 'TriggerRepeat', 0);
+set(handles.iodev.NI.ai, 'TriggerRepeat', 0);
 % set SamplesPerTrigger to # of samples to collect for each trigger event
-set(iodev.NI.ai, 'SamplesPerTrigger', ms2samples(handles.cal.SweepDuration, iodev.Fs));
+set(handles.iodev.NI.ai, 'SamplesPerTrigger', ms2samples(handles.cal.SweepDuration, handles.iodev.Fs));
 
 %------------------------------------------------------------------------
 % EVENT and CALLBACK PARAMETERS
 %------------------------------------------------------------------------
 % first, set the object to call the SamplesAcquiredFunction when
 % BufferSize # of points are available
-set(iodev.NI.ai, 'SamplesAcquiredFcnCount', ms2samples(handles.cal.SweepDuration, iodev.Fs));
+set(handles.iodev.NI.ai, 'SamplesAcquiredFcnCount', ms2samples(handles.cal.SweepDuration, handles.iodev.Fs));
 % provide callback function handle (ai_plotpeek_callback.m)
-set(iodev.NI.ai, 'SamplesAcquiredFcn', {@plot_callback});
+set(handles.iodev.NI.ai, 'SamplesAcquiredFcn', {@plot_callback});
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -100,19 +99,24 @@ set(iodev.NI.ai, 'SamplesAcquiredFcn', {@plot_callback});
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % set up automatic file logging
-set(iodev.NI.ai, 'LogFileName', fullfile(OutputDataPath, OutputDataFile));
+set(handles.iodev.NI.ai, 'LogFileName', fullfile(OutputDataPath, OutputDataFile));
 %-------------------------------------------------------
 % set logging mode
 %	'Disk'	sets logging mode to a file on disk (specified by 'LogFileName)
 %	'Memory'	sets logging mode to memory only
 %	'Disk&Memory'	logs to file and memory
 %-------------------------------------------------------
-set(iodev.NI.ai, 'LoggingMode', 'Disk&Memory');
+set(handles.iodev.NI.ai, 'LoggingMode', 'Disk&Memory');
+%-------------------------------------------------------
 % Disk logging mode
 %	'Index' will append 00, 01, 02 etc on successive start commands
 %	'Overwrite' will overwrite current log file
-set(iodev.NI.ai, 'LogToDiskMode', 'Index');
+%-------------------------------------------------------
+set(handles.iodev.NI.ai, 'LogToDiskMode', 'Index');
 
-TDTINIT = 1;
+%-------------------------------------------------------
+% set init_status to 1
+%-------------------------------------------------------
+init_status = 1;
 
 

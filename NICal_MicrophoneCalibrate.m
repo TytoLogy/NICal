@@ -55,7 +55,7 @@ NICal_settings;
 %---------------------------------------------
 % KLUDGE!!!!!!!
 %---------------------------------------------
-handles.Nchannels = 2;
+handles.cal.Nchannels = 2;
 guidata(hObject, handles);
 
 %-----------------------------------------------------------------------
@@ -63,8 +63,12 @@ guidata(hObject, handles);
 % Start DAQ things
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-NICal_NIinit;
+[handles, initFlag] = NICal_NIinit(handles);
 guidata(hObject, handles);
+if initFlag == 0
+	warning('NICAL:HW', '%s: NIinit failure', mfilename)
+	return
+end
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -182,9 +186,9 @@ set(handles.Lmicplot, 'XTickLabel', '');
 % pre-allocate some data cell arrays
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-mags = cell(1, handles.Nchannels);
-for c = 1:handles.Nchannels
-	mags{c} = zeros(Nfreqs, cal.Nreps);
+mags = cell(1, handles.cal.Nchannels);
+for c = 1:handles.cal.Nchannels
+	mags{c} = zeros(handles.cal.Nfreqs, handles.cal.Nreps);
 end
 phis = mags; 
 dists = mags;
@@ -199,7 +203,7 @@ if handles.cal.AttenFix
 	Latten = handles.cal.AttenFixValue;
 	Ratten = handles.cal.AttenFixValue;
 else
-	warning('NICal:Atten', [mfilename ': AttenFix not set, using StartAtten value']);
+	warning('NICal:Atten', [mfilename ': AttenFix not set, using default StartAtten value']);
 	% set the adjustable starting attenuator values
 	Latten = handles.cal.StartAtten;
 	Ratten = handles.cal.StartAtten;
@@ -210,9 +214,9 @@ end
 %-----------------------------------------------------------------------
 % another kludge... use channel 2 (RIGHT) as reference
 %-----------------------------------------------------------------------
-if handles.Nchannels == 2
+if handles.cal.Nchannels == 2
 	REFCHAN = 2;
-elseif handles.Nchannels == 3
+elseif handles.cal.Nchannels == 3
 	REFCHAN = 3;
 else
 	REFCHAN = 2;
@@ -248,9 +252,9 @@ refreshdata(H.Lstim, 'caller');
 refreshdata(H.Rstim, 'caller');
 
 % pre-allocate the background data cell array
-background = cell(1, handles.Nchannels);
-for c = 1:handles.Nchannels
-	background{c} = zeros(1, cal.Nreps);
+background = cell(1, handles.cal.Nchannels);
+for c = 1:handles.cal.Nchannels
+	background{c} = zeros(1, handles.cal.Nreps);
 end
 	
 % pause to let things settle down
@@ -265,7 +269,7 @@ if read_ui_val(handles.AbortCtrl) == 1
 	break
 end
 
-for rep = 1:cal.Nreps
+for rep = 1:handles.cal.Nreps
 	% update the reps display value
 	update_ui_str(handles.RepNumText, sprintf('%d L', rep));
 
@@ -309,7 +313,7 @@ for rep = 1:cal.Nreps
 end
 
 % average and st. dev
-for c = 1:handles.Nchannels
+for c = 1:handles.cal.Nchannels
 	frdata.background(c, 1) = mean( background{c} );
 	frdata.background(c, 2) = std( background{c} );
 end
@@ -324,13 +328,12 @@ end
 disp([mfilename ': now running calibration...']);
 pause(1)
 	
-	
 tic
 handles.STOP_FLG = 0;	
 rep = 1;
 freq_index = 1;
 
-while ~handles.STOP_FLG && freq_index <= Nfreqs
+while ~handles.STOP_FLG && freq_index <= handles.cal.Nfreqs
 	% get the current frequency
 	freq = Freqs(freq_index);
 
@@ -364,7 +367,7 @@ while ~handles.STOP_FLG && freq_index <= Nfreqs
 	%-------------------------------------------------------
 	% now, collect the data for frequency FREQ, LEFT channel
 	%-------------------------------------------------------
-	for rep = 1:cal.Nreps
+	for rep = 1:handles.cal.Nreps
 		% update the reps display value
 		update_ui_str(handles.RepNumText, sprintf('%d', rep));
 
@@ -429,7 +432,7 @@ while ~handles.STOP_FLG && freq_index <= Nfreqs
 		update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*mags{REFCHAN}(freq_index, rep))));
 		
 		% Check for possible clipping (values > 5V for NI)
-		for channel = 1:handles.Nchannels
+		for channel = 1:handles.cal.Nchannels
 			if max(resp{channel}) >= CLIPVAL
 				handles.STOP_FLG = channel;
 			end
@@ -443,7 +446,7 @@ while ~handles.STOP_FLG && freq_index <= Nfreqs
 	end	%******************** END OF REPS
 
 	% compute the averages for this frequency
-	for channel = 1:handles.Nchannels
+	for channel = 1:handles.cal.Nchannels
 		frdata.mag(channel, freq_index) = mean( mags{channel}(freq_index, :) );
 		frdata.mag_stderr(channel, freq_index) = std( mags{channel}(freq_index, :) );
 		frdata.phase(channel, freq_index) = mean( unwrap(phis{channel}(freq_index, :)) );
@@ -487,7 +490,7 @@ NICal_NIexit;
 % set COMPLETE if we made it to the last frequency, 
 % otherwise, assume that ABORT was engaged and exit the run
 %-------------------------------------------------------
-if freq_index == Nfreqs+1
+if freq_index == handles.cal.Nfreqs+1
 	COMPLETE = 1;
 else
 	% if not, incomplete, skip the calculations and
