@@ -49,6 +49,13 @@ end
 %---------------------------------------------
 % plot decimation factor
 deciFactor = handles.deciFactor;
+
+if handles.cal.Nchannels  ~= length(handles.cal.MicGain)
+	handles.cal.MicGain = handles.cal.MicGain(1) .* ones(1, handles.cal.Nchannels);
+	update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
+	guidata(hObject, handles);
+end
+
 % read in the gain on the mic preamp
 Gain_dB = handles.cal.MicGain;
 % convert dB to linear scale
