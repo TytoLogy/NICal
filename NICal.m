@@ -773,6 +773,10 @@ function HiPassFcCtrl_Callback(hObject, eventdata, handles)
 	elseif length(newVal) ~= 1
 		handles.cal.InputHPFc = newVal(1);
 		update_ui_str(hObject, handles.cal.InputHPFc);
+	elseif newVal > (handles.cal.Fs / 2)
+		warning('NICal:ValueOutOfRange', '%s: HiPassFc (%.2f) must be less than Fs/2 (%.2f)', ...
+													mfilename, newVal, handles.cal.Fs);
+		update_ui_str(hObject, handles.cal.InputHPFc);
 	else
 		% update cal.DAscale value to new value
 		handles.cal.InputHPFc = newVal;
@@ -805,6 +809,10 @@ function LoPassFcCtrl_Callback(hObject, eventdata, handles)
 		% newval is greater than hi pass value
 		warning('NICal:ValueOutOfRange', '%s: LoPassFc (%.2f) must be greater than HiPass Fc (%.2f)', ...
 													mfilename, newVal, handles.cal.InputHPFc);
+		update_ui_str(hObject, handles.cal.InputLPFc);
+	elseif newVal > (handles.cal.Fs / 2)
+		warning('NICal:ValueOutOfRange', '%s: LoPassFc (%.2f) must be less than Fs/2 (%.2f)', ...
+													mfilename, newVal, handles.cal.Fs);
 		update_ui_str(hObject, handles.cal.InputLPFc);
 	elseif length(newVal) ~= 1
 		handles.cal.InputLPFc = newVal(1);
@@ -873,7 +881,11 @@ function InputChannelCtrl_Callback(hObject, eventdata, handles)
 % sets mic Gain
 %--------------------------------------------------------------------------
 function MicGainCtrl_Callback(hObject, eventdata, handles)
-	newVal = read_ui_str(hObject, 'n')
+	% normally, read_ui_str(x, 'n') would be used, but str2double only
+	% works on scalar inputs.  with 2 possible input channels, need to account
+	% for both
+	newVal = read_ui_str(hObject);
+	newVal = str2num(newVal);
 	if isempty(newVal)
 		warning('NICal:ValueOutOfRange', '%s: invalid MicGain value %f', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.MicGain);

@@ -80,8 +80,16 @@ fnyq = handles.iodev.Fs / 2;
 % passband definition
 handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 % filter coefficients using a butterworth bandpass filter
-[handles.cal.fcoeffb, handles.cal.fcoeffa] = ...
-					butter(handles.cal.forder, handles.cal.fband, 'bandpass');
+try
+	[handles.cal.fcoeffb, handles.cal.fcoeffa] = ...
+						butter(handles.cal.forder, handles.cal.fband, 'bandpass');
+catch errMsg
+	fprintf('handles.cal.fband = %f\n', handles.cal.fband);
+	NICal_NIexit;
+	errMsg
+	return
+end
+
 guidata(hObject, handles);
 
 %------------------------------------------------------------------------
@@ -193,7 +201,6 @@ end
 phis = mags; 
 dists = mags;
 
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % setup attenuation
@@ -208,7 +215,6 @@ else
 	Latten = handles.cal.StartAtten;
 	Ratten = handles.cal.StartAtten;
 end
-
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -278,9 +284,9 @@ for rep = 1:handles.cal.Nreps
 
 	% filter the data if asked
 	if handles.cal.InputFilter
-		tmp = sin2array(resp{L}, 1, iodev.Fs);
+		tmp = sin2array(resp{L}, FILTSMOOTH_MS, iodev.Fs);
 		resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
-		tmp = sin2array(resp{R}, 1, iodev.Fs);
+		tmp = sin2array(resp{R}, FILTSMOOTH_MS, iodev.Fs);
 		resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 		clear tmp
 	end
@@ -376,9 +382,9 @@ while ~handles.STOP_FLG && freq_index <= handles.cal.Nfreqs
 		
 		% filter the data if asked
 		if handles.cal.InputFilter
-			tmp = sin2array(resp{L}, 1, iodev.Fs);
+			tmp = sin2array(resp{L}, FILTSMOOTH_MS, iodev.Fs);
 			resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
-			tmp = sin2array(resp{R}, 1, iodev.Fs);
+			tmp = sin2array(resp{R}, FILTSMOOTH_MS, iodev.Fs);
 			resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 			clear tmp
 		end
@@ -390,6 +396,8 @@ while ~handles.STOP_FLG && freq_index <= handles.cal.Nfreqs
 		[ldistmag, ldistphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, 2*freq);				
 		[rdistmag, rdistphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, 2*freq);				
 		[refdistmag, refdistphi] = fitsinvec(resp{REFCHAN}(start_bin:end_bin), 1, iodev.Fs, 2*freq);			
+		update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
+		update_ui_str(handles.RValText, sprintf('%.4f', 1000*refmag));
 
 		% compute 2nd harmonic distortion ratio
 		dists{L}(freq_index, rep) = ldistmag / lmag;
@@ -427,13 +435,11 @@ while ~handles.STOP_FLG && freq_index <= handles.cal.Nfreqs
 		refreshdata(H.Lacq, 'caller');
 		refreshdata(H.Racq, 'caller');
 	
-		update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
-		update_ui_str(handles.RValText, sprintf('%.4f', 1000*refmag));
 		update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*mags{REFCHAN}(freq_index, rep))));
 		
 		% Check for possible clipping (values > 5V for NI)
 		for channel = 1:handles.cal.Nchannels
-			if max(resp{channel}) >= CLIPVAL
+			if max(abs(resp{channel})) >= CLIPVAL
 				handles.STOP_FLG = channel;
 			end
 		end
@@ -485,7 +491,6 @@ end
 %-----------------------------------------------------------------------
 NICal_NIexit;
 
-	
 %-------------------------------------------------------
 % set COMPLETE if we made it to the last frequency, 
 % otherwise, assume that ABORT was engaged and exit the run
