@@ -76,7 +76,11 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	disp([mfilename ': checking paths'])
-	pdir = ['C:\TytoLogy\TytoSettings\' getenv('USERNAME')];
+	
+	% directory when using installed version:
+	%	pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+	% development tree
+	pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
 	if isempty(which('RPload'))
 		% could not find the RPload.m function (which is in TytoLogy
 		% toolbox) which suggests that the paths are not set or are 
@@ -103,7 +107,10 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% define user config path
-	userconfigpath = ['C:\TytoLogy\TytoSettings\' getenv('USERNAME') '\NICal\'];
+	% path when using installed version:
+	%	userconfigpath = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME') '\NICal\'];
+	% path when using working version:
+	userconfigpath = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME') '\NICal\'];
 
 	% load the configuration information, store in config structure
 	if isempty(which('NICal_Configuration'))
