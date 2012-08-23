@@ -335,7 +335,7 @@ for F = 1:Nfreqs
 			update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
-			lmag = RMSsin * lmag / (Gain*frdata.lmagadjval(freq_index));
+			lmag = RMSsin * lmag / (Gain(L)*frdata.lmagadjval(freq_index));
 			% compute dB SPL
 			lmagdB = dbspl(VtoPa*lmag);
 			update_ui_str(handles.LSPLText, sprintf('%.4f', lmagdB));
@@ -402,7 +402,7 @@ for F = 1:Nfreqs
 
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
-			lmag_adjusted = RMSsin * lmag / (Gain*frdata.lmagadjval(freq_index));
+			lmag_adjusted = RMSsin * lmag / (Gain(L)*frdata.lmagadjval(freq_index));
 
 			% Store the values in the cell arrays for later averaging
 			% (we'll do the averages later in order to save time while
@@ -467,7 +467,7 @@ for F = 1:Nfreqs
 				leakdists{R}(freq_index, rep) = rleakdistmag / rleakmag;
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				rleakmag = RMSsin * rleakmag / (Gain*frdata.rmagadjval(freq_index));
+				rleakmag = RMSsin * rleakmag / (Gain(R)*frdata.rmagadjval(freq_index));
 				% store leak values
 				leakmags{R}(freq_index, rep) = VtoPa*(rleakmag);
 				leakphis{R}(freq_index, rep) = rleakphi - frdata.rphiadjval(freq_index);
@@ -527,7 +527,7 @@ for F = 1:Nfreqs
 				update_ui_str(handles.LValText, sprintf('%.4f', 1000*bgmag));
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				bgmag_adjusted = RMSsin * bgmag / (Gain*frdata.lmagadjval(freq_index));
+				bgmag_adjusted = RMSsin * bgmag / (Gain(L)*frdata.lmagadjval(freq_index));
 				% Store the values in the cell arrays for later averaging
 				% (we'll do the averages later in order to save time while
 				%  running the calibration curves)
@@ -637,7 +637,7 @@ for F = 1:Nfreqs
 			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag));
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
-			rmag = RMSsin * rmag / (Gain*frdata.rmagadjval(freq_index));
+			rmag = RMSsin * rmag / (Gain(R)*frdata.rmagadjval(freq_index));
 			% compute dB SPL
 			rmagdB = dbspl(VtoPa*rmag);
 			update_ui_str(handles.RSPLText, sprintf('%.4f', rmagdB));
@@ -702,7 +702,7 @@ for F = 1:Nfreqs
 			dists{R}(freq_index, rep) = rdistmag / rmag;
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
-			rmag_adjusted = RMSsin * rmag / (Gain*frdata.rmagadjval(freq_index));
+			rmag_adjusted = RMSsin * rmag / (Gain(R)*frdata.rmagadjval(freq_index));
 			% update text display
 			update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*rmag_adjusted)));
 			
@@ -757,7 +757,7 @@ for F = 1:Nfreqs
 				leakdists{L}(freq_index, rep) = lleakdistmag / lleakmag;
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				lleakmag = RMSsin * lleakmag / (Gain*frdata.lmagadjval(freq_index));
+				lleakmag = RMSsin * lleakmag / (Gain(L)*frdata.lmagadjval(freq_index));
 				% convert to Pascals (rms) and adjust phase measurements
 				leakmags{L}(freq_index, rep) = VtoPa*(lleakmag);
 				leakphis{L}(freq_index, rep) = lleakphi - frdata.lphiadjval(freq_index);
@@ -818,7 +818,7 @@ for F = 1:Nfreqs
 				update_ui_str(handles.RValText, sprintf('%.4f', 1000*bgmag));
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				bgmag_adjusted = RMSsin * bgmag / (Gain*frdata.rmagadjval(freq_index));
+				bgmag_adjusted = RMSsin * bgmag / (Gain(R)*frdata.rmagadjval(freq_index));
 				% Store the values in the cell arrays for later averaging
 				% (we'll do the averages later in order to save time while
 				%  running the calibration curves)

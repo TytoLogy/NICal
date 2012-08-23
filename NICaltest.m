@@ -1,15 +1,15 @@
-function varargout = NICal(varargin)
-% NICAL M-file for NICal.fig
-%      NICAL, by itself, creates a new NICAL or raises the existing
+function varargout = NICaltest(varargin)
+% NICALTEST M-file for NICaltest.fig
+%      NICALTEST, by itself, creates a new NICALTEST or raises the existing
 %      singleton*.
 %
-%      H = NICAL returns the handle to a new NICAL or the handle to
+%      H = NICALTEST returns the handle to a new NICALTEST or the handle to
 %      the existing singleton*.
 %
-%      NICAL('CALLBACK',hObject,eventData,handles,...) calls the local
-%      function named CALLBACK in NICAL.M with the given input arguments.
+%      NICALTEST('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in NICALTEST.M with the given input arguments.
 %
-%      NICAL('Property','Value',...) creates a new NICAL or raises the
+%      NICALTEST('Property','Value',...) creates a new NICALTEST or raises the
 %      existing singleton*.  
 %
 
@@ -38,14 +38,14 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 13-Aug-2012 19:19:34
+% Last Modified by GUIDE v2.5 21-Aug-2012 15:31:49
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
 	gui_State = struct('gui_Name',       mfilename, ...
 					   'gui_Singleton',  gui_Singleton, ...
-					   'gui_OpeningFcn', @NICal_OpeningFcn, ...
-					   'gui_OutputFcn',  @NICal_OutputFcn, ...
+					   'gui_OpeningFcn', @NICaltest_OpeningFcn, ...
+					   'gui_OutputFcn',  @NICaltest_OutputFcn, ...
 					   'gui_LayoutFcn',  [] , ...
 					   'gui_Callback',   []);
 	if nargin && ischar(varargin{1})
@@ -64,12 +64,12 @@ function varargout = NICal(varargin)
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-% --- Executes just before NICal is made visible.
+% --- Executes just before NICaltest is made visible.
 % Performs Initial Setup
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
+function NICaltest_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% Setup Paths
@@ -1201,7 +1201,7 @@ function Menu_DumpNISettings_Callback(hObject, eventdata, handles)
 
 %--------------------------------------------------------------------------
 % --- Outputs from this function are returned to the command line.
-function varargout = NICal_OutputFcn(hObject, eventdata, handles) 
+function varargout = NICaltest_OutputFcn(hObject, eventdata, handles) 
 	% Get default command line output from handles structure
 	varargout{1} = [];
 %--------------------------------------------------------------------------

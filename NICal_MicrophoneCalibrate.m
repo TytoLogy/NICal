@@ -34,7 +34,7 @@ calfile_orig = handles.cal.calfile;
 
 [newname, newpath] = uiputfile('*.fr','Save microphone freq response data to file', pathstr);
 if isequal(newname, 0) || isequal(newpath, 0)
-	fprintf('Cancelling .fr file collection');
+	fprintf('\nCancelling .fr file collection\n\n');
 	return
 else
 	handles.cal.calfile = fullfile(newpath, newname);
