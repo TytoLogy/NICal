@@ -1,11 +1,12 @@
-Use HeadphoneCal program to obtain magnitude and phase response 
-(as function of frequency) of, typically, loudspeakers.
+The NICal Matlab program is used to obtain magnitude and phase response 
+(as function of frequency) of, typically, loudspeakers.  It should also
+be able to calibrate earphones using in situ microphones, but this 
+has not been tested.  It is a relative of the HeadphoneCal program, also
+part of the TytoLogy project.
 
-Typically, a *_frdata.mat file is needed from the MicrophoneCal 
-program, although an "assumed" flat microphone may also be used.  In
-the latter case, a conversion factor to convert from Volts to Pascal
-will be needed if the calibration data will be used to generate 
-pre-calibrated stimuli.
+It was written to use the NI-DAQ boards with the Matlab Data Acquisition 
+Toolbox.  Other hardware could be used, but appropriate changes to the 
+input/output functions and setup would be necessary.
 
 
 
