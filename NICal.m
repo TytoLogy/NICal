@@ -202,15 +202,9 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	% some IO constants - not sure where to put them , so 
-	% put them here
-	%----------------------------------------------------------
-	%----------------------------------------------------------
-	% time to wait for TTL trigger in seconds
-	handles.TriggerTimeout = 10;
-	% triggering level (Volts)
-	handles.TriggerLevel = 4;
 	% Decimation factor for rawdata plots
+	%----------------------------------------------------------
+	%----------------------------------------------------------
 	handles.deciFactor = 10;
  
 	%----------------------------------------------------------
@@ -269,7 +263,7 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
 		case 0
 			NICal_RunCalibration
 		case 1
-			NICal_TriggeredCalibration			
+			NICal_RunTriggeredCalibration			
 	end
 	%---------------------------------------------------------------
 	% enable Calibration ctrl, disable abort ctrl

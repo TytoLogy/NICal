@@ -21,20 +21,28 @@ function plot_callback(obj, event)
 %---------------------------------------------------------------
 % global variables
 %---------------------------------------------------------------
-global Lacq Racq H acqpts
+global tvec_acq Lacq Racq fvec Lfft Rfft H SweepPoints deciFactor start_bin end_bin
 
-if strcmpi(obj.Running, 'On')
+if strcmpi(obj.Running, 'On') || (obj.SamplesAvailable >= SweepPoints)
 	%---------------------------------------------------------------
-	% read data from ai object
+	% read data (acqpts, nchannels) array from ai object
 	%---------------------------------------------------------------
-	tmpdata = peekdata(obj, acqpts);
-	data{1} = tmpdata(:, 1);
-	data{2} = tmpdata(:, 2);
-	
+	tmpdata = peekdata(obj, SweepPoints);
+
 	%---------------------------------------------------------------
 	% update data plot
 	%---------------------------------------------------------------
-	refreshdata(Lacq);
-	refreshdata(Racq);
+	Lacq = downsample(tmpdata(:, 1), deciFactor);
+	Racq = downsample(tmpdata(:, 2), deciFactor);
+
+	refreshdata(H.Lacq, 'caller');
+	refreshdata(H.Racq, 'caller');
 	
+	% plot fft
+	[tmpf, Lfft] = daqdbfft(tmpdata(start_bin:end_bin, 1), obj.SampleRate, length(start_bin:end_bin));
+	[tmpf, Rfft] = daqdbfft(tmpdata(start_bin:end_bin, 2), obj.SampleRate, length(start_bin:end_bin));
+	refreshdata(H.Lfft, 'caller');
+	refreshdata(H.Rfft, 'caller');
+	drawnow
+
 end
