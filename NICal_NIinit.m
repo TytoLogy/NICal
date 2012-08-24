@@ -1,4 +1,3 @@
-
 function [handles, init_status] = NICal_NIinit(handles)
 %--------------------------------------------------------------------------
 % NICal_NIinit.m
@@ -39,7 +38,8 @@ init_status = 0;
 %handles.iodev.NI = handles.initfunction('NI', iodev.Dnum);
 try
 	handles.iodev.NI = nidaq_aiao_init('NI', handles.iodev.Dnum);
-catch
+catch errMsg
+	disp('error initializing NI device')
 	init_status = 0;
 	return
 end

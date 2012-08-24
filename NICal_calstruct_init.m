@@ -15,6 +15,8 @@ function cal = NICal_calstruct_init()
 % Revisions:
 % 	2 Aug 2012 (SJS): added CollectBackground
 %	17 Aug 2012 (SJS): added FieldType for mic calibration, Nchannels
+%	24 Aug 2012 (SJS): added TriggerTimeout, TriggerLevel for 
+% 							 use in Triggered acquisition mode
 %--------------------------------------------------------------------------
 
 %----------------------------------------------------------------
@@ -149,7 +151,7 @@ cal.MeasureLeak = 0;
 cal.InputFilter = 1;
 cal.InputHPFc = 200;
 cal.InputLPFc = 120000;
-% for NI card, set default sampling rate here
+% for NI card, set default sampling rate here (kludge!!!!)
 cal.Fs = 250000;
 % Nyquist frequency
 fnyq = cal.Fs/2;
@@ -161,6 +163,15 @@ cal.fband = [cal.InputHPFc cal.InputLPFc] ./ fnyq;
 [cal.fcoeffb, cal.fcoeffa] = butter(cal.forder, cal.fband, 'bandpass');
 %----------------------------------------------------------------
 
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% triggered IO settings
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% time to wait for TTL trigger in seconds
+cal.TriggerTimeout = 10;
+% triggering level (Volts)
+cal.TriggerLevel = 4;
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------

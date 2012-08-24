@@ -37,10 +37,12 @@ init_status = 0;
 %-----------------------------------------------------------------------
 try
 	handles.iodev.NI = nidaq_ai_init('NI', handles.iodev.Dnum);
-catch
+catch errMsg
+	disp('error initializing NI device')
 	init_status = 0;
 	return
 end
+
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % set sample rate to value specified in cal settings
@@ -63,8 +65,14 @@ handles.cal.Fs = ActualRate;
 % set input range
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% range needs to be in [RangeMin RangeMax] format
+aiaoRange = 5 * [-1 1];
+% set analog input range (might be overkill to set 
+% InputRange, SensorRange and UnitsRange, but is seems to work)
 for n = 1:length(handles.iodev.NI.ai.Channel)
-	handles.iodev.NI.ai.Channel(n).InputRange = [-5 5];
+	handles.iodev.NI.ai.Channel(n).InputRange = aiaoRange;
+	handles.iodev.NI.ai.Channel(n).SensorRange = aiaoRange;
+	handles.iodev.NI.ai.Channel(n).UnitsRange = aiaoRange;
 end
 
 %------------------------------------------------------------------------
@@ -78,7 +86,7 @@ set(handles.iodev.NI.ai, 'HwDigitalTriggerSource', 'PFI0');
 % trigger on positive-going part of signal
 set(handles.iodev.NI.ai, 'TriggerCondition', 'PositiveEdge');
 % use 4 Volt trigger level
-set(handles.iodev.NI.ai, 'TriggerConditionValue', handles.TriggerLevel);
+set(handles.iodev.NI.ai, 'TriggerConditionValue', handles.cal.TriggerLevel);
 % only 1 "sweep" per trigger event 
 set(handles.iodev.NI.ai, 'TriggerRepeat', 0);
 % set SamplesPerTrigger to # of samples to collect for each trigger event
@@ -99,7 +107,7 @@ set(handles.iodev.NI.ai, 'SamplesAcquiredFcn', {@plot_callback});
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % set up automatic file logging
-set(handles.iodev.NI.ai, 'LogFileName', fullfile(OutputDataPath, OutputDataFile));
+set(handles.iodev.NI.ai, 'LogFileName', fullfile(handles.OutputDataPath, handles.OutputDataFile));
 %-------------------------------------------------------
 % set logging mode
 %	'Disk'	sets logging mode to a file on disk (specified by 'LogFileName)
@@ -113,6 +121,15 @@ set(handles.iodev.NI.ai, 'LoggingMode', 'Disk&Memory');
 %	'Overwrite' will overwrite current log file
 %-------------------------------------------------------
 set(handles.iodev.NI.ai, 'LogToDiskMode', 'Index');
+
+%-------------------------------------------------------
+% set channel skew mode to Equisample
+%-------------------------------------------------------
+set(handles.iodev.NI.ai, 'ChannelSkewMode', 'Equisample');
+%set(handles.iodev.NI.ai, 'ChannelSkewMode', 'Minimum');
+%set(handles.iodev.NI.ai, 'ChannelSkewMode', 'Manual');
+%set(handles.iodev.NI.ai, 'ChannelSkew', 3.0e-06);
+
 
 %-------------------------------------------------------
 % set init_status to 1
