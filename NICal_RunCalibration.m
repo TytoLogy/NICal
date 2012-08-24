@@ -77,7 +77,6 @@ if initFlag == 0
 	return
 end
 
-
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Define a bandpass filter for processing the data
@@ -181,6 +180,12 @@ Nullstim = 0 * Nullstim;
 Nullstim = insert_delay(Nullstim, handles.cal.StimDelay, handles.iodev.Fs);
 Nullstim_downsample =  downsample(Nullstim(1, :), deciFactor);
 
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% Setup Plots
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+
 %-------------------------------------------------------
 % create arrays for plotting and plot them
 %-------------------------------------------------------
@@ -190,17 +195,44 @@ Rstim = zerostim;
 % acq
 Lacq = zeroacq;
 Racq = zeroacq;
+% FFT
+nfft = length(start_bin:end_bin);
+tmp = zeros(1, nfft);
+[fvec, Lfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
+[fvec, Rfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
+% convert fvec to kHz
+fvec = 0.001 * fvec;
+clear tmp
 
+%-------------------------------------------------------
+% plot null data, save handles for time-domain plots
+%-------------------------------------------------------
+% stimulus
 H.Lstim = plot(handles.Lstimplot, tvec_stim, Lstim, 'g');
 set(H.Lstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Lstim');
+ylabel(handles.Lstimplot, 'V');
 H.Rstim = plot(handles.Rstimplot, tvec_stim, Rstim, 'r');
 set(H.Rstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Rstim');
+% response
 H.Lacq = plot(handles.Lmicplot, tvec_acq, Lacq, 'g');
 set(H.Lacq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Lacq');
+xlabel(handles.Lmicplot, 'Time (ms)')
+ylabel(handles.Lmicplot, 'V')
 H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
 set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
-set(handles.Lstimplot, 'XTickLabel', '');
-set(handles.Lmicplot, 'XTickLabel', '');
+xlabel(handles.Rmicplot, 'Time (ms)')
+
+%-------------------------------------------------------
+% plot null data, save handles for frequency-domain plots
+%-------------------------------------------------------
+H.Lfft = plot(handles.Lfftplot, fvec, Lfft);
+set(H.Lfft, 'XDataSource', 'fvec', 'YDataSource', 'Lfft');
+xlabel(handles.Lfftplot, 'Frequency (kHz)')
+ylabel(handles.Lfftplot, 'dBV')
+H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
+set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
+xlabel(handles.Rfftplot, 'Frequency (kHz)')
+
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -485,10 +517,12 @@ for F = 1:Nfreqs
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
 			% plot fft
-			figure(10)
-			[tmpf, tmpm] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
-			plot(tmpf, tmpm);
-			title('Left')
+			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
+			refreshdata(H.Lfft, 'caller');
+			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
+			refreshdata(H.Rfft, 'caller');
+			drawnow
+			
 			% Pause for ISI
 			pause(0.001*cal.ISI);
 			
@@ -774,10 +808,11 @@ for F = 1:Nfreqs
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
 			% plot fft
-			figure(10)
-			[tmpf, tmpm] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
-			plot(tmpf, tmpm);
-			title('Right')
+			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
+			refreshdata(H.Rfft, 'caller');
+			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
+			refreshdata(H.Lfft, 'caller');
+			drawnow
 	
 			% pause for ISI (convert to seconds)
 			pause(0.001*cal.ISI);
