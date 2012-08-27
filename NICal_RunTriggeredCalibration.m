@@ -118,12 +118,19 @@ if isequal(filename, 0) || isequal(pathname, 0)
 	return
 else
 	% parse filenames
+	[~, filebase] = fileparts(filename);
+	% if ending of filename is not '-1', add it
+	% this is done in order to have automatic file name indexing
+	% by the log to file processing in DAQ toolbox work properly.
+	if ~strcmpi(filebase((end-1):end), '-1')
+		filebase = [filebase '-1'];
+	end
 	handles.OutputDataPath = pathname;
-	handles.OutputDataFile = filename;
-	[~, filebase] = fileparts(handles.OutputDataFile);
+	handles.OutputDataFile = [filebase '.daq'];
 	filebase = filebase(1:(length(filebase)-2));
 	handles.OutputMatFile = [filebase '.mat'];
 end
+clear filename pathname tmppath tmpname tmpfilename
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -231,7 +238,8 @@ xlabel(handles.Rfftplot, 'Frequency (kHz)')
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% set the start and end bins for the calibration
+% set the start and end bins for the calibration based on 
+% front panel settings
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, handles.iodev.Fs);
@@ -249,30 +257,55 @@ end_bin = start_bin + ms2bin(handles.cal.StimDuration-handles.cal.StimRamp, hand
 %------------------------------------------------------------------------
 fprintf('Ready to acquire data...\n\n\n');
 
-stopFlag = 0;
-rep = 1;
-freq_index = 1;
 
+%----------------------------------------------------------------
+% open a menu-panel for user to start (or cancel) monitoring
+% of PF1 input for triggering of acquisition
+%----------------------------------------------------------------
 userResp = menu('Acquiring Triggered Data', 'Start', 'Cancel');
 
+%----------------------------------------------------------------
+% if user hit start, begin acquisition at triggers
+%----------------------------------------------------------------
 if userResp ~= 2
 	runFLAG = 1;
 	while runFLAG
 		%START ACQUIRING
 		start(handles.iodev.NI.ai);
 		fprintf('Writing to file %s \n', handles.iodev.NI.ai.LogFileName);
-
+		% wait for TriggerTimeout seconds
 		try
 			wait(handles.iodev.NI.ai, handles.cal.TriggerTimeout);
 		catch errEvent
-			disp('TIMEOUT!');
+			% if timeout occurs (more than handles.cal.TriggerTimeout seconds
+			% elapse since prior trigger), set runFLAG to 0 to end looping
+			fprintf('\n\n*** TIMEOUT!!! ***\n');
 			runFLAG = 0;
 		end
+		% check for abort button press
+		if read_ui_val(handles.AbortCtrl) == 1
+			% if so, stop
+			fprintf('abortion detected\n\n');
+			runFLAG = 0;
+		end
+		
 	end
 	% stop acquiring
-	fprintf('... terminating\n')
+	fprintf('... terminating acquisition \n\n')
 	stop(handles.iodev.NI.ai);
+%----------------------------------------------------------------
+% otherwise, cancel
+%----------------------------------------------------------------
+else
+	fprintf('Cancelling acquisition!\n\n');
 end
+
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% get event log
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+EventLogAI = showdaqevents(handles.iodev.NI.ai);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -289,34 +322,36 @@ end
 %-----------------------------------------------------------------------
 disp('...closing NI devices...');
 
-% get event log
-EventLogAI = showdaqevents(handles.iodev.NI.ai);
-
 % delete and clear ai and ch0 object
 delete(handles.iodev.NI.ai);
 delete(handles.iodev.NI.chI);
 clear handles.iodev.NI.ai handles.iodev.NI.chI
 
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % save settings information to mat file
-save(fullfile(pwd, 'NICal_EventLogs.mat'), ...
-		'EventLogAI'			, ...
-		'-MAT' );
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+if userResp ~= 2
+	cal = handles.cal;
+	Fs = handles.iodev.Fs;
+	save(fullfile(handles.OutputDataPath, handles.OutputMatFile), ...
+			'cal'			, ...
+			'acqpts'					, ...
+			'VtoPa'					, ...
+			'Fs'						, ...
+			'EventLogAI'			, ...
+			'-MAT' );
+end
 
 % save settings information to mat file
-Fs = handles.iodev.Fs;
-InputChannel = handles.cal.InputChannel;
-MicChannel = handles.cal.Side;
-save(fullfile(handles.OutputDataPath, handles.OutputMatFile), ...
-		'InputChannel'			, ...
-		'MicChannel'			, ...
-		'acqpts'					, ...
-		'VtoPa'					, ...
-		'Fs'						, ...
-		'EventLogAI'			, ...
-		'-MAT' );
+if DEBUG
+	save(fullfile(pwd, 'NICal_EventLogs.mat'), ...
+			'EventLogAI'			, ...
+			'-MAT' );
+end
 
 COMPLETE = 1;
 
 disp('Finished.')
-
 
