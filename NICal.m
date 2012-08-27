@@ -148,7 +148,13 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% Initial Calibration settings
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	
+
+	%---------------------------------------------
+	% KLUDGE!!!!!!!
+	%---------------------------------------------
+	handles.Nchannels = 2;
+	guidata(hObject, handles);
+
 	%------------------------------------------------------------
 	% first check to see if defaults file exists
 	%------------------------------------------------------------
@@ -200,13 +206,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	handles.iodev = iodev;
 	guidata(hObject, handles);
 	
-	%----------------------------------------------------------
-	%----------------------------------------------------------
-	% Decimation factor for rawdata plots
-	%----------------------------------------------------------
-	%----------------------------------------------------------
-	handles.deciFactor = 10;
- 
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% set function handles from configuration data
@@ -302,7 +301,6 @@ function SideCtrl_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
-
 %-------------------------------------------------------------------------
 % --- Executes on button press in TriggeredAcquisitionCtrl.
 %-------------------------------------------------------------------------
@@ -333,7 +331,6 @@ function FreqListCtrl_Callback(hObject, eventdata, handles)
 	% act accordingly
 	%------------------------------------------------------
 	if newVal
-
 		% get filename and path to frequency list file (.m or .txt)
 		[filename, pathname] = uigetfile(	...
 														{	...
@@ -363,7 +360,6 @@ function FreqListCtrl_Callback(hObject, eventdata, handles)
 			freqfile = fullfile(pathname, filename);
 			[freqs, nfreqs] = NICal_LoadFreqList(freqfile);
 		end
-	
 		
 		if isempty(freqs)
 			%------------------------------------------------------
@@ -608,17 +604,24 @@ function StartAttenCtrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
-function CheckCalCtrl_Callback(hObject, eventdata, handles)
-	handles.cal.CheckCal = read_ui_val(hObject)-1;
-	guidata(hObject, handles);
-%--------------------------------------------------------------------------
-
-%--------------------------------------------------------------------------
 function CollectBackgroundCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.CollectBackground = read_ui_val(hObject);
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
+%--------------------------------------------------------------------------
+% --- Executes on button press in MeasureLeakCtrl. ("Measure Crosstalk")
+%--------------------------------------------------------------------------
+function MeasureLeakCtrl_Callback(hObject, eventdata, handles)
+	handles.cal.MeasureLeak = read_ui_val(hObject);
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+function CheckCalCtrl_Callback(hObject, eventdata, handles)
+	handles.cal.CheckCal = read_ui_val(hObject)-1;
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
@@ -712,14 +715,6 @@ function DAscaleCtrl_Callback(hObject, eventdata, handles)
 		handles.cal.DAscale = newVal;
 	end
 	% update handles
-	guidata(hObject, handles);
-%--------------------------------------------------------------------------
-
-%--------------------------------------------------------------------------
-% --- Executes on button press in MeasureLeakCtrl. ("Measure Crosstalk")
-%--------------------------------------------------------------------------
-function MeasureLeakCtrl_Callback(hObject, eventdata, handles)
-	handles.cal.MeasureLeak = read_ui_val(hObject);
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
@@ -956,7 +951,7 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 function CalFileCtrl_Callback(hObject, eventdata, handles)
 % 	oldfile = handles.cal.calfile;
 	oldfile = read_ui_str(hObject);
-	[filename, pathname] = uiputfile('*_cal.mat','Save calibration data to file', oldfile);
+	[filename, pathname] = uiputfile('*.cal','Save calibration data to file', oldfile);
 	if isequal(filename, 0) || isequal(pathname, 0)
 		update_ui_str(hObject, handles.cal.calfile);
 		return
@@ -991,7 +986,7 @@ function AutoSaveCtrl_Callback(hObject, eventdata, handles)
 
 %--------------------------------------------------------------------------
 function Menu_SaveCal_Callback(hObject, eventdata, handles)
-	[calfile, calpath] = uiputfile('*_cal.mat','Save headphone calibration data in file');
+	[calfile, calpath] = uiputfile('*.cal','Save headphone calibration data in file');
 	if calfile ~= 0
 		% save the sequence so we can match up with the RF data
 		datafile = fullfile(calpath, calfile);

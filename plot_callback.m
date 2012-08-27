@@ -1,9 +1,9 @@
 function plot_callback(obj, event)
 %------------------------------------------------------------------------
 % plot_callback
-% 
+% TytoLogy Project: NICal program
 %------------------------------------------------------------------------
-% 
+% callback function for use with triggered acq in NICal
 % 
 %------------------------------------------------------------------------
 % See also: DAQ Toolbox 

@@ -12,9 +12,15 @@
 % 				NICal_TriggeredCalibration)
 %
 % Revisions:
-%	24 Aug 2012 (SJS): renamed NICal_RunTriggeredCalibration to
-% 							 more accurately reflect function as well as to
-% 							 mirror NICal_RunCalibration
+%	24 Aug 2012 (SJS): 
+% 	 -	renamed NICal_RunTriggeredCalibration to more accurately reflect 
+% 		function as well as to mirror NICal_RunCalibration
+% 	27 Aug 2012 (SJS)
+% 	 -	changed deciFactor to handles.cal.deciFactor
+% 
+%--------------------------------------------------------------------------
+% To do:  
+% 	-	some way to avoid global variables?
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -39,7 +45,7 @@ COMPLETE = 0;
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% Initialization Scripts
+% Initialization & init Scripts
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -69,6 +75,13 @@ guidata(hObject, handles);
 %---------------------------------------------
 %---------------------------------------------
 
+% fix # gain values if Nchannels doesn't match # of gain values
+if handles.cal.Nchannels  ~= length(handles.cal.MicGain)
+	handles.cal.MicGain = handles.cal.MicGain(1) .* ones(1, handles.cal.Nchannels);
+	update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
+	guidata(hObject, handles);
+end
+
 % read in the gain on the mic preamp
 Gain_dB = handles.cal.MicGain;
 % convert dB to linear scale
@@ -85,12 +98,6 @@ end
 VtoPa = (CalMic_sense^-1);
 % precompute the volts -> RMS conversion factor for sinusoids (0.7071)
 RMSsin = 1/sqrt(2);
-
-%---------------------------------------------
-% KLUDGE!!!!!!!
-%---------------------------------------------
-handles.Nchannels = 2;
-guidata(hObject, handles);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -146,21 +153,25 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 %-----------------------------------------------------------------------
 % NICal_caldata_init;
 
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% global vars for access by DAQ callback function
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+global	tvec_acq Lacq Racq fvec Lfft Rfft H SweepPoints ...
+			deciFactor start_bin end_bin
+% assign plot decimation factor to deciFactor
+deciFactor = handles.cal.deciFactor;
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% create null response and time vector for plots, set up plots, global
-% vars for callback
+% create null response and time vector for plots, set up plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-global tvec_acq Lacq Racq fvec Lfft Rfft H SweepPoints deciFactor start_bin end_bin
-
-% plot decimation factor
-deciFactor = handles.deciFactor;
 
 % fake acquired data
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
-zeroacq = downsample(zeroacq, deciFactor);
+zeroacq = downsample(zeroacq, handles.cal.deciFactor);
 acqpts = length(zeroacq);
 % time vector for stimulus plots
 tvec_acq = 1000*(1/handles.iodev.Fs)*(0:(acqpts-1));
@@ -171,10 +182,14 @@ SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
 %-----------------------------------------------------------------------
 % Setup Plots
 %-----------------------------------------------------------------------
+% to speed up plotting, the vectors Lacq, Racq, tvec_acq, L/Rfft, fvec
+% are pre-allocated and then those arrys are used as XDataSource and
+% YDataSource for the respective plots
+%-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 
 %-------------------------------------------------------
-% create arrays for plotting and plot them
+% create arrays for plotting (with null value)
 %-------------------------------------------------------
 % acq
 Lacq = zeroacq;
