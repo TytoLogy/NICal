@@ -17,6 +17,7 @@ function cal = NICal_calstruct_init()
 %	17 Aug 2012 (SJS): added FieldType for mic calibration, Nchannels
 %	24 Aug 2012 (SJS): added TriggerTimeout, TriggerLevel for 
 % 							 use in Triggered acquisition mode
+%	27 Aug 2012 (SJS): modified fr and cal filenames
 %--------------------------------------------------------------------------
 
 %----------------------------------------------------------------
@@ -227,9 +228,9 @@ cal.AutoSave = 1;
 %----------------------------------------------------------------
 datadir = ['C:\Users\' getenv('USERNAME')];
 % default fr response file for Knowles mics
-cal.mic_fr_file = fullfile(datadir, 'default_fr.mat');
+cal.mic_fr_file = fullfile(datadir, 'default.fr');
 % default output file
-cal.calfile = fullfile(datadir, 'ear_cal.mat');
+cal.calfile = fullfile(datadir, 'ear.cal');
 
 cal.CollectBackground = 0;
 
