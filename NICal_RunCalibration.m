@@ -15,6 +15,13 @@
 % Revisions:
 %	9 July, 2012 (SJS) renamed for NICal project
 %	2 July, 2012 (SJS): added background calculation
+%	27 Aug 2012 (SJS): 
+% 	 -	some comments added
+%	 -	noticed that CheckCal is somewhat useless, so disabled it in GUI.
+%	 -	should probably rework the way attenuation is done (manage both
+%		Latten and Ratten instead of using MAX_ATTEN when needed), but 
+%		this is low priority
+%	 -	changed deciFactor to handles.cal.deciFactor
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -28,7 +35,6 @@ NICal_Constants;
 % set the COMPLETE flag to 0
 COMPLETE = 0;
 
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Initialization Scripts
@@ -39,12 +45,6 @@ COMPLETE = 0;
 %---------------------------------------------
 NICal_settings;
 % save the GUI handle information
-guidata(hObject, handles);
-
-%---------------------------------------------
-% KLUDGE!!!!!!!
-%---------------------------------------------
-handles.Nchannels = 2;
 guidata(hObject, handles);
 
 %-----------------------------------------------------------------------
@@ -149,9 +149,9 @@ zerostim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 0);
 % insert stim delay
 zerostim = insert_delay(zerostim, handles.cal.StimDelay, handles.iodev.Fs);
 % downsample (no need to plot all points)
-zerostim = downsample(zerostim, deciFactor);
+zerostim = downsample(zerostim, handles.cal.deciFactor);
 % downsample-factor adjusted sample interval
-dt = deciFactor/handles.iodev.Fs;
+dt = handles.cal.deciFactor/handles.iodev.Fs;
 % # output points
 outpts = length(zerostim);
 % time vector for stimulus plots
@@ -161,7 +161,7 @@ stim_start = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
 stim_end = stim_start + outpts - 1;
 % fake acquired data
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
-zeroacq = downsample(zeroacq, deciFactor);
+zeroacq = downsample(zeroacq, handles.cal.deciFactor);
 acqpts = length(zeroacq);
 % time vector for stimulus plots
 tvec_acq = 1000*dt*(0:(acqpts-1));
@@ -178,11 +178,15 @@ Nullstim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 1);
 Nullstim = 0 * Nullstim;
 % insert delay
 Nullstim = insert_delay(Nullstim, handles.cal.StimDelay, handles.iodev.Fs);
-Nullstim_downsample =  downsample(Nullstim(1, :), deciFactor);
+Nullstim_downsample =  downsample(Nullstim(1, :), handles.cal.deciFactor);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Setup Plots
+%-----------------------------------------------------------------------
+% to speed up plotting, the vectors Lacq, Racq, tvec_acq, L/Rfft, fvec
+% are pre-allocated and then those arrys are used as XDataSource and
+% YDataSource for the respective plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 
@@ -231,24 +235,25 @@ xlabel(handles.Lfftplot, 'Frequency (kHz)')
 ylabel(handles.Lfftplot, 'dBV')
 H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
 set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
-xlabel(handles.Rfftplot, 'Frequency (kHz)')
-
+xlabel(handles.Rfftplot, 'Frequency (kHz)');
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % setup attenuation
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% check if AttenFix is set and that it is in the range of [0, MAX_ATTEN]
 if handles.cal.AttenFix && between(handles.cal.AttenFixValue, 0, MAX_ATTEN)
 	Latten = handles.cal.AttenFixValue;
 	Ratten = handles.cal.AttenFixValue;
 else
-	% set the adjustable starting attenuator values	
-	Latten = handles.cal.StartAtten;
-	Ratten = handles.cal.StartAtten;
+	% use StartAtten
 	if ~between(handles.cal.AttenFixValue, 0, MAX_ATTEN)
 		warning('NICal:Atten', [mfilename ': AttenFixValue out of range, using default StartAtten value'])
 	end
+	% set the adjustable starting attenuator values	
+	Latten = handles.cal.StartAtten;
+	Ratten = handles.cal.StartAtten;
 end
 
 %-----------------------------------------------------------------------
@@ -293,13 +298,16 @@ for F = 1:Nfreqs
 	
 	%------------------------------------------------------------------
 	% if cal.Side is 1 or 3 (LEFT or BOTH), calibrate L channel
+	% Side is set by the SideCtrl pulldown under CalibrationSettings
 	% 		cal.Side == 1 is LEFT
 	% 		cal.Side == 2 is RIGHT
 	% 		cal.Side == 3 is BOTH channels, 
 	%------------------------------------------------------------------
 	if cal.Side == 1 || cal.Side == 3
 		%LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
-		% set input channel: if INputChannel is set to 3 (both), use left
+		% set input channel: if InputChannel is set to 3 (both), 
+		% use left input when calibrating Left side
+		%LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
 		if handles.cal.InputChannel == 3
 			inChan = 1;
 		else
@@ -320,7 +328,7 @@ for F = 1:Nfreqs
 		% save in Satt
 		Satt = S;
 		% plot the stimuli - set R stim to zero
-		Lstim = downsample(S(1, :), deciFactor);
+		Lstim = downsample(S(1, :), handles.cal.deciFactor);
 		Rstim = zerostim;
 		refreshdata(H.Lstim, 'caller');
 		refreshdata(H.Rstim, 'caller');
@@ -393,11 +401,11 @@ for F = 1:Nfreqs
 			end
 
 			% plot the response
-			Lacq = downsample(resp{L}, deciFactor);
-			Racq = downsample(resp{R}, deciFactor);
+			Lacq = downsample(resp{L}, handles.cal.deciFactor);
+			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
-		end
+		end		% END of L attenuation loop
 
 		pause(0.001*cal.ISI);
 
@@ -455,12 +463,16 @@ for F = 1:Nfreqs
 			% microphone (i.e., B & K calibration mic), we have a few
 			% more things to do...
 			if cal.CheckCal == L
+				% mag, phase of L channel
 				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				% convert tmpmag to Pascals (rms)
 				mags{REF}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
 				phis{REF}(freq_index, rep) = tmpphi;
+				% distortion measures
 				[tmpdistmag, tmpdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
 				dists{REF}(freq_index, rep) = tmpdistmag;
 				distphis{REF}(freq_index, rep) = tmpdistphi;
+				% feedback to user
 				fprintf('ref mag: %f    L mag: %f', dbspl(mags{REF}(freq_index, rep)), dbspl(mags{L}(freq_index, rep)) );
 			elseif cal.CheckCal == BOTH
 				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
@@ -512,8 +524,8 @@ for F = 1:Nfreqs
 			end
 			
 			% plot the response
-			Lacq = downsample(resp{L}, deciFactor);
-			Racq = downsample(resp{R}, deciFactor);
+			Lacq = downsample(resp{L}, handles.cal.deciFactor);
+			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
 			% plot fft
@@ -571,8 +583,8 @@ for F = 1:Nfreqs
 				update_ui_str(handles.RValText, '---');
 				update_ui_str(handles.RSPLText, '---');
 				% plot the response
-				Lacq = downsample(resp{L}, deciFactor);
-				Racq = downsample(resp{R}, deciFactor);
+				Lacq = downsample(resp{L}, handles.cal.deciFactor);
+				Racq = downsample(resp{R}, handles.cal.deciFactor);
 				refreshdata(H.Lacq, 'caller');
 				refreshdata(H.Racq, 'caller');
 				% plot fft
@@ -591,17 +603,19 @@ for F = 1:Nfreqs
 
 			end		
 		end
-	% END OF L CHANNEL	
-	end
+	end		% END OF L CHANNEL	
 	
+	%------------------------------------
 	% check for abort button press
+	%------------------------------------
 	if read_ui_val(handles.AbortCtrl) == 1
 		% if so, stop
 		disp('abortion detected')
 		break
 	end
-
+	%------------------------------------
 	% pause for ISI
+	%------------------------------------
 	pause(0.001*cal.ISI);
 
 	%------------------------------------------------------------------
@@ -628,7 +642,7 @@ for F = 1:Nfreqs
 		Satt = S;
 		% plot the stimulus arrays
 		Lstim = zerostim;
-		Rstim = downsample(S(2, :), deciFactor);
+		Rstim = downsample(S(2, :), handles.cal.deciFactor);
 		refreshdata(H.Lstim, 'caller');
 		refreshdata(H.Rstim, 'caller');
 
@@ -698,8 +712,8 @@ for F = 1:Nfreqs
 			end
 
 			% plot the response
-			Lacq = downsample(resp{L}, deciFactor);
-			Racq = downsample(resp{R}, deciFactor);
+			Lacq = downsample(resp{L}, handles.cal.deciFactor);
+			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
 		end
@@ -803,8 +817,8 @@ for F = 1:Nfreqs
 			end
 			
 			% plot the response
-			Lacq = downsample(resp{L}, deciFactor);
-			Racq = downsample(resp{R}, deciFactor);
+			Lacq = downsample(resp{L}, handles.cal.deciFactor);
+			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
 			% plot fft
@@ -863,8 +877,8 @@ for F = 1:Nfreqs
 				update_ui_str(handles.LValText, '---');
 				update_ui_str(handles.LSPLText, '---');
 				% plot the response
-				Lacq = downsample(resp{L}, deciFactor);
-				Racq = downsample(resp{R}, deciFactor);
+				Lacq = downsample(resp{L}, handles.cal.deciFactor);
+				Racq = downsample(resp{R}, handles.cal.deciFactor);
 				refreshdata(H.Lacq, 'caller');
 				refreshdata(H.Racq, 'caller');
 				% plot fft
@@ -949,7 +963,7 @@ for F = 1:Nfreqs
 		mags{REFL}(freq_index, :) = dbspl(mags{REFL}(freq_index, :)) + atten{L}(freq_index, :);
 		mags{REFR}(freq_index, :) = dbspl(mags{REFR}(freq_index, :)) + atten{R}(freq_index, :);
 	end
-
+	
 	% store in caldata struct
 	for channel = 1:handles.Nchannels				
 		caldata.mag(channel, freq_index) = mean( mags{channel}(freq_index, :) );

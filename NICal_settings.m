@@ -14,6 +14,8 @@
 % Revisions:
 %	9 July 2012 (SJS)
 % 	 -	modifications to use NI hardware
+% 	27 Aug 2012 (SJS): removed handles.deciFactor 
+%							(changed to handles.cal.deciFactor in main function)
 %--------------------------------------------------------------------------
 
 disp('...general setup starting...');
@@ -47,9 +49,7 @@ end
 % settings
 %---------------------------------------------
 %---------------------------------------------
-% plot decimation factor
-deciFactor = handles.deciFactor;
-
+% fix # gain values if Nchannels doesn't match # of gain values
 if handles.cal.Nchannels  ~= length(handles.cal.MicGain)
 	handles.cal.MicGain = handles.cal.MicGain(1) .* ones(1, handles.cal.Nchannels);
 	update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
