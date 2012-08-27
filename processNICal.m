@@ -79,36 +79,60 @@ end
 % find data files
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-if length(basename) == 0
+
+%----------------------------------
+% check if filename was provided
+%----------------------------------
+if isempty(basename)
+	% if not, ask user for file
+	
+	%----------------------------------
 	% output data path and file
+	%----------------------------------
 	% DefaultPath = 'C:\Users\Calibrate\Matlab\Calibration\Data';
 	DefaultPath = pwd;
-	  
+	
+	%----------------------------------
+	% open panel to get .daq file name
+	%----------------------------------
 	[tmpfile, basepath] = uigetfile(...
 			 {'*.daq', 'DAQ output files (*.daq)'}, ...
-			  'Pick a file', DefaultPath);
-
-	if isequal(tmpfile, 0) | isequal(basepath, 0)
+			  'Pick a DAQ file', DefaultPath);
+	% check if user hit cancel (tmpfile, or basepath == 0)
+	if isequal(tmpfile, 0) || isequal(basepath, 0)
 		disp('Cancelled...')
 		return
 	end
 	
+	%----------------------------------
+	% break down file into parts
+	%----------------------------------
 	[~, extfile, fext] = fileparts(tmpfile);
-	basename = extfile(1:(length(extfile) - 2))
+	% last 2 chars of file should be a '-' and a number; remove this to get
+	% a valid basename for file
+	basename = extfile(1:(length(extfile) - 2));
 	
 else
+	% basename was given, see if basepath was also provided
 	if ~exist('basepath', 'var') || isempty(basepath)
+		% if not, use current dir
 		basepath = pwd;
 	end
 end
+
+%-----------------------------------------------
+% find the daq files that match the basename
+%-----------------------------------------------
 [daqFiles, daqNumbers] = find_daq_files(basename, basepath);
 nDaqFiles = length(daqFiles);
-
+% error if # daq files is 0
 if ~nDaqFiles
 	error('%s: no daq files found (%s, %s)', mfilename, basename, basepath);
 end
 
+%-----------------------------------------------
 % load .mat file for this calibration session
+%-----------------------------------------------
 load(fullfile(basepath, [basename '.mat']), '-MAT');
 
 %--------------------------------------------------------
@@ -130,16 +154,23 @@ for n = 1:nDaqFiles
 	% Read Data
 	%--------------------------------
 	[tmpdata, t, tabs, events, info] = daqread(daqfile);
+	[npts, nchan] = size(tmpdata);
+	fprintf('Read %d points from file %s\n', npts, daqfile);
 	if isempty(tmpdata)
+		% file is empty
+		fprintf('File %s is empty, terminating data loading\n\n', daqfile);
 		break
 	end
 	
+	% ASSUME (!!) that stimulus data are collected on channel 1 (NI 0)
+	% and mic data are on channel 2 (NI AI0)
 	stimdata = tmpdata(:, 1);
-	micdata = tmpdata(:, MicChannel+1);
+	micdata = tmpdata(:, 2);
 	clear tmpdata
-	% sample rate
-	Fs = info.ObjInfo.SampleRate;
 	
+	% get sample rate
+	Fs = info.ObjInfo.SampleRate;
+
 	%------------------------------------------------------------------------
 	% get a highpass filter for processing the  data
 	%------------------------------------------------------------------------
@@ -230,7 +261,7 @@ switch lower(calmode)
 		xlabel('frequency (kHz)');
 
 	case 'window'
-		out.dbvals = dbvals
+		out.dbvals = dbvals;
 		out.rms_windowsize_ms = rms_windowsize_ms;
 
 end
