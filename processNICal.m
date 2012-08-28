@@ -52,7 +52,6 @@ DeciFactor = 10;
 % parse inputs
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-
 if nargin == 0
 	basepath = '';
 	basename = '';
@@ -135,6 +134,16 @@ end
 %-----------------------------------------------
 load(fullfile(basepath, [basename '.mat']), '-MAT');
 
+
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% should consider loading/asking user for 
+% tone frequencies if tone is specified
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+if strcmpi(calmode, 'tones')
+end
+
 %--------------------------------------------------------
 %--------------------------------------------------------
 % PROCESS DATA
@@ -160,15 +169,13 @@ for n = 1:nDaqFiles
 		% file is empty
 		fprintf('File %s is empty, terminating data loading\n\n', daqfile);
 		break
-	end
-	
+	end	
 	% ASSUME (!!) that stimulus data are collected on channel 1 (NI 0)
 	% and mic data are on channel 2 (NI AI0)
 	stimdata = tmpdata(:, 1);
 	micdata = tmpdata(:, 2);
 	clear tmpdata
-	
-	% get sample rate
+	% get sample rate from the DAQ info object
 	Fs = info.ObjInfo.SampleRate;
 
 	%------------------------------------------------------------------------
@@ -182,27 +189,22 @@ for n = 1:nDaqFiles
 	%------------------------------------------------------------------------
 	% now process data
 	%------------------------------------------------------------------------
-
 	% window and filter the data
 	micdata = sin2array(micdata', 1, Fs);
 	micdata = filter(fcoeffb, fcoeffa, micdata);
 	
+	%--------------------------------
+	% process data according to mode
+	%--------------------------------
 	switch lower(calmode)
+		%--------------------------------
+		% WINDOW
+		%--------------------------------
 		case 'window'
-			% convert rms_windowsize from msec into samples
-			rms_windowsize = ms2samples(rms_windowsize_ms, Fs);
-			% calculate rms_window indices into data
-			rms_windows = 1:rms_windowsize:length(micdata);
-			Nwindows = length(rms_windows);
-			% compute rms values for all windows of data
-			rms_vals = zeros(Nwindows, 1);
-			rmsIndex = 0;
-			for w = 2:Nwindows
-				rmsIndex = rmsIndex + 1;
-				rms_vals(rmsIndex) = rms(micdata(rms_windows(w-1):rms_windows(w)));
-			end
+			[rms_vals, rmw_windows] =  processWindows(micdata, rms_windowsize_ms, Fs);
 			% convert to dB SPL
 			dbvals{n} = dbspl(VtoPa * rms_vals);
+
 			% decimate data for plotting
 			micdata_reduced = decimate(micdata, DeciFactor);
 			Fs_reduced = Fs / 10;
@@ -222,14 +224,27 @@ for n = 1:nDaqFiles
 			xlabel('Time (seconds)');
 			grid
 
+		%--------------------------------
+		% TONES
+		%--------------------------------
 		case 'tones'
 			[tmpfreqs, tmpmags, fmax, magmax] = daqdbfft(micdata, Fs, length(micdata));
 			calfreqs(n) = fmax;
 			[mags(n), phis(n)] = fitsinvec(micdata, 1, Fs, fmax);
+				
+		%--------------------------------
+		% RMS
+		%--------------------------------
+		case 'rms'
+			rms_vals(n) = rms(micdata);
+			dbvals(n) = dbspl(VtoPa * rms_vals(n));
+		
 	end
 	
 end
 
+
+% assign output vars
 switch lower(calmode)
 	case 'tones'
 		ndatums = length(calfreqs);
@@ -276,3 +291,23 @@ out.fcoeff.a = fcoeffa;
 out.fcoeff.b = fcoeffb;
 
 varargout{1} = out;
+
+end
+
+
+function [rmsvals, rmswindows] = processWindows(data, windowms, fs)
+	% convert windowsize from msec into samples
+	windowpts = ms2samples(windowms, fs);
+	
+	% calculate rms_window indices into data
+	rmswindows = 1:windowpts:length(data);
+	Nwindows = length(rmswindows);
+	
+	% compute rms values for all windows of data
+	rmsvals = zeros(Nwindows, 1);
+	rmsIndex = 0;
+	for w = 2:Nwindows
+		rmsIndex = rmsIndex + 1;
+		rmsvals(rmsIndex) = rms(micdata(rmswindows(w-1):rmswindows(w)));
+	end
+end
