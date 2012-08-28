@@ -196,8 +196,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% using information from the config struct 
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-% 	iodev.Circuit_Path = config.CIRCUIT_PATH;
-% 	iodev.Circuit_Name = config.CIRCUIT_NAME;
 	% Dnum = device number - this is for dev1
 	iodev.Dnum = sprintf('Dev%d', config.IODEVNUM);
 	% reference channel
@@ -288,7 +286,8 @@ function AbortCtrl_Callback(hObject, eventdata, handles)
 % --- Executes on button press in MonitorCtrl.
 %--------------------------------------------------------------------------
 function MonitorCtrl_Callback(hObject, eventdata, handles)
-	NICal_Monitor
+	NICal_Monitor;
+	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
 
