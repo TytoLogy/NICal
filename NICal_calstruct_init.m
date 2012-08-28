@@ -18,6 +18,7 @@ function cal = NICal_calstruct_init()
 %	24 Aug 2012 (SJS): added TriggerTimeout, TriggerLevel for 
 % 							 use in Triggered acquisition mode
 %	27 Aug 2012 (SJS): modified fr and cal filenames
+%	28 Aug 2012 (SJS): added gain, adjusted MicGain for Nchannels
 %--------------------------------------------------------------------------
 
 %----------------------------------------------------------------
@@ -121,6 +122,11 @@ cal.CheckCal = 0;
 %----------------------------------------------------------------
 %----------------------------------------------------------------
 
+%----------------------------------------------------------------
+% # channels
+%----------------------------------------------------------------
+cal.Nchannels = 2;
+
 %---------------------------------------------
 %---------------------------------------------
 % set the stimulus/acquisition settings
@@ -200,6 +206,12 @@ cal.InputChannel = L;
 % mic gain in dB
 %----------------------------------------------------------------
 cal.MicGain = 0;
+% fix # gain values if Nchannels doesn't match # of gain values
+if cal.Nchannels  ~= length(cal.MicGain)
+	cal.MicGain = cal.MicGain(1) .* ones(1, cal.Nchannels);
+end
+% convert dB to linear scale
+cal.Gain = invdb(cal.MicGain);
 %----------------------------------------------------------------
 % mic sensitivity in V/Pa
 %----------------------------------------------------------------
@@ -208,7 +220,6 @@ cal.MicSensitivity = 0.1;
 % recording type (1 = freefield, 2 = pressure field (closed field)
 %----------------------------------------------------------------
 cal.FieldType = 1;
-cal.Nchannels = 2;
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------

@@ -55,11 +55,8 @@ if handles.cal.Nchannels  ~= length(handles.cal.MicGain)
 	update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
 	guidata(hObject, handles);
 end
-
-% read in the gain on the mic preamp
-Gain_dB = handles.cal.MicGain;
 % convert dB to linear scale
-Gain = invdb(Gain_dB);
+Gain = invdb(handles.cal.MicGain);
 % this is the sensitivity of the calibration mic in V / Pa
 % if FR file is used, get sens. from there, 
 if read_ui_val(handles.FRenableCtrl) == 1

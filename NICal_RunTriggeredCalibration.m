@@ -257,7 +257,6 @@ end_bin = start_bin + ms2bin(handles.cal.StimDuration-handles.cal.StimRamp, hand
 %------------------------------------------------------------------------
 fprintf('Ready to acquire data...\n\n\n');
 
-
 %----------------------------------------------------------------
 % open a menu-panel for user to start (or cancel) monitoring
 % of PF1 input for triggering of acquisition
@@ -272,6 +271,7 @@ if userResp ~= 2
 	while runFLAG
 		%START ACQUIRING
 		start(handles.iodev.NI.ai);
+		guidata(hObject, handles);
 		fprintf('Writing to file %s \n', handles.iodev.NI.ai.LogFileName);
 		% wait for TriggerTimeout seconds
 		try
@@ -293,6 +293,7 @@ if userResp ~= 2
 	% stop acquiring
 	fprintf('... terminating acquisition \n\n')
 	stop(handles.iodev.NI.ai);
+	guidata(hObject, handles);
 %----------------------------------------------------------------
 % otherwise, cancel
 %----------------------------------------------------------------
@@ -324,8 +325,8 @@ disp('...closing NI devices...');
 
 % delete and clear ai and ch0 object
 delete(handles.iodev.NI.ai);
-delete(handles.iodev.NI.chI);
-clear handles.iodev.NI.ai handles.iodev.NI.chI
+delete(handles.iodev.NI.Channel);
+clear handles.iodev.NI.ai handles.iodev.NI.Channel
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
