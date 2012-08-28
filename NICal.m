@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 24-Aug-2012 16:05:24
+% Last Modified by GUIDE v2.5 28-Aug-2012 12:07:15
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -282,6 +282,13 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 function AbortCtrl_Callback(hObject, eventdata, handles)
 	disp('ABORTING Calibration!')
+%--------------------------------------------------------------------------
+
+%--------------------------------------------------------------------------
+% --- Executes on button press in MonitorCtrl.
+%--------------------------------------------------------------------------
+function MonitorCtrl_Callback(hObject, eventdata, handles)
+	NICal_Monitor
 %--------------------------------------------------------------------------
 
 
@@ -892,6 +899,13 @@ function MicGainCtrl_Callback(hObject, eventdata, handles)
 % 		update_ui_str(hObject, handles.cal.MicGain);
 	else
 		handles.cal.MicGain = newVal;
+		% fix # gain values if Nchannels doesn't match # of gain values
+		if handles.cal.Nchannels  ~= length(handles.cal.MicGain)
+			handles.cal.MicGain = handles.cal.MicGain(1) .* ones(1, handles.cal.Nchannels);
+			update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
+		end
+		% convert dB to linear scale
+		handles.cal.Gain = invdb(handles.cal.MicGain);
 	end
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
@@ -1338,6 +1352,7 @@ function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 		 set(hObject,'BackgroundColor','white');
 	end
 %-------------------------------------------------------------------------
+
 
 
 

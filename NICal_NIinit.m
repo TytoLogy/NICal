@@ -35,7 +35,6 @@ init_status = 0;
 % Initialize the NI device
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-%handles.iodev.NI = handles.initfunction('NI', iodev.Dnum);
 try
 	handles.iodev.NI = nidaq_aiao_init('NI', handles.iodev.Dnum);
 catch errMsg
