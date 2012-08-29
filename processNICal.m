@@ -2,22 +2,25 @@ function varargout = processNICal(varargin)
 %------------------------------------------------------------------------
 % dbvals = processDAQdB(basename, basepath, calmode)
 %------------------------------------------------------------------------
+% TytoLogy:NICal program
+%------------------------------------------------------------------------
 % 
 % 	If basename and basepath are provided, program will use those values 
 % 	to search for .daq files.
 % 	
 % 	Otherwise, a GUI dialog will pop up to ask user for file
 % 	
-% 	calmode = 'tones'  (default) will look for tone magnitudes in
-% 					each .daq file and compute a freq-dB SPL curve
-% 					
-% 	calmode = 'rms'	will simply compute the overall db SPL level
-% 							for each file
-%	calmode = 'window' will compute db SPL levels for each file 
-% 							broken up into 100 msec windows
+%	Calmode will select how the data are processed:
+% 		calmode = 'tones'  (default) will look for tone magnitudes in
+% 						each .daq file and compute a freq-dB SPL curve
+% 
+% 		calmode = 'rms'	will simply compute the overall db SPL level
+% 								for each file
+% 		calmode = 'window' will compute db SPL levels for each file 
+% 								broken up into 100 msec windows
 % 								
 %------------------------------------------------------------------------
-% See also: DAQ Toolbox 
+% See also: NICal 
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -27,6 +30,7 @@ function varargout = processNICal(varargin)
 % Created: 29 February, 2012 (SJS)
 %
 % Revisions:
+%	29 Aug 2012 (SJS): updated documentation
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -142,6 +146,16 @@ load(fullfile(basepath, [basename '.mat']), '-MAT');
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 if strcmpi(calmode, 'tones')
+	qVal = query_user('Auto-detect tone frequencies', 'y')
+	if qVal == 0
+		AUTOFREQ = 0;
+		fstr = '';
+		fstr = query_uservalue('Enter frequencies, separated by spaces', '');
+		calfreqs = str2num(fstr);
+		clear fstr;
+	else
+		AUTOFREQ = 1;
+	emd
 end
 
 %--------------------------------------------------------
@@ -228,9 +242,13 @@ for n = 1:nDaqFiles
 		% TONES
 		%--------------------------------
 		case 'tones'
+			
+			% get spectrum of data
 			[tmpfreqs, tmpmags, fmax, magmax] = daqdbfft(micdata, Fs, length(micdata));
+			% find frequency at peak magnitude
 			calfreqs(n) = fmax;
-			[mags(n), phis(n)] = fitsinvec(micdata, 1, Fs, fmax);
+			% compute pll magnitude and phase at this frequency
+			[mags(n), phis(n)] = fitsinvec(micdata, 1, Fs, calfreqs(n));
 				
 		%--------------------------------
 		% RMS
