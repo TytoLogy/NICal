@@ -80,13 +80,25 @@ end
 %------------------------------------------------------------------------
 % set TriggerType to HwDigital which sets triggering to
 % digital type for NI hardware
-set(handles.iodev.NI.ai, 'TriggerType', 'HwDigital');
+% set(handles.iodev.NI.ai, 'TriggerType', 'HwDigital');
+set(handles.iodev.NI.ai, 'TriggerType', handles.cal.TriggerSettings.TriggerType);
 % set trigger source to the PFI0 trigger/counter input
-set(handles.iodev.NI.ai, 'HwDigitalTriggerSource', 'PFI0');
+% set(handles.iodev.NI.ai, 'HwDigitalTriggerSource', 'PFI0');
+switch handles.cal.TriggerSettings.TriggerType
+	case 'HwDigital'
+		set(handles.iodev.NI.ai, 'HwDigitalTriggerSource', ...
+				handles.cal.TriggerSettings.TriggerSource);
+	case {'HwAnalogChannel', 'HwAnalogPin'}
+		set(handles.iodev.NI.ai, 'TriggerChannel', ...
+			handles.iodev.NI.ai.Channel(handles.cal.TriggerSettings.TriggerSource));
+	otherwise
+		error('%s: invalid TriggerType %s', ...
+					mfilename, handles.cal.TriggerSettings.TriggerType);
+end
 % trigger on positive-going part of signal
-set(handles.iodev.NI.ai, 'TriggerCondition', 'PositiveEdge');
+set(handles.iodev.NI.ai, 'TriggerCondition', cal.TriggerSettings.TriggerCondition);
 % use 4 Volt trigger level
-set(handles.iodev.NI.ai, 'TriggerConditionValue', handles.cal.TriggerLevel);
+set(handles.iodev.NI.ai, 'TriggerConditionValue', handles.cal.TriggerSettings.TriggerLevel);
 % only 1 "sweep" per trigger event 
 set(handles.iodev.NI.ai, 'TriggerRepeat', 0);
 % set SamplesPerTrigger to # of samples to collect for each trigger event

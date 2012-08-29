@@ -275,7 +275,7 @@ if userResp ~= 2
 		fprintf('Writing to file %s \n', handles.iodev.NI.ai.LogFileName);
 		% wait for TriggerTimeout seconds
 		try
-			wait(handles.iodev.NI.ai, handles.cal.TriggerTimeout);
+			wait(handles.iodev.NI.ai, handles.cal.TriggerSettings.TriggerTimeout);
 		catch errEvent
 			% if timeout occurs (more than handles.cal.TriggerTimeout seconds
 			% elapse since prior trigger), set runFLAG to 0 to end looping
