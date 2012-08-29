@@ -325,8 +325,7 @@ disp('...closing NI devices...');
 
 % delete and clear ai and ch0 object
 delete(handles.iodev.NI.ai);
-delete(handles.iodev.NI.Channel);
-clear handles.iodev.NI.ai handles.iodev.NI.Channel
+clear handles.iodev.NI.ai
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------

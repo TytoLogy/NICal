@@ -155,7 +155,7 @@ if currentState == 1
 	% sample interval
 	dt = 1/handles.iodev.Fs;
 	zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
-	SweepPoints = length(zeroacq)
+	SweepPoints = length(zeroacq);
 	% time vector for stimulus plots
 	tvec_acq = 1000*(1/handles.iodev.Fs)*(0:(SweepPoints-1));
 	%-------------------------------------------------------
