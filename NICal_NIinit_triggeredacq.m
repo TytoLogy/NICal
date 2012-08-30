@@ -86,9 +86,11 @@ set(handles.iodev.NI.ai, 'TriggerType', handles.cal.TriggerSettings.TriggerType)
 % set(handles.iodev.NI.ai, 'HwDigitalTriggerSource', 'PFI0');
 switch handles.cal.TriggerSettings.TriggerType
 	case 'HwDigital'
+		% use digital (TTL) channel
 		set(handles.iodev.NI.ai, 'HwDigitalTriggerSource', ...
 				handles.cal.TriggerSettings.TriggerSource);
 	case {'HwAnalogChannel', 'HwAnalogPin'}
+		% use analog channel
 		set(handles.iodev.NI.ai, 'TriggerChannel', ...
 			handles.iodev.NI.ai.Channel(handles.cal.TriggerSettings.TriggerSource));
 	otherwise
@@ -96,7 +98,7 @@ switch handles.cal.TriggerSettings.TriggerType
 					mfilename, handles.cal.TriggerSettings.TriggerType);
 end
 % trigger on positive-going part of signal
-set(handles.iodev.NI.ai, 'TriggerCondition', cal.TriggerSettings.TriggerCondition);
+set(handles.iodev.NI.ai, 'TriggerCondition', handles.cal.TriggerSettings.TriggerCondition);
 % use 4 Volt trigger level
 set(handles.iodev.NI.ai, 'TriggerConditionValue', handles.cal.TriggerSettings.TriggerLevel);
 % only 1 "sweep" per trigger event 

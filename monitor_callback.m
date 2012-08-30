@@ -23,8 +23,10 @@ global VtoPa Gain fcoeffa fcoeffb ...
 
 % read data from ai object
 tmpdata = getdata(obj, SweepPoints);
-Lacq = filtfilt(fcoeffb, fcoeffa, sin2array(tmpdata(:, 1)', 5, obj.SampleRate));
-Racq = filtfilt(fcoeffb, fcoeffa, sin2array(tmpdata(:, 2)', 5, obj.SampleRate));
+% Lacq = filtfilt(fcoeffb, fcoeffa, sin2array(tmpdata(:, 1)', 5, obj.SampleRate));
+% Racq = filtfilt(fcoeffb, fcoeffa, sin2array(tmpdata(:, 2)', 5, obj.SampleRate));
+Lacq = buffer_filter(tmpdata(:, 1)', 5, obj.SampleRate, fcoeffb, fcoeffa);
+Racq = buffer_filter(tmpdata(:, 2)', 5, obj.SampleRate, fcoeffb, fcoeffa);
 % find peak value
 maxval(1) = max(abs(Lacq));
 maxval(2) = max(abs(Racq));
