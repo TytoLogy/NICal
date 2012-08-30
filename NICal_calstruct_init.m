@@ -158,10 +158,10 @@ cal.MeasureLeak = 0;
 % Input Bandpass Filter (in software)
 %----------------------------------------------------------------
 cal.InputFilter = 1;
-cal.InputHPFc = 200;
-cal.InputLPFc = 120000;
+cal.InputHPFc = 100;
+cal.InputLPFc = 125000;
 % for NI card, set default sampling rate here (kludge!!!!)
-cal.Fs = 250000;
+cal.Fs = 500000;
 % Nyquist frequency
 fnyq = cal.Fs/2;
 % filter order
@@ -183,15 +183,25 @@ cal.fband = [cal.InputHPFc cal.InputLPFc] ./ fnyq;
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-% enable/disable triggered Acquisition
+% enable (1)/disable (0) triggered Acquisition
 cal.TriggeredAcquisition = 0;
 %----------------------------------------------------------------
-% these settings only apply for triggered acquisition
+% *these settings only apply for triggered acquisition*
 %----------------------------------------------------------------
+
+%--------------------------
+% trigger timeout
+%--------------------------
 % time to wait for TTL trigger in seconds
 cal.TriggerSettings.TriggerTimeout = 10;
-% triggering level (Volts)
+
+%--------------------------
+% trigger level (TriggerConditionLevel)
+%--------------------------
+% triggering level (Volts) (used to set the TriggerConditionLevel setting
+% in NI-DAQ hardware)
 cal.TriggerSettings.TriggerLevel = 4;
+
 %--------------------------
 % trigger type
 %--------------------------
@@ -210,7 +220,10 @@ cal.TriggerSettings.TriggerLevel = 4;
 %								signal (AI only). Note that HwAnalogPin is supported 
 %								only for Traditional NIDAQ devices. It is not supported 
 %								for NIDAQmx devices.HWDigitalTriggerSource	
-cal.TriggerSettings.TriggerType = 'HWDigital';
+cal.TriggerSettings.TriggerType = 'HwDigital';
+
+%--------------------------
+% trigger source
 %--------------------------
 % if TriggerType = HwAnalogChannel or HwAnalogPin
 % 	source for analog trigger input is first active	analog channel 
@@ -221,35 +234,30 @@ cal.TriggerSettings.TriggerType = 'HWDigital';
 %	 'RTSI0 to RTSI6'			Use specified pin from RTSI0 through RTSI6.
 cal.TriggerSettings.TriggerSource = 'PFI0';
 
+%--------------------------
+% Trigger condition
+%--------------------------
 % The following trigger conditions are available for AI objects 
 % when TriggerType is HwDigital. 
 % 
-% 'PositiveEdge'			The trigger occurs when the positive (rising) edge 
-% 							of a digital signal is detected.
-% '{NegativeEdge}'		The trigger occurs when the negative (falling) edge 
-% 							of a digital signal is detected.
-% 
-% The following trigger conditions are available for AO objects 
-% on NI-DAQmx devices when TriggerType is HwDigital. 
-% 
-% 'PositiveEdge'			The trigger occurs when the positive (rising) edge 
-% 							of a digital signal is detected. 
-% '{NegativeEdge}'		The trigger occurs when the negative (falling) edge 
-% 							of a digital signal is detected.
+% 'PositiveEdge'		The trigger occurs when the positive (rising) edge 
+%								of a digital signal is detected.
+% '{NegativeEdge}'	The trigger occurs when the negative (falling) edge 
+%								of a digital signal is detected.
 % 
 % The following trigger conditions are available when TriggerType is 
 % HwAnalogChannel or HwAnalogPin.
 % 
-% '{AboveHighLevel}'		The trigger occurs when the analog signal is above 
+% '{AboveHighLevel}'	The trigger occurs when the analog signal is above 
 % 								the specified value.
-% 'BelowLowLevel'			The trigger occurs when the analog signal is below 
+% 'BelowLowLevel'		The trigger occurs when the analog signal is below 
 % 								the specified value.
-% 'InsideRegion'				The trigger occurs when the analog signal is inside 
+% 'InsideRegion'		The trigger occurs when the analog signal is inside 
 % 								the specified region.
-% 'LowHysteresis'			The trigger occurs when the analog signal is less 
+% 'LowHysteresis'		The trigger occurs when the analog signal is less 
 % 								than the specified low value with hysteresis given 
-% 								by the specified high value.
-% 'HighHysteresis'			The trigger occurs when the analog signal is 
+%								by the specified high value.
+% 'HighHysteresis'	The trigger occurs when the analog signal is 
 % 								greater than the specified high value with 
 % 								hysteresis given by the specified low value
 cal.TriggerSettings.TriggerCondition = 'PositiveEdge';
