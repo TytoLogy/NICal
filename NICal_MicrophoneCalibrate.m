@@ -11,7 +11,7 @@
 % Created:	16 August, 2012 (SJS) from MicrophoneCal_RunSequential
 %
 % Revisions:
-%
+%	13 Sep 2012 (SJS): changed deciFactor to handles.cal.deciFactor
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -86,7 +86,7 @@ try
 catch errMsg
 	fprintf('handles.cal.fband = %f\n', handles.cal.fband);
 	NICal_NIexit;
-	errMsg
+	disp errMsg
 	return
 end
 
@@ -138,9 +138,9 @@ zerostim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 0);
 % insert stim delay
 zerostim = insert_delay(zerostim, handles.cal.StimDelay, handles.iodev.Fs);
 % downsample (no need to plot all points)
-zerostim = downsample(zerostim, deciFactor);
+zerostim = downsample(zerostim, handles.cal.deciFactor);
 % downsample-factor adjusted sample interval
-dt = deciFactor/handles.iodev.Fs;
+dt = handles.cal.deciFactor/handles.iodev.Fs;
 % # output points
 outpts = length(zerostim);
 % time vector for stimulus plots
@@ -150,7 +150,7 @@ stim_start = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
 stim_end = stim_start + outpts - 1;
 % fake acquired data
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
-zeroacq = downsample(zeroacq, deciFactor);
+zeroacq = downsample(zeroacq, handles.cal.deciFactor);
 acqpts = length(zeroacq);
 % time vector for stimulus plots
 tvec_acq = 1000*dt*(0:(acqpts-1));
@@ -167,7 +167,7 @@ Nullstim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 1);
 Nullstim = 0 * Nullstim;
 % insert delay
 Nullstim = insert_delay(Nullstim, handles.cal.StimDelay, handles.iodev.Fs);
-Nullstim_downsample =  downsample(Nullstim(1, :), deciFactor);
+Nullstim_downsample =  downsample(Nullstim(1, :), handles.cal.deciFactor);
 
 %-------------------------------------------------------
 % create arrays for plotting and plot them
@@ -178,6 +178,16 @@ Rstim = zerostim;
 % acq
 Lacq = zeroacq;
 Racq = zeroacq;
+% FFT
+nfft = length(start_bin:end_bin);
+tmp = zeros(1, nfft);
+[fvec, Lfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
+[fvec, Rfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
+% convert fvec to kHz
+fvec = 0.001 * fvec;
+clear tmp
+
+%{
 H.Lstim = plot(handles.Lstimplot, tvec_stim, Lstim, 'g');
 set(H.Lstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Lstim');
 H.Rstim = plot(handles.Rstimplot, tvec_stim, Rstim, 'r');
@@ -188,6 +198,35 @@ H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
 set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
 set(handles.Lstimplot, 'XTickLabel', '');
 set(handles.Lmicplot, 'XTickLabel', '');
+%}
+%-------------------------------------------------------
+% plot null data, save handles for time-domain plots
+%-------------------------------------------------------
+% stimulus
+H.Lstim = plot(handles.Lstimplot, tvec_stim, Lstim, 'g');
+set(H.Lstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Lstim');
+ylabel(handles.Lstimplot, 'V');
+H.Rstim = plot(handles.Rstimplot, tvec_stim, Rstim, 'r');
+set(H.Rstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Rstim');
+% response
+H.Lacq = plot(handles.Lmicplot, tvec_acq, Lacq, 'g');
+set(H.Lacq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Lacq');
+xlabel(handles.Lmicplot, 'Time (ms)')
+ylabel(handles.Lmicplot, 'V')
+H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
+set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
+xlabel(handles.Rmicplot, 'Time (ms)')
+
+%-------------------------------------------------------
+% plot null data, save handles for frequency-domain plots
+%-------------------------------------------------------
+H.Lfft = plot(handles.Lfftplot, fvec, Lfft);
+set(H.Lfft, 'XDataSource', 'fvec', 'YDataSource', 'Lfft');
+xlabel(handles.Lfftplot, 'Frequency (kHz)')
+ylabel(handles.Lfftplot, 'dBV')
+H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
+set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
+xlabel(handles.Rfftplot, 'Frequency (kHz)');
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -290,12 +329,26 @@ for rep = 1:handles.cal.Nreps
 		resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 		clear tmp
 	end
-		
+	
+	%{
 	% plot the response
-	Lacq = downsample(resp{L}, deciFactor);
-	Racq = downsample(resp{R}, deciFactor);
+	Lacq = downsample(resp{L}, handles.cal.deciFactor);
+	Racq = downsample(resp{R}, handles.cal.deciFactor);
 	refreshdata(H.Lacq, 'caller');
 	refreshdata(H.Racq, 'caller');
+	%}
+	
+	% plot the response
+	Lacq = downsample(resp{L}, handles.cal.deciFactor);
+	Racq = downsample(resp{R}, handles.cal.deciFactor);
+	refreshdata(H.Lacq, 'caller');
+	refreshdata(H.Racq, 'caller');
+	% plot fft
+	[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
+	refreshdata(H.Lfft, 'caller');
+	[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
+	refreshdata(H.Rfft, 'caller');
+	drawnow
 
 	% determine the magnitude of the response
 	% first, the test channel (L)
@@ -365,8 +418,8 @@ while ~handles.STOP_FLG && freq_index <= handles.cal.Nfreqs
 	update_ui_str(handles.LAttenText, Latten);
 	update_ui_str(handles.RAttenText, MAX_ATTEN);
 	% plot the stimuli - set R stim to zero
-	Lstim = downsample(Satt(L, :), deciFactor);
-	Rstim = downsample(Satt(R, :), deciFactor);
+	Lstim = downsample(Satt(L, :), handles.cal.deciFactor);
+	Rstim = downsample(Satt(R, :), handles.cal.deciFactor);
 	refreshdata(H.Lstim, 'caller');
 	refreshdata(H.Rstim, 'caller');
 	
@@ -429,12 +482,26 @@ while ~handles.STOP_FLG && freq_index <= handles.cal.Nfreqs
 		phis{R}(freq_index, rep) = rphi;
 		phis{REFCHAN}(freq_index, rep) = refphi;
 
+		%{
 		% plot the response
-		Lacq = downsample(resp{L}, deciFactor);
-		Racq = downsample(resp{REFCHAN}, deciFactor);
+		Lacq = downsample(resp{L}, handles.cal.deciFactor);
+		Racq = downsample(resp{REFCHAN}, handles.cal.deciFactor);
 		refreshdata(H.Lacq, 'caller');
 		refreshdata(H.Racq, 'caller');
-	
+	%}
+		
+		% plot the response
+		Lacq = downsample(resp{L}, handles.cal.deciFactor);
+		Racq = downsample(resp{R}, handles.cal.deciFactor);
+		refreshdata(H.Lacq, 'caller');
+		refreshdata(H.Racq, 'caller');
+		% plot fft
+		[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
+		refreshdata(H.Lfft, 'caller');
+		[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
+		refreshdata(H.Rfft, 'caller');
+		drawnow
+
 		update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*mags{REFCHAN}(freq_index, rep))));
 		
 		% Check for possible clipping (values > 5V for NI)
@@ -516,11 +583,11 @@ end
 % 	phase adj = Knowls mic deg - ref mic radians
 
 % compute L and R magnitude correction
-frdata.ladjmag = frdata.mag(R, :) ./ frdata.mag(REFCHAN, :);
+frdata.ladjmag = frdata.mag(L, :) ./ frdata.mag(REFCHAN, :);
 frdata.radjmag = frdata.mag(R, :) ./ frdata.mag(REFCHAN, :);
 
 % compute L and R phase correction
-frdata.ladjphi = frdata.phase(R, :) - frdata.phase(REFCHAN, :);
+frdata.ladjphi = frdata.phase(L, :) - frdata.phase(REFCHAN, :);
 frdata.radjphi = frdata.phase(R, :) - frdata.phase(REFCHAN, :);
 	
 %-----------------------------------------------------------------------
@@ -542,14 +609,19 @@ save(handles.cal.calfile, 'frdata', 'cal', '-mat');
 %-----------------------------------------------------------------------
 % average data (non-normalized)
 figure
+set(gcf, 'Name', 'Microphone Calibration')
 subplot(211)
 hold on
-	errorbar(frdata.freq, 1000*frdata.mag(L, :), 1000*frdata.mag_stderr(L, :), 'g');
+	errorbar(frdata.freq, frdata.mag(L, :), frdata.mag_stderr(L, :), 'g');
 	errorbar(frdata.freq, frdata.mag(REFCHAN, :), frdata.mag_stderr(REFCHAN, :), 'k-.');
 hold off
-ylabel('Magnitude')
-legend('Left (X1000)', 'Ref');
-title('Calibration Results')
+ylabel('Magnitude (mV)')
+legend('Test', 'Ref');
+title('Calibration Results: Non-normalized');
+set(gca, 'XGrid', 'on');
+set(gca, 'YGrid', 'on');
+set(gca, 'Color', .6*[1 1 1]);
+
 subplot(212)
 hold on
 	errorbar(frdata.freq, frdata.phase(L, :), frdata.phase_stderr(L, :), 'g');
@@ -557,21 +629,24 @@ hold on
 hold off
 ylabel('Phase')
 xlabel('Frequency (Hz)')
-legend('Left', 'Ref');
+set(gca, 'XGrid', 'on');
+set(gca, 'YGrid', 'on');
+set(gca, 'Color', .6*[1 1 1]);
 
 % Normalized data plot	
 figure
+set(gcf, 'Name', 'Microphone Calibration');
 subplot(211)
 plot(frdata.freq, normalize(frdata.mag(1, :)), 'g.-')
 hold on
 	plot(frdata.freq, normalize(frdata.mag(REFCHAN, :)), 'k.-')
 hold off
 ylabel('Normalized Magnitude')
-legend('Left', 'Ref');
+legend('Test', 'Ref');
 title('Normalized Frequency Response')
 set(gca, 'XGrid', 'on');
 set(gca, 'YGrid', 'on');
-set(gca, 'Color', .5*[1 1 1]);
+set(gca, 'Color', .6*[1 1 1]);
 
 subplot(212)
 plot(frdata.freq, unwrap(frdata.phase(1, :)), 'g.-');
@@ -582,7 +657,7 @@ ylabel('Unwrapped Phase')
 xlabel('Frequency (Hz)')
 set(gca, 'XGrid', 'on');
 set(gca, 'YGrid', 'on');
-set(gca, 'Color', .5*[1 1 1]);
+set(gca, 'Color', .6*[1 1 1]);
 	
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------

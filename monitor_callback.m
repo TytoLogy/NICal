@@ -15,6 +15,7 @@ function monitor_callback(obj, event)
 % Created: 28 August, 2012 (SJS) from ai_plot_callback
 %
 % Revisions:
+%	13 Sep 2012 (SJS): fixed incorrect Rfft calculation from daqdbfft
 %------------------------------------------------------------------------
 
 % global variables
@@ -42,7 +43,7 @@ refreshdata(H.Lacq, 'caller');
 refreshdata(H.Racq, 'caller');
 % plot fft
 [tmpf, Lfft] = daqdbfft(Lacq, obj.SampleRate, SweepPoints);
-[tmpf, Rfft] = daqdbfft(Lacq, obj.SampleRate, SweepPoints);
+[tmpf, Rfft] = daqdbfft(Racq, obj.SampleRate, SweepPoints);
 refreshdata(H.Lfft, 'caller');
 refreshdata(H.Rfft, 'caller');
 drawnow

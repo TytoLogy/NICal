@@ -942,11 +942,56 @@ function MicSensitivityCtrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
+% get microphone fr file for frdata
+%--------------------------------------------------------------------------
 function MicFRFileCtrl_Callback(hObject, eventdata, handles)
+
+	tmpfile = read_ui_str(hObject);
+	
+	if ~exist(tmpfile, 'file')
+		% user provided file does not exist
+		h = warndlg('Microphone calibration file not found!', 'NICal Warning', 'modal');
+		uiwait(h);
+		
+	
+		[filename, pathname] = uigetfile( {'*.fr'; '*_fr.mat'}, ...
+										'Load microphone calibration data from file...');
+		if isequal(filename, 0) || isequal(pathname, 0)
+			% user hit cancel, so restore the stored value of mic_fr_file
+			update_ui_str(hObject, handles.cal.mic_fr_file);
+			return
+		else
+			% set the tmp file to what user chose
+			tmpfile = fullfile(pathname, filename);
+		end
+	end
+	
+	% now load fr data
+	load(tmpfile, '-MAT', 'frdata');
+	% make sure it was loaded
+	if ~exist('frdata', 'var')
+		warndlg('No frdata struct in fr file!', 'NICal Warning', 'modal');
+		update_ui_str(hObject, handles.cal.mic_fr_file);
+		guidata(hObject, handles);
+		return
+	else
+		% store frdata and new file name
+		handles.cal.mic_fr_file = tmpfile;
+		handles.cal.mic_fr = frdata;
+		guidata(hObject, handles);
+		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
+	end
+
+
+
+
+%{
+
 	% get the fr file data
 	tmpfile = read_ui_str(handles.MicFRFileCtrl);
 	if ~exist(tmpfile, 'file')
-		warndlg('Microphone calibration file not found!', 'NICal Warning');
+		h = warndlg('Microphone calibration file not found!', 'NICal Warning', 'modal');
+
 		% revert to old value
 		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
 	else
@@ -956,13 +1001,13 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);		
 	end
+%}
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
 % get file to save data to
 %--------------------------------------------------------------------------
 function CalFileCtrl_Callback(hObject, eventdata, handles)
-% 	oldfile = handles.cal.calfile;
 	oldfile = read_ui_str(hObject);
 	[filename, pathname] = uiputfile('*.cal','Save calibration data to file', oldfile);
 	if isequal(filename, 0) || isequal(pathname, 0)
