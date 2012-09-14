@@ -187,18 +187,6 @@ tmp = zeros(1, nfft);
 fvec = 0.001 * fvec;
 clear tmp
 
-%{
-H.Lstim = plot(handles.Lstimplot, tvec_stim, Lstim, 'g');
-set(H.Lstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Lstim');
-H.Rstim = plot(handles.Rstimplot, tvec_stim, Rstim, 'r');
-set(H.Rstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Rstim');
-H.Lacq = plot(handles.Lmicplot, tvec_acq, Lacq, 'g');
-set(H.Lacq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Lacq');
-H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
-set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
-set(handles.Lstimplot, 'XTickLabel', '');
-set(handles.Lmicplot, 'XTickLabel', '');
-%}
 %-------------------------------------------------------
 % plot null data, save handles for time-domain plots
 %-------------------------------------------------------
@@ -329,14 +317,6 @@ for rep = 1:handles.cal.Nreps
 		resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 		clear tmp
 	end
-	
-	%{
-	% plot the response
-	Lacq = downsample(resp{L}, handles.cal.deciFactor);
-	Racq = downsample(resp{R}, handles.cal.deciFactor);
-	refreshdata(H.Lacq, 'caller');
-	refreshdata(H.Racq, 'caller');
-	%}
 	
 	% plot the response
 	Lacq = downsample(resp{L}, handles.cal.deciFactor);
@@ -482,14 +462,6 @@ while ~handles.STOP_FLG && freq_index <= handles.cal.Nfreqs
 		phis{R}(freq_index, rep) = rphi;
 		phis{REFCHAN}(freq_index, rep) = refphi;
 
-		%{
-		% plot the response
-		Lacq = downsample(resp{L}, handles.cal.deciFactor);
-		Racq = downsample(resp{REFCHAN}, handles.cal.deciFactor);
-		refreshdata(H.Lacq, 'caller');
-		refreshdata(H.Racq, 'caller');
-	%}
-		
 		% plot the response
 		Lacq = downsample(resp{L}, handles.cal.deciFactor);
 		Racq = downsample(resp{R}, handles.cal.deciFactor);
