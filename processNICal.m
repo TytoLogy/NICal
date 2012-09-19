@@ -155,7 +155,7 @@ if strcmpi(calmode, 'tones')
 		clear fstr;
 	else
 		AUTOFREQ = 1;
-	emd
+	end
 end
 
 %--------------------------------------------------------
