@@ -1,6 +1,6 @@
-function varargout = processNICal(varargin)
+function varargout = processTriggeredData(varargin)
 %------------------------------------------------------------------------
-% dbvals = processDAQdB(basename, basepath, calmode)
+% dbvals = processTriggeredData(basename, basepath, calmode)
 %------------------------------------------------------------------------
 % TytoLogy:NICal program
 %------------------------------------------------------------------------
