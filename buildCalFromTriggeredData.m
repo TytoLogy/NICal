@@ -228,11 +228,11 @@ for n = 1:nDaqFiles
 	[ch0mags(n), ch0phis(n)] = fitsinvec(ch0data, 1, Fs, calfreqs(n));
 	[ch1mags(n), ch1phis(n)] = fitsinvec(ch1data, 1, Fs, calfreqs(n));
 	% compute pll magnitude and phase at 2*f
-	[ch0d2mags(n), ch0d2phis(n)] = fitsinvec(ch0data, 1, Fs, 2*calfreqs(n));
-	[ch1d2mags(n), ch1d2phis(n)] = fitsinvec(ch1data, 1, Fs, 2*calfreqs(n));
+	[ch0d1mags(n), ch0d1phis(n)] = fitsinvec(ch0data, 1, Fs, 2*calfreqs(n));
+	[ch1d1mags(n), ch1d1phis(n)] = fitsinvec(ch1data, 1, Fs, 2*calfreqs(n));
 	% compute pll magnitude and phase at 3*f
-	[ch0d3mags(n), ch0d3phis(n)] = fitsinvec(ch0data, 1, Fs, 3*calfreqs(n));
-	[ch1d3mags(n), ch1d3phis(n)] = fitsinvec(ch1data, 1, Fs, 3*calfreqs(n));
+	[ch0d2mags(n), ch0d2phis(n)] = fitsinvec(ch0data, 1, Fs, 3*calfreqs(n));
+	[ch1d2mags(n), ch1d2phis(n)] = fitsinvec(ch1data, 1, Fs, 3*calfreqs(n));
 	
 	% plot signals
 	subplot(221)
@@ -252,19 +252,23 @@ end
 % assign output vars
 ndatums = length(calfreqs);
 out.freqs = calfreqs;
-out.mags = [ch0mags; ch1mags];
+out.mags = dbspl(VtoPa * rmssin * [ch0mags; ch1mags]);
 out.phis = [ch0phis; ch1phis];
-out.dbvals = dbspl(VtoPa * rmssin * out.mags);
-out.dist = [ch0d2mags; ch1d2mags];
-out.dist3 = [ch0d3mags; ch1d3mags];
+out.dist = dbspl(VtoPa * rmssin * [ch0d1mags; ch1d1mags]);
+out.dist2 = dbspl(VtoPa * rmssin * [ch0d2mags; ch1d2mags]);
+out.magsraw = cell(2, 1);
+out.distraw = cell(2, 1);
+out.distraw2 = cell(2, 1);
+out.magsraw{1} = ch0mags;
+out.magsraw{2} = ch1mags;
+out.distraw{1} = ch0d1mags;
+out.distraw{2} = ch1d1mags;
+out.distraw2{1} = ch0d2mags;
+out.distraw2{2} = ch1d2mags;
 
 figure
 subplot(211)
-% plot(dbspl(VtoPa * rmssin * out.mags), '.-')
-% set(gca, 'XTick', 1:ndatums);
-% set(gca, 'XTickLabel', '');
-% xlim([0 ndatums+1])
-plot(0.001*calfreqs, dbspl(VtoPa * rmssin * out.mags), '.-')
+plot(0.001*calfreqs, out.mags, '.-')
 set(gca, 'XTickLabel', '');
 grid
 title(basename);
@@ -274,13 +278,7 @@ legend('Ch0', 'Ch1')
 
 
 subplot(212)
-% plot(unwrap(out.phis), '.-')
-% set(gca, 'XTick', 1:ndatums);
 plot(0.001*calfreqs, unwrap(out.phis), '.-')
-% for n = 1:ndatums
-% 	labels{n} = sprintf('%', 0.001*calfreqs(n));
-% end
-% set(gca, 'XTickLabel', labels);
 xlim(0.001*[min(calfreqs) max(calfreqs)]);
 grid
 ylabel('phase (rad)');
