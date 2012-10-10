@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 28-Aug-2012 12:07:15
+% Last Modified by GUIDE v2.5 10-Oct-2012 15:41:06
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -623,6 +623,14 @@ function MeasureLeakCtrl_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
+%--------------------------------------------------------------------------
+% --- Executes on button press in SaveRawDataCtrl.
+%--------------------------------------------------------------------------
+function SaveRawDataCtrl_Callback(hObject, eventdata, handles)
+	handles.cal.SaveRawData = read_ui_val(hObject);
+	guidata(hObject, handles)
+%--------------------------------------------------------------------------
+	
 %--------------------------------------------------------------------------
 function CheckCalCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.CheckCal = read_ui_val(hObject)-1;
@@ -1396,6 +1404,8 @@ function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 		 set(hObject,'BackgroundColor','white');
 	end
 %-------------------------------------------------------------------------
+
+
 
 
 

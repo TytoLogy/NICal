@@ -25,6 +25,7 @@ function NICal_UpdateUIFromCal(handles, cal)
 % 
 % Revisions:
 % 2 Aug 2012 (SJS): added CollectBackground to calibration settings
+% 10 Oct 2012 (SJS): added SaveRawData to calibration settings
 %--------------------------------------------------------------------------
 
 %-----------------------------------------
@@ -72,6 +73,8 @@ update_ui_str(handles.StartAttenCtrl, cal.StartAtten);
 update_ui_val(handles.CheckCalCtrl, cal.CheckCal + 1);
 % Background
 update_ui_val(handles.CollectBackgroundCtrl, cal.CollectBackground);
+% RawData
+update_ui_val(handles.SaveRawDataCtrl, cal.SaveRawData);
 %-----------------------------------------
 % INPUT/OUTPUT SETTINGS
 %-----------------------------------------

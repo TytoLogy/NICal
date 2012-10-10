@@ -65,6 +65,16 @@ if exist(handles.cal.calfile, 'file')
 	end
 end
 
+if handles.cal.SaveRawData
+	[pathstr, fname, fext] = fileparts(handles.cal.calfile);
+	rawfile = fullfile(pathstr, [fname '.dat']);
+	if exists(rawfile, 'file')
+		fp = fopen(rawfile, 'w')
+		fclose(fp);
+	end
+end
+
+
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Start DAQ things
@@ -535,6 +545,12 @@ for F = 1:Nfreqs
 			refreshdata(H.Rfft, 'caller');
 			drawnow
 			
+			if handles.cal.SaveRawData
+				fp = fopen(rawfile, 'a+');
+				writeCell(fp, resp);				
+				fclose(fp);
+			end
+			
 			% Pause for ISI
 			pause(0.001*cal.ISI);
 			
@@ -593,6 +609,11 @@ for F = 1:Nfreqs
 				plot(tmpf, tmpm);
 				title('Left Background')
 				% Pause for ISI
+				if handles.cal.SaveRawData
+					fp = fopen(rawfile, 'a+');
+					writeCell(fp, resp); 				
+					fclose(fp);
+				end
 				pause(0.001*cal.ISI);
 				% check for abort button press
 				if read_ui_val(handles.AbortCtrl) == 1
@@ -827,7 +848,13 @@ for F = 1:Nfreqs
 			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
 			refreshdata(H.Lfft, 'caller');
 			drawnow
-	
+
+			if handles.cal.SaveRawData
+				fp = fopen(rawfile, 'a+');
+				writeCell(fp, resp); 				
+				fclose(fp);
+			end
+
 			% pause for ISI (convert to seconds)
 			pause(0.001*cal.ISI);
 			% check for abort button press
@@ -886,6 +913,13 @@ for F = 1:Nfreqs
 				[tmpf, tmpm] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
 				plot(tmpf, tmpm);
 				title('Right Background')
+
+				if handles.cal.SaveRawData
+					fp = fopen(rawfile, 'a+');
+					writeCell(fp, resp); 				
+					fclose(fp);
+				end
+				
 				% Pause for ISI
 				pause(0.001*cal.ISI);
 				% check for abort button press

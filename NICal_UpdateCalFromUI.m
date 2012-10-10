@@ -24,6 +24,7 @@ function cal = UpdateCalFromUI(handles)
 % 
 % Revisions:
 % 2 Aug 2012 (SJS): added CollectBackground to calibration settings
+% 10 Oct 2012 (SJS): added SaveRawData to calibration settings
 %--------------------------------------------------------------------------
 
 %-----------------------------------------
@@ -50,6 +51,8 @@ cal.StartAtten = read_ui_str(handles.StartAttenCtrl, 'n');
 cal.CheckCal = read_ui_val(handles.CheckCalCtrl) - 1;
 % background data
 cal.CollectBackground = read_ui_val(handles.CollectBackgroundCtrl);
+% Raw data
+cal.SaveRawData = read_ui_val(handles.SaveRawDataCtrl);
 %-----------------------------------------
 % INPUT/OUTPUT SETTINGS
 %-----------------------------------------
