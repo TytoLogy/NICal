@@ -65,14 +65,6 @@ if exist(handles.cal.calfile, 'file')
 	end
 end
 
-if handles.cal.SaveRawData
-	[pathstr, fname, fext] = fileparts(handles.cal.calfile);
-	rawfile = fullfile(pathstr, [fname '.dat']);
-	if exists(rawfile, 'file')
-		fp = fopen(rawfile, 'w')
-		fclose(fp);
-	end
-end
 
 
 %-----------------------------------------------------------------------
@@ -99,6 +91,15 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 % filter coefficients using a butterworth bandpass filter
 [handles.cal.fcoeffb, handles.cal.fcoeffa] = ...
 					butter(handles.cal.forder, handles.cal.fband, 'bandpass');
+
+				
+if handles.cal.SaveRawData
+	[pathstr, fname, fext] = fileparts(handles.cal.calfile);
+	rawfile = fullfile(pathstr, [fname '.dat']);
+	fp = fopen(rawfile, 'w');
+	writeStruct(fp, handles.cal, 'cal');
+	fclose(fp);
+end
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -546,7 +547,7 @@ for F = 1:Nfreqs
 			drawnow
 			
 			if handles.cal.SaveRawData
-				fp = fopen(rawfile, 'a+');
+				fp = fopen(rawfile, 'a');
 				writeCell(fp, resp);				
 				fclose(fp);
 			end
@@ -610,7 +611,7 @@ for F = 1:Nfreqs
 				title('Left Background')
 				% Pause for ISI
 				if handles.cal.SaveRawData
-					fp = fopen(rawfile, 'a+');
+					fp = fopen(rawfile, 'a');
 					writeCell(fp, resp); 				
 					fclose(fp);
 				end
@@ -850,7 +851,7 @@ for F = 1:Nfreqs
 			drawnow
 
 			if handles.cal.SaveRawData
-				fp = fopen(rawfile, 'a+');
+				fp = fopen(rawfile, 'a');
 				writeCell(fp, resp); 				
 				fclose(fp);
 			end
@@ -915,7 +916,7 @@ for F = 1:Nfreqs
 				title('Right Background')
 
 				if handles.cal.SaveRawData
-					fp = fopen(rawfile, 'a+');
+					fp = fopen(rawfile, 'a');
 					writeCell(fp, resp); 				
 					fclose(fp);
 				end
