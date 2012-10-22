@@ -1,3 +1,4 @@
+function [DataPos, FreqList, calStruct] = readRawData(datfile)
 %--------------------------------------------------------------------------
 % readRawData.m
 %--------------------------------------------------------------------------
@@ -11,35 +12,51 @@
 % Created: 16 October, 2012
 % 
 % Revisions:
+%	17 Oct 2012 (SJS): functionalized
 %--------------------------------------------------------------------------
 
-basepath = '/Users/sshanbhag/Work/Data/Audio/Calibration/MouseRig/10Oct2012';
-basename = 'TDT7283_10Oct2012_45k-110k_4Vpk_FT6antialias'
-
-datfile = fullfile(basepath, [basename, '.dat']);
-calfile = fullfile(basepath, [basename, '.cal']);
-
+DataPos = [];
+FreqList = [];
+calStruct = [];
 
 %-----------------------------------------------------------------------
-% check output  file - if it exists, check with user
+% check dat file - if it exists, use it.  if not, check with user
 %-----------------------------------------------------------------------
-if exist(calfile, 'file')
-	load(calfile, '-MAT', 'caldata')
-else
-	warning('NICAL:FileNotFound', '%s: could not find cal file', mfilename);
-	fprintf('\t\tcal file: %s\n\n', calfile);
+if ~exist(datfile, 'file')
+	warning('NICAL:FileNotFound', '%s: could not find .DAT file', mfilename);
+	fprintf('\t\tdat file: %s\n\n', datfile);
 
-	[calfile, basepath] = uigetfile({'*.cal', '*_cal.mat'},'Open cal file', ...
+	[datfile, basepath] = uigetfile({'*.dat'},'Open dat file', ...
 													basepath);
 	
-	if isequal(calfile, 0) || isequal(basepath, 0)
+	if isequal(datfile, 0) || isequal(basepath, 0)
 		return
 	else
-		[~, basename, ~] = fileparts(calfile);
-		calfile = fullfile(basepath, calfile);
+		[~, basename, ~] = fileparts(datfile);
 		datfile = fullfile(basepath, [basename, '.dat']);
-		load(calfile, '-MAT', 'caldata');
 	end
+else
+	fprintf('Reading data information from %s\n', datfile);
 end
 
-
+%-----------------------------------------------------------------------
+% read info from .dat file
+%-----------------------------------------------------------------------
+% open file
+fp = fopen(datfile, 'r');
+% read in cal struct (to get freqs and other info)
+calStruct = readStruct(fp);
+% build list of frequencies and file positions to data
+% DataPos has dimensions [Nfreqs, Nreps]
+FreqList = calStruct.Freqs;
+DataPos = zeros(calStruct.Nfreqs, calStruct.Nreps);
+for f = 1:calStruct.Nfreqs
+	for r = 1:calStruct.Nreps
+		% store position
+		DataPos(f, r) = ftell(fp);
+		% read data to move to next array
+		tmp = readCell(fp);
+	end
+end
+% close file
+fclose(fp);
