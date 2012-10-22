@@ -1,6 +1,6 @@
 function varargout = processTriggeredData(varargin)
 %------------------------------------------------------------------------
-% dbvals = processTriggeredData(basename, basepath, calmode)
+% dbvals = processTriggeredData(basename, basepath, calmode, freqdetectwidth)
 %------------------------------------------------------------------------
 % TytoLogy:NICal program
 %------------------------------------------------------------------------
@@ -18,7 +18,9 @@ function varargout = processTriggeredData(varargin)
 % 								for each file
 % 		calmode = 'window' will compute db SPL levels for each file 
 % 								broken up into 100 msec windows
-% 								
+% 	
+%	freqdetectwidth sets the width to search for peak frequency magnitude
+% 			default is 21 Hz
 %------------------------------------------------------------------------
 % See also: NICal 
 %------------------------------------------------------------------------
@@ -31,6 +33,9 @@ function varargout = processTriggeredData(varargin)
 %
 % Revisions:
 %	29 Aug 2012 (SJS): updated documentation
+% 	22 Oct 2012 (SJS):
+% 	 -	added freqdetectwidth input var
+% 	 - reworking tone calibration 
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -50,6 +55,9 @@ forder = 3;
 % Decimation factor - plotted data will be 1 / DeciFactor shorter
 % and sampling rate will be Fs / DeciFactor
 DeciFactor = 10;
+
+% tolerance (in Hz) for finding peak frequency in autodetect mode
+FreqDetectWidth = 21;
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -75,6 +83,14 @@ elseif nargin == 3
 	if ~any(strcmpi(calmode, {'tones', 'rms', 'window'}))
 		error('%s: invalid calmode %s', mfilename, calmode);
 	end
+elseif nargin == 4
+	[~, basename] = fileparts(varargin{1});
+	basepath = varargin{2};
+	calmode = varargin{3};
+	if ~any(strcmpi(calmode, {'tones', 'rms', 'window'}))
+		error('%s: invalid calmode %s', mfilename, calmode);
+	end
+	FreqDetectWidth = varargin{4};
 end
 
 %------------------------------------------------------------------------
@@ -138,7 +154,6 @@ end
 %-----------------------------------------------
 load(fullfile(basepath, [basename '.mat']), '-MAT');
 
-
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % should consider loading/asking user for 
@@ -146,23 +161,42 @@ load(fullfile(basepath, [basename '.mat']), '-MAT');
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 if strcmpi(calmode, 'tones')
-	qVal = query_user('Auto-detect tone frequencies', 'y')
+	qVal = query_user('Auto-detect tone frequencies', 1)
 	if qVal == 0
-		AUTOFREQ = 0;
-		fstr = '';
-		fstr = query_uservalue('Enter frequencies, separated by spaces', '');
-		calfreqs = str2num(fstr);
-		clear fstr;
+		% check if user has text list of frequencies
+		fVal = query_user('Read list of frequencies from .txt file', 1);
+		if fVal == 1
+			% open panel to get .txt file name
+			[freqfile, freqpath] = uigetfile(...
+					 {'*.txt', 'txt frequency list files (*.txt)'}, ...
+					  'Pick a .txt file');
+			% check if user hit cancel (tmpfile, or basepath == 0)
+			if isequal(freqfile, 0) || isequal(freqpath, 0)
+				disp('Cancelled file load...')
+				fVal = 0;
+			else
+				calfreqs = load(fullfile(freqpath, freqfile));
+			end
+		end
+		% don't use else-if in order to allow fall-through from previous if
+		if fVal == 0
+			AUTOFREQ = 0;
+			fstr = '';
+			fstr = query_uservalue('Enter frequencies, separated by spaces', '');
+			calfreqs = str2num(fstr);
+			clear fstr;			
+		end
 	else
 		AUTOFREQ = 1;
+		calfreqs = zeros(1, nDaqFiles);
 	end
 end
 
-%--------------------------------------------------------
-%--------------------------------------------------------
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
 % PROCESS DATA
-%--------------------------------------------------------
-%--------------------------------------------------------
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
 %--------------------------------
 % loop through daqfiles
 %--------------------------------
@@ -182,6 +216,7 @@ for n = 1:nDaqFiles
 	if isempty(tmpdata)
 		% file is empty
 		fprintf('File %s is empty, terminating data loading\n\n', daqfile);
+		calfreqs = calfreqs(1:(n-1));
 		break
 	end	
 	% ASSUME (!!) that stimulus data are collected on channel 1 (NI 0)
@@ -241,15 +276,9 @@ for n = 1:nDaqFiles
 		%--------------------------------
 		% TONES
 		%--------------------------------
-		case 'tones'
+		case 'tones'		
+			[mags(n), phis(n), calfreqs(n)] = processTones(micdata, Fs, calfreqs(n), FreqDetectWidth);
 			
-			% get spectrum of data
-			[tmpfreqs, tmpmags, fmax, magmax] = daqdbfft(micdata, Fs, length(micdata));
-			% find frequency at peak magnitude
-			calfreqs(n) = fmax;
-			% compute pll magnitude and phase at this frequency
-			[mags(n), phis(n)] = fitsinvec(micdata, 1, Fs, calfreqs(n));
-				
 		%--------------------------------
 		% RMS
 		%--------------------------------
@@ -312,7 +341,30 @@ varargout{1} = out;
 
 end
 
+%------------------------------------------------------------------------
+% processTones function
+%------------------------------------------------------------------------
+function [mag, phi, freq] = processTones(micdata, Fs, calfreq, FreqDetectWidth)
+	% get spectrum of data
+	[tmpfreqs, tmpmags, fmax, magmax] = daqdbfft(micdata, Fs, length(micdata));
+	
+	if calfreq == 0
+		% if  calfreq == 0, use fmax to detect magnitude (automatic freq. detection)
+		freq = fmax;
+	else
+		% otherwise, search in a range around the provided frequency
+		freqindx = find(between(tmpfreqs, calfreq - FreqDetectWidth, calfreq + FreqDetectWidth));
+		[~, maxindx] = max(tmpmags(freqindx));
+		freq = tmpfreqs(freqindx(maxindx));
+	end
+	% compute pll magnitude and phase at this frequency
+	[mag, phi] = fitsinvec(micdata, 1, Fs, freq);
 
+end
+
+%------------------------------------------------------------------------
+% processWindows function
+%------------------------------------------------------------------------
 function [rmsvals, rmswindows] = processWindows(data, windowms, fs)
 	% convert windowsize from msec into samples
 	windowpts = ms2samples(windowms, fs);
