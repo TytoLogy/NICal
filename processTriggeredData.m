@@ -351,6 +351,8 @@ function [mag, phi, freq] = processTones(micdata, Fs, calfreq, FreqDetectWidth)
 	if calfreq == 0
 		% if  calfreq == 0, use fmax to detect magnitude (automatic freq. detection)
 		freq = fmax;
+	elseif FreqDetectWidth == 0
+		freq = calfreq;
 	else
 		% otherwise, search in a range around the provided frequency
 		freqindx = find(between(tmpfreqs, calfreq - FreqDetectWidth, calfreq + FreqDetectWidth));
