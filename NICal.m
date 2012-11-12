@@ -990,9 +990,6 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
 	end
 
-
-
-
 %{
 
 	% get the fr file data
