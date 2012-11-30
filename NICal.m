@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 30-Nov-2012 15:39:09
+% Last Modified by GUIDE v2.5 30-Nov-2012 18:03:02
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -1026,6 +1026,22 @@ function CalFileCtrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 
+% --- If Enable == 'on', executes on mouse press in 5 pixel border.
+% --- Otherwise, executes on mouse press in 5 pixel border or over CalFileCtrl.
+function CalFileCtrl_ButtonDownFcn(hObject, eventdata, handles)
+	oldfile = read_ui_str(hObject);
+	[filename, pathname] = uiputfile('*.cal','Save calibration data to file', oldfile);
+	if isequal(filename, 0) || isequal(pathname, 0)
+		update_ui_str(hObject, handles.cal.calfile);
+		return
+	else
+		handles.cal.calfile = fullfile(pathname, filename);
+		update_ui_str(hObject, handles.cal.calfile);
+		guidata(hObject, handles);
+	end
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+
 %-------------------------------------------------------------------------
 function AutoSaveCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.AutoSave = read_ui_val(hObject);
@@ -1417,6 +1433,9 @@ function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 		 set(hObject,'BackgroundColor','white');
 	end
 %-------------------------------------------------------------------------
+
+
+
 
 
 
