@@ -26,6 +26,23 @@ NICal_Constants;
 global VtoPa Gain fcoeffa fcoeffb ...
 		tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints
 
+%---------------------------------------------
+%---------------------------------------------
+% Load Microphone calibration data
+%---------------------------------------------
+%---------------------------------------------
+if read_ui_val(handles.FRenableCtrl) == 0
+	DAscale = read_ui_str(handles.DAscaleCtrl, 'n');
+	handles.cal.mic_fr = [];
+	handles.cal.DAscale = DAscale;
+else
+	load(handles.cal.mic_fr_file, 'frdata', '-MAT');
+	if ~isfield(frdata, 'DAscale')
+		frdata.DAscale = frdata.calsettings.DAscale;
+	end
+	handles.cal.mic_fr = frdata;
+end
+
 %-------------------------------------------------------------
 % need some conversion factors
 %-------------------------------------------------------------
@@ -33,7 +50,7 @@ Gain = handles.cal.Gain;
 % this is the sensitivity of the calibration mic in V / Pa
 % if FR file is used, get sens. from there, 
 if read_ui_val(handles.FRenableCtrl) == 1
-	CalMic_sense = frdata.calsettings.CalMic_sense;
+	CalMic_sense = frdata.calsettings.MicSensitivity;
 else
 	% otherwise, use cal information
 	CalMic_sense = handles.cal.MicSensitivity;

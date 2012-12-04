@@ -54,7 +54,7 @@ if exist(handles.cal.calfile, 'file')
 	resp = uiyesno('title', 'Save File', 'string', 'File exists! Overwrite?', 'default', 'No');
 	if strcmpi(resp, 'No')
 		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
-		[newname, newpath] = uiputfile('*_cal.mat','Save calibration data to file', fullfile(pathstr, [fname '_1' fext]));
+		[newname, newpath] = uiputfile('*.cal','Save calibration data to file', fullfile(pathstr, [fname '_1' fext]));
 		if isequal(newname, 0) || isequal(newpath, 0)
 			return
 		else
@@ -64,8 +64,6 @@ if exist(handles.cal.calfile, 'file')
 		end
 	end
 end
-
-
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------

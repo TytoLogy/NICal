@@ -12,6 +12,7 @@
 %
 % Revisions:
 %	13 Sep 2012 (SJS): changed deciFactor to handles.cal.deciFactor
+%	2 Dec 2012 (SJS): debugging.  
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -28,17 +29,17 @@ COMPLETE = 0;
 %-----------------------------------------------------------------------
 % get output  file - if it exists, check with user
 %-----------------------------------------------------------------------
-[pathstr, fname, fext] = fileparts(handles.cal.calfile);
 % store original file to restore to uictrl after frdata run
-calfile_orig = handles.cal.calfile;
+calfile_orig = handles.cal.mic_fr_file;
+[pathstr, fname, fext] = fileparts(handles.cal.mic_fr_file);
 
 [newname, newpath] = uiputfile('*.fr','Save microphone freq response data to file', pathstr);
 if isequal(newname, 0) || isequal(newpath, 0)
 	fprintf('\nCancelling .fr file collection\n\n');
 	return
 else
-	handles.cal.calfile = fullfile(newpath, newname);
-	update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
+	handles.cal.mic_fr_file = fullfile(newpath, newname);
+	update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
 	guidata(hObject, handles);
 end
 
@@ -572,7 +573,7 @@ handles.rawdata = rawdata;
 handles.cal = cal;
 guidata(hObject, handles);
 
-save(handles.cal.calfile, 'frdata', 'cal', '-mat');
+save(handles.cal.mic_fr_file, 'frdata', 'cal', '-mat');
 	
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------

@@ -37,7 +37,7 @@ if read_ui_val(handles.FRenableCtrl) == 0
 	handles.cal.mic_fr = [];
 	handles.cal.DAscale = DAscale;
 else
-	load(handles.cal.mic_fr_file, 'frdata');
+	load(handles.cal.mic_fr_file, 'frdata', '-MAT');
 	if ~isfield(frdata, 'DAscale')
 		frdata.DAscale = frdata.calsettings.DAscale;
 	end
@@ -60,9 +60,9 @@ Gain = invdb(handles.cal.MicGain);
 % this is the sensitivity of the calibration mic in V / Pa
 % if FR file is used, get sens. from there, 
 if read_ui_val(handles.FRenableCtrl) == 1
-	CalMic_sense = frdata.calsettings.CalMic_sense;
+	CalMic_sense = frdata.calsettings.MicSensitivity;
 else
-	% otherwise, use cal information
+	% otherwise, use cal information	
 	CalMic_sense = handles.cal.MicSensitivity;
 end
 % pre-compute the V -> Pa conversion factor
@@ -89,8 +89,8 @@ if handles.cal.FRenable
 		return
 	end
 	% check high freq limit
-	if Freqs(end) > frdata.range(3)
-		warning('NICal:Freq', [mfilename ': requested MAx calibration frequency is out of FR file bounds']);
+	if Freqs(end) > frdata.range(2)
+		warning('NICal:Freq', [mfilename ': requested Max calibration frequency is out of FR file bounds']);
 		return
 	end
 end
