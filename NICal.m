@@ -76,28 +76,23 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	disp([mfilename ': checking paths'])
-	% directory when using installed version:
-	%	pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
-	% development tree
-	pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
-	if isempty(which('RPload'))
+	if ispc
+		% directory when using installed version:
+		%	pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+		% development tree
+		pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+	else ismac
+		pdir = ['~/Work/Code/Matlab/dev/TytoLogy/TytoLogySettings/' getenv('USER')];
+	end
+			
+	if isempty(which('ms2samples'))
 		% could not find the RPload.m function (which is in TytoLogy
 		% toolbox) which suggests that the paths are not set or are 
 		% incorrect for this setup.  load the paths using the tytopaths program.
-		%--------
-		% First, store the current path
-		cdir = pwd;
-		% build the path to the user's TytoSettings directory and
-		% change dirs to it.  Run the tytopaths script and then
-		% return to the original ("current") directory
-		disp([mfilename ': loading paths using ' pdir])
-		cd(pdir);
-		tytopaths
-		cd(cdir);
+		run(fullfile(pdir, 'tytopaths'))
 	else
 		disp([mfilename ': paths ok, launching programn'])
-	end
-	
+	end	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% load the configuration information, store in config structure
