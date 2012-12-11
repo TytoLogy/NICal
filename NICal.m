@@ -76,24 +76,16 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	disp([mfilename ': checking paths'])
-<<<<<<< HEAD
 	if ispc
 		% directory when using installed version:
-		%	pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+		pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
 		% development tree
-		pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+		% pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
 	else ismac
 		pdir = ['~/Work/Code/Matlab/dev/TytoLogy/TytoLogySettings/' getenv('USER')];
 	end
 			
 	if isempty(which('ms2samples'))
-=======
-	% directory when using installed version:
-	pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
-	% development tree
-	%pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
-	if isempty(which('RPload'))
->>>>>>> changes to directories
 		% could not find the RPload.m function (which is in TytoLogy
 		% toolbox) which suggests that the paths are not set or are 
 		% incorrect for this setup.  load the paths using the tytopaths program.
@@ -110,9 +102,9 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	% define user config path
 	% path when using installed version:
-	%	userconfigpath = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME') '\NICal\'];
+	userconfigpath = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME') '\NICal\'];
 	% path when using working version:
-	userconfigpath = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME') '\NICal\'];
+	%userconfigpath = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME') '\NICal\'];
 
 	% load the configuration information, store in config structure
 	if isempty(which('NICal_Configuration'))
