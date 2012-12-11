@@ -1,26 +1,45 @@
 function varargout = processTriggeredData(varargin)
 %------------------------------------------------------------------------
-% dbvals = processTriggeredData(basename, basepath, calmode, freqdetectwidth)
+% dbvals = processTriggeredData(	'base', <base file name for .daq files>,
+% 											'path',	<path to .daq files>,
+% 											'mode', <analysis mode>,
+% 											'freqwidth' <automagic frequency detect width> )
 %------------------------------------------------------------------------
 % TytoLogy:NICal program
 %------------------------------------------------------------------------
 % 
-% 	If basename and basepath are provided, program will use those values 
-% 	to search for .daq files.
-% 	
-% 	Otherwise, a GUI dialog will pop up to ask user for file
-% 	
-%	Calmode will select how the data are processed:
-% 		calmode = 'tones'  (default) will look for tone magnitudes in
-% 						each .daq file and compute a freq-dB SPL curve
+% If base filename and base path are provided, program will use those values 
+% to search for .daq files.
 % 
-% 		calmode = 'rms'	will simply compute the overall db SPL level
-% 								for each file
-% 		calmode = 'window' will compute db SPL levels for each file 
-% 								broken up into 100 msec windows
-% 	
-%	freqdetectwidth sets the width to search for peak frequency magnitude
-% 			default is 21 Hz
+% The base filename should be the root filename of the automatically
+% triggered .daq files from NICal.  For example, if the files collected by
+% NICal are:
+% 	NICalfile_test-1.daq
+% 	NICalfile_test-2.daq
+% 	.
+% 	.
+% 	.
+% 	NICalfile_test-n.daq
+% and the files are in the directory D:\calibrationuser\data, base and path 
+% would be declared as follows:
+% 
+% processTriggeredData(	'base', 'NICalfile_test', ...
+% 								'path', 'D:\calibrationuser\data' )
+% 
+% If basename or path is not provided, a GUI dialog will pop up
+% to ask user for file
+% 
+% mode will select how the data are processed:
+% 	mode = 'tones'  (default) will look for tone magnitudes in
+% 					each .daq file and compute a freq-dB SPL curve
+% 
+% 	mode = 'rms'	will simply compute the overall db SPL level
+% 							for each file
+% 	mode = 'window' will compute db SPL levels for each file 
+% 							broken up into 100 msec windows
+% 
+% freqwidth sets the width to search for peak frequency magnitude
+% 		default is 21 Hz
 %------------------------------------------------------------------------
 % See also: NICal 
 %------------------------------------------------------------------------
@@ -35,7 +54,11 @@ function varargout = processTriggeredData(varargin)
 %	29 Aug 2012 (SJS): updated documentation
 % 	22 Oct 2012 (SJS):
 % 	 -	added freqdetectwidth input var
-% 	 - reworking tone calibration 
+% 	 - reworking tone calibration
+%	11 Dec 2012 (SJS):
+%	 -	added section for rms calibration mode to output variable assignment
+%	 - changed input parsing to pure varargin mode (no assumption on order 
+%		of input args -> downside is that all inputs must have tags!
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -59,38 +82,50 @@ DeciFactor = 10;
 % tolerance (in Hz) for finding peak frequency in autodetect mode
 FreqDetectWidth = 21;
 
+% set basepath and basename to empty and
+% use default calibration mode ('tones')
+basepath = '';
+basename = '';
+calmode = 'tones';
+
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % parse inputs
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-if nargin == 0
-	basepath = '';
-	basename = '';
-	calmode = 'tones';
-elseif nargin == 1
-	[~, basename] = fileparts(varargin{1});
-	basepath = pwd;
-	calmode = 'tones';
-elseif nargin == 2
-	[~, basename] = fileparts(varargin{1});
-	basepath = varargin{2};
-	calmode = 'tones';
-elseif nargin == 3
-	[~, basename] = fileparts(varargin{1});
-	basepath = varargin{2};
-	calmode = varargin{3};
-	if ~any(strcmpi(calmode, {'tones', 'rms', 'window'}))
-		error('%s: invalid calmode %s', mfilename, calmode);
-	end
-elseif nargin == 4
-	[~, basename] = fileparts(varargin{1});
-	basepath = varargin{2};
-	calmode = varargin{3};
-	if ~any(strcmpi(calmode, {'tones', 'rms', 'window'}))
-		error('%s: invalid calmode %s', mfilename, calmode);
-	end
-	FreqDetectWidth = varargin{4};
+
+% loop through arguments
+index = 1;
+while index <= nargin
+	% act according to tag
+	switch lower(varargin{index})
+		case 'base'
+			% set basename, strip off any path information
+			[~, basename] = fileparts(varargin{index+1});
+			% increment index by 2 places
+			index = index + 2;
+
+		case 'path'
+			basepath = varargin{index+1};
+			% increment index by 2 places
+			index = index + 2;
+			
+		case 'mode'
+			switch(lower(varargin{index+1}))
+				case {'tones', 'window', 'rms'}
+					calmode = lower(varargin{index+1});
+				otherwise
+					error('%s: invalid mode value %s', mfilename, varargin{index+1});
+			end
+			index = index + 2;
+
+		case 'freqwidth'
+			FreqDetectWidth = varargin{index+1};
+			index = index + 2;
+		
+		otherwise
+			error('%s: invalid option %s', mfilename, varargin{index});
+	end	
 end
 
 %------------------------------------------------------------------------
@@ -161,7 +196,7 @@ load(fullfile(basepath, [basename '.mat']), '-MAT');
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 if strcmpi(calmode, 'tones')
-	qVal = query_user('Auto-detect tone frequencies', 1)
+	qVal = query_user('Auto-detect tone frequencies', 1);
 	if qVal == 0
 		% check if user has text list of frequencies
 		fVal = query_user('Read list of frequencies from .txt file', 1);
@@ -216,7 +251,9 @@ for n = 1:nDaqFiles
 	if isempty(tmpdata)
 		% file is empty
 		fprintf('File %s is empty, terminating data loading\n\n', daqfile);
-		calfreqs = calfreqs(1:(n-1));
+		if strcmpi(calmode, 'tones')
+			calfreqs = calfreqs(1:(n-1));
+		end
 		break
 	end	
 	% ASSUME (!!) that stimulus data are collected on channel 1 (NI 0)
@@ -313,6 +350,7 @@ switch lower(calmode)
 		subplot(212)
 		plot(unwrap(out.phis), '.-')
 		set(gca, 'XTick', 1:ndatums);
+		labels = cell(ndatums, 1);
 		for n = 1:ndatums
 			labels{n} = sprintf('%.1f', 0.001*calfreqs(n));
 		end
@@ -326,6 +364,9 @@ switch lower(calmode)
 		out.dbvals = dbvals;
 		out.rms_windowsize_ms = rms_windowsize_ms;
 
+	case 'rms'
+		out.dbvals = dbvals;
+		out.rms_vals = rms_vals;
 end
 
 out.Fs = Fs;
@@ -336,13 +377,15 @@ out.forder = forder;
 out.DeciFactor = DeciFactor;
 out.fcoeff.a = fcoeffa;
 out.fcoeff.b = fcoeffb;
-
+out.VtoPa = VtoPa;
 varargout{1} = out;
 
 end
 
 %------------------------------------------------------------------------
-% processTones function
+%------------------------------------------------------------------------
+%% processTones function
+%------------------------------------------------------------------------
 %------------------------------------------------------------------------
 function [mag, phi, freq] = processTones(micdata, Fs, calfreq, FreqDetectWidth)
 	% get spectrum of data
@@ -363,9 +406,13 @@ function [mag, phi, freq] = processTones(micdata, Fs, calfreq, FreqDetectWidth)
 	[mag, phi] = fitsinvec(micdata, 1, Fs, freq);
 
 end
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
-% processWindows function
+%------------------------------------------------------------------------
+%% processWindows function
+%------------------------------------------------------------------------
 %------------------------------------------------------------------------
 function [rmsvals, rmswindows] = processWindows(data, windowms, fs)
 	% convert windowsize from msec into samples
