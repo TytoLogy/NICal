@@ -296,7 +296,8 @@ for n = 1:nDaqFiles
 			Fs_reduced = Fs / 10;
 			% build time vectors for plotting
 			t1 = ((1:length(micdata_reduced)) - 1) / Fs_reduced;
-			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
+% 			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
+			t2 = rms_windowsize_ms * 0.001 * rmw_windows;
 			% plot!
 
 			subplot(211)
@@ -427,6 +428,6 @@ function [rmsvals, rmswindows] = processWindows(data, windowms, fs)
 	rmsIndex = 0;
 	for w = 2:Nwindows
 		rmsIndex = rmsIndex + 1;
-		rmsvals(rmsIndex) = rms(micdata(rmswindows(w-1):rmswindows(w)));
+		rmsvals(rmsIndex) = rms(data(rmswindows(w-1):rmswindows(w)));
 	end
 end
