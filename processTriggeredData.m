@@ -227,6 +227,10 @@ if strcmpi(calmode, 'tones')
 	end
 end
 
+if length(calfreqs) ~= nDaqFiles
+	calfreqs = calfreqs * ones(1, nDaqFiles);
+end
+
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % PROCESS DATA
@@ -296,14 +300,14 @@ for n = 1:nDaqFiles
 			Fs_reduced = Fs / 10;
 			% build time vectors for plotting
 			t1 = ((1:length(micdata_reduced)) - 1) / Fs_reduced;
-			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
+			t2 = rms_windowsize_ms * 0.001 * (0:size(dbvals{n},1)-1);
+% 			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
 			% plot!
 
 			subplot(211)
 			plot(t1, micdata_reduced);
 			grid
 			ylabel('Volts');
-
 			subplot(212)
 			plot(t2, dbvals{n}, 'Marker', '.', 'Color', 'r');
 			ylabel('dB SPL')
@@ -427,6 +431,6 @@ function [rmsvals, rmswindows] = processWindows(data, windowms, fs)
 	rmsIndex = 0;
 	for w = 2:Nwindows
 		rmsIndex = rmsIndex + 1;
-		rmsvals(rmsIndex) = rms(micdata(rmswindows(w-1):rmswindows(w)));
+		rmsvals(rmsIndex) = rms(data(rmswindows(w-1):rmswindows(w)));
 	end
 end
