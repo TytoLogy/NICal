@@ -302,6 +302,8 @@ for n = 1:nDaqFiles
 			t1 = ((1:length(micdata_reduced)) - 1) / Fs_reduced;
 			t2 = rms_windowsize_ms * 0.001 * (0:size(dbvals{n},1)-1);
 % 			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
+% 			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
+			t2 = rms_windowsize_ms * 0.001 * rmw_windows;
 			% plot!
 
 			subplot(211)

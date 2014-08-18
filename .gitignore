@@ -1,3 +1,17 @@
-NICalhandles.mat
+############
+## Windows
+############
+
+# Windows image file caches
+Thumbs.db
+
+# Folder config file
+Desktop.ini
+
+
+# Mac crap
 .DS_Store
+
+# NICAl things
+NICalhandles.mat
 NICal_EventLogs.mat
