@@ -76,7 +76,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	disp([mfilename ': checking paths'])
-<<<<<<< HEAD
+
 	if ispc
 		% directory when using installed version:
 		pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
@@ -87,13 +87,14 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	end
 			
 	if isempty(which('ms2samples'))
-=======
+
 	% directory when using installed version:
 	pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
 	% development tree
 % 	pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+	end
 	if isempty(which('RPload'))
->>>>>>> gerbil
+
 		% could not find the RPload.m function (which is in TytoLogy
 		% toolbox) which suggests that the paths are not set or are 
 		% incorrect for this setup.  load the paths using the tytopaths program.
