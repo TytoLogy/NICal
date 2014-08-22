@@ -87,20 +87,11 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	end
 			
 	if isempty(which('ms2samples'))
-		% directory when using installed version:
-		pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
-		% development tree
-		% 	pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
-	end
-	
-	if isempty(which('RPload'))
-		% could not find the RPload.m function (which is in TytoLogy
-		% toolbox) which suggests that the paths are not set or are 
-		% incorrect for this setup.  load the paths using the tytopaths program.
 		run(fullfile(pdir, 'tytopaths'))
 	else
 		disp([mfilename ': paths ok, launching programn'])
-	end	
+	end
+	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% load the configuration information, store in config structure
