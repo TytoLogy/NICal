@@ -76,6 +76,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	disp([mfilename ': checking paths'])
+
 	if ispc
 		% directory when using installed version:
 		pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
@@ -86,6 +87,15 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	end
 			
 	if isempty(which('ms2samples'))
+
+		% directory when using installed version:
+		pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+		% development tree
+		% 	pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+	end
+	
+	if isempty(which('RPload'))
+
 		% directory when using installed version:
 		pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
 		% development tree
