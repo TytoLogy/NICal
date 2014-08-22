@@ -76,6 +76,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	disp([mfilename ': checking paths'])
+
 	if ispc
 		% directory when using installed version:
 		pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
@@ -91,6 +92,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% development tree
 % 	pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
 	end
+	
 	if isempty(which('RPload'))
 		% could not find the RPload.m function (which is in TytoLogy
 		% toolbox) which suggests that the paths are not set or are 
