@@ -51,10 +51,13 @@ guidata(hObject, handles);
 % check output  file - if it exists, check with user
 %-----------------------------------------------------------------------
 if exist(handles.cal.calfile, 'file')
-	resp = uiyesno('title', 'Save File', 'string', 'File exists! Overwrite?', 'default', 'No');
+	resp = uiyesno('title', 'Save File', 'string', ...
+							'File exists! Overwrite?', 'default', 'No');
 	if strcmpi(resp, 'No')
 		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
-		[newname, newpath] = uiputfile('*.cal','Save calibration data to file', fullfile(pathstr, [fname '_1' fext]));
+		[newname, newpath] = uiputfile('*.cal', ...
+													'Save calibration data to file', ...
+													fullfile(pathstr, [fname '_1' fext]));
 		if isequal(newname, 0) || isequal(newpath, 0)
 			return
 		else
@@ -142,11 +145,13 @@ end
 % set the start and end bins for the calibration
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, handles.iodev.Fs);
+start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, ...
+								handles.iodev.Fs);
 if ~start_bin
 	start_bin = 1;
 end
-end_bin = start_bin + ms2bin(handles.cal.StimDuration - handles.cal.StimRamp, handles.iodev.Fs);
+end_bin = start_bin + ms2bin(handles.cal.StimDuration - handles.cal.StimRamp,...
+											handles.iodev.Fs);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -229,11 +234,46 @@ set(H.Rstim, 'XDataSource', 'tvec_stim', 'YDataSource', 'Rstim');
 % response
 H.Lacq = plot(handles.Lmicplot, tvec_acq, Lacq, 'g');
 set(H.Lacq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Lacq');
-xlabel(handles.Lmicplot, 'Time (ms)')
 ylabel(handles.Lmicplot, 'V')
 H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
 set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
-xlabel(handles.Rmicplot, 'Time (ms)')
+
+%-------------------------------------------------------
+% plot null data, save handles for spectrogram plots
+%-------------------------------------------------------
+[tmp, lspecF, lspecT, lspecP] = spectrogram(	Lacq, ...
+													handles.SpectrumWindow, ...
+													floor(0.98*handles.SpectrumWindow), ...
+													512, ...
+													handles.iodev.Fs	);
+lspecT = 1000 * lspecT;
+lspecF = 0.001 * lspecF;
+lspecP = 20*log10(ones(size(lspecP)));
+H.Lspec = surf(handles.Lspecgram, lspecT, lspecF, lspecP, 'edgecolor', 'none');
+% axis(H.Lspec, 'tight');
+view(handles.Lspecgram, 0, 90);
+colormap(handles.Lspecgram, handles.ColorMap);
+set(H.Lspec,	'XDataSource', 'lspecT', ...
+					'YDataSource', 'lspecF', ...
+					'ZDataSource', 'lspecP');
+				
+get(H.Lspec)
+
+[tmp, rspecF, rspecT, rspecP] = spectrogram(	Racq, ...
+													handles.SpectrumWindow, ...
+													floor(0.98*handles.SpectrumWindow), ...
+													512, ...
+													handles.iodev.Fs	);
+rspecT = 1000 * rspecT;
+rspecF = 0.001 * rspecF;
+rspecP = 20*log10(ones(size(rspecP)));
+H.Rspec = surf(handles.Rspecgram, rspecT, rspecF, rspecP, 'edgecolor', 'none');
+% axis(H.Rspec, 'tight');
+view(handles.Rspecgram, 0, 90);
+colormap(handles.Rspecgram, handles.ColorMap);
+set(H.Lspec,	'XDataSource', 'rspecT', ...
+					'YDataSource', 'rspecF', ...
+					'ZDataSource', 'rspecP');
 
 %-------------------------------------------------------
 % plot null data, save handles for frequency-domain plots
@@ -258,7 +298,8 @@ if handles.cal.AttenFix && between(handles.cal.AttenFixValue, 0, MAX_ATTEN)
 else
 	% use StartAtten
 	if ~between(handles.cal.AttenFixValue, 0, MAX_ATTEN)
-		warning('NICal:Atten', [mfilename ': AttenFixValue out of range, using default StartAtten value'])
+		warning('NICal:Atten', [mfilename ...
+					': AttenFixValue out of range, using default StartAtten value'])
 	end
 	% set the adjustable starting attenuator values	
 	Latten = handles.cal.StartAtten;
@@ -327,7 +368,9 @@ for F = 1:Nfreqs
 		% Build stimulus output array for this frequency
 		%-------------------------------------------------------
 		% synthesize the L sine wave;
-		[S, stimspec.RMS, stimspec.phi] = syn_calibrationtone2(cal.StimDuration, iodev.Fs, freq, 0, 'L');
+		[S, stimspec.RMS, stimspec.phi] = ...
+									syn_calibrationtone2(cal.StimDuration, ...
+																	iodev.Fs, freq, 0, 'L');
 		% scale the sound
 		S = cal.DAscale * S;
 		% apply the sin^2 amplitude envelope to the stimulus
@@ -380,7 +423,8 @@ for F = 1:Nfreqs
 			end
 			
 			% determine the magnitude and phase of the response
-			[lmag, lphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+			[lmag, lphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
+												1, iodev.Fs, freq);
 			update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
@@ -438,8 +482,11 @@ for F = 1:Nfreqs
 			end
 
 			% determine the magnitude and phase of the response
-			[lmag, lphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
-			[ldistmag, ldistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);		
+			[lmag, lphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
+											1, iodev.Fs, freq);
+			[ldistmag, ldistphi] = ...
+										fitsinvec(resp{inChan}(start_bin:end_bin), ...
+															1, iodev.Fs, 2*freq);		
 			update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
 
 			% store peak mag (in Volts) in magsV 
@@ -451,7 +498,8 @@ for F = 1:Nfreqs
 
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
-			lmag_adjusted = RMSsin * lmag / (Gain(L)*frdata.lmagadjval(freq_index));
+			lmag_adjusted = RMSsin * lmag / ...
+									(Gain(L)*frdata.lmagadjval(freq_index));
 
 			% Store the values in the cell arrays for later averaging
 			% (we'll do the averages later in order to save time while
@@ -459,7 +507,8 @@ for F = 1:Nfreqs
 			% adjust for the gain of the preamp and convert to Pascals
 			mags{L}(freq_index, rep) = VtoPa*(lmag_adjusted);
 			phis{L}(freq_index, rep) = lphi - frdata.lphiadjval(freq_index);
-			update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
+			update_ui_str(handles.LSPLText, ...
+								sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
 
 			% store distortion and leak values
 			distphis{L}(freq_index, rep) = ldistphi - frdata.lphiadjval(freq_index);
@@ -473,24 +522,35 @@ for F = 1:Nfreqs
 			% more things to do...
 			if cal.CheckCal == L
 				% mag, phase of L channel
-				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[tmpmag, tmpphi] = ...
+										fitsinvec(resp{inChan}(start_bin:end_bin), ...
+															1, iodev.Fs, freq);
 				% convert tmpmag to Pascals (rms)
 				mags{REF}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
 				phis{REF}(freq_index, rep) = tmpphi;
 				% distortion measures
-				[tmpdistmag, tmpdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[tmpdistmag, tmpdistphi] = ...
+											fitsinvec(resp{inChan}(start_bin:end_bin), ...
+													1, iodev.Fs, 2*freq);
 				dists{REF}(freq_index, rep) = tmpdistmag;
 				distphis{REF}(freq_index, rep) = tmpdistphi;
 				% feedback to user
-				fprintf('ref mag: %f    L mag: %f', dbspl(mags{REF}(freq_index, rep)), dbspl(mags{L}(freq_index, rep)) );
+				fprintf('ref mag: %f    L mag: %f', ...
+										dbspl(mags{REF}(freq_index, rep)), ...
+										dbspl(mags{L}(freq_index, rep)) );
 			elseif cal.CheckCal == BOTH
-				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
+														1, iodev.Fs, freq);
 				mags{REFL}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
 				phis{REFL}(freq_index, rep) = tmpphi;
-				[tmpdistmag, tmpdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[tmpdistmag, tmpdistphi] = ...
+										fitsinvec(resp{inChan}(start_bin:end_bin), 1, ...
+														iodev.Fs, 2*freq);
 				dists{REFL}(freq_index, rep) = tmpdistmag;
 				distphis{REFL}(freq_index, rep) = tmpdistphi;
-				fprintf('refL mag: %f    L mag: %f', dbspl(mags{REFL}(freq_index, rep)), dbspl(mags{L}(freq_index, rep)) );
+				fprintf('refL mag: %f    L mag: %f', ...
+								dbspl(mags{REFL}(freq_index, rep)), ...
+								dbspl(mags{L}(freq_index, rep)) );
 			end
 
 			% if DEBUG is set, save the raw magnitude and phase values
@@ -511,22 +571,30 @@ for F = 1:Nfreqs
 			if handles.cal.MeasureLeak
 				% determine magnitude and phase of the response in the
 				% opposite channel - this is the leak magnitude and phase
-				[rleakmag, rleakphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[rleakmag, rleakphi] = ...
+													fitsinvec(resp{R}(start_bin:end_bin), ...
+																				1, iodev.Fs, freq);
 				update_ui_str(handles.RValText, sprintf('%.4f', 1000*rleakmag));
 				% compute leak distortion (1st harmonic)
-				[rleakdistmag, rleakdistphi] = fitsinvec(resp{R}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[rleakdistmag, rleakdistphi] = ...
+													fitsinvec(resp{R}(start_bin:end_bin), ...
+																			1, iodev.Fs, 2*freq);
 				% compute harmonic distortion measures before 
 				% applying corrections for the knowles mic response
 				leakdists{R}(freq_index, rep) = rleakdistmag / rleakmag;
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				rleakmag = RMSsin * rleakmag / (Gain(R)*frdata.rmagadjval(freq_index));
+				rleakmag = RMSsin * rleakmag / ...
+												(Gain(R)*frdata.rmagadjval(freq_index));
 				% store leak values
 				leakmags{R}(freq_index, rep) = VtoPa*(rleakmag);
-				leakphis{R}(freq_index, rep) = rleakphi - frdata.rphiadjval(freq_index);
-				leakdistphis{R}(freq_index, rep) = rleakdistphi - frdata.rphiadjval(freq_index);
+				leakphis{R}(freq_index, rep) = ...
+											rleakphi - frdata.rphiadjval(freq_index);
+				leakdistphis{R}(freq_index, rep) = ...
+											rleakdistphi - frdata.rphiadjval(freq_index);
 				% update R text display
-				update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(leakmags{R}(freq_index, rep))));
+				update_ui_str(handles.RSPLText, sprintf('%.4f', ...
+														dbspl(leakmags{R}(freq_index, rep))));
 			else
 				update_ui_str(handles.RValText, '---');
 				update_ui_str(handles.RSPLText, '---');
@@ -538,12 +606,26 @@ for F = 1:Nfreqs
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
 			% plot fft
-			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
+			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), ...
+											iodev.Fs, length(resp{L}(start_bin:end_bin)));
 			refreshdata(H.Lfft, 'caller');
-			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
+			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), ...
+											iodev.Fs, length(resp{R}(start_bin:end_bin)));
 			refreshdata(H.Rfft, 'caller');
 			drawnow
+			% draw spectrogram
+			[tmp, lspecF, lspecT, lspecP] = spectrogram(	resp{L}, ...
+													handles.SpectrumWindow, ...
+													floor(0.98*handles.SpectrumWindow), ...
+													512, ...
+													iodev.Fs	);
+			lspecT = 1000*lspecT;
+			lspecF = 0.001*lspecF;
+			lspecP = 20*log10(lspecP);
+			refreshdata(H.Lspec, 'caller');
+			clear tmp
 			
+			% save raw data
 			if handles.cal.SaveRawData
 				fp = fopen(rawfile, 'a');
 				writeCell(fp, resp);				
@@ -588,13 +670,15 @@ for F = 1:Nfreqs
 				update_ui_str(handles.LValText, sprintf('%.4f', 1000*bgmag));
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				bgmag_adjusted = RMSsin * bgmag / (Gain(L)*frdata.lmagadjval(freq_index));
+				bgmag_adjusted = RMSsin * bgmag / ...
+										(Gain(L)*frdata.lmagadjval(freq_index));
 				% Store the values in the cell arrays for later averaging
 				% (we'll do the averages later in order to save time while
 				%  running the calibration curves)
 				% adjust for the gain of the preamp and convert to Pascals
 				bgmags{L}(freq_index, rep) = VtoPa*(bgmag_adjusted);
-				update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(bgmags{L}(freq_index, rep))));			
+				update_ui_str(handles.LSPLText, ...
+										sprintf('%.4f', dbspl(bgmags{L}(freq_index, rep))));			
 				update_ui_str(handles.RValText, '---');
 				update_ui_str(handles.RSPLText, '---');
 				% plot the response
@@ -604,7 +688,8 @@ for F = 1:Nfreqs
 				refreshdata(H.Racq, 'caller');
 				% plot fft
 				figure(10)
-				[tmpf, tmpm] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
+				[tmpf, tmpm] = daqdbfft(resp{L}(start_bin:end_bin), ...
+										iodev.Fs, length(resp{L}(start_bin:end_bin)));
 				plot(tmpf, tmpm);
 				title('Left Background')
 				% Pause for ISI
@@ -651,7 +736,9 @@ for F = 1:Nfreqs
 		end
 		
 		% synthesize the R sine wave;
-		[S, stimspec.RMS, stimspec.phi] = syn_calibrationtone2(cal.StimDuration, iodev.Fs, freq, 0, 'R');
+		[S, stimspec.RMS, stimspec.phi] = ...
+					syn_calibrationtone2(cal.StimDuration, iodev.Fs, ...
+													freq, 0, 'R');
 		% scale the sound
 		S = cal.DAscale * S;
 		% apply the sin^2 amplitude envelope to the stimulus
@@ -700,7 +787,8 @@ for F = 1:Nfreqs
 			end
 			
 			% determine the magnitude and phase of the response
-			[rmag, rphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+			[rmag, rphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, ...
+												iodev.Fs, freq);
 			% update text display
 			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag));
 			% adjust for the gain of the preamp and apply correction
@@ -758,8 +846,10 @@ for F = 1:Nfreqs
 			end
 			
 			% determine the magnitude and phase of the response
-			[rmag, rphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
-			[rdistmag, rdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);				
+			[rmag, rphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
+														1, iodev.Fs, freq);
+			[rdistmag, rdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
+															1, iodev.Fs, 2*freq);				
 
 			% store peak mag (in Volts) in magsV 
 			magsV{R}(freq_index, rep) = rmag;
@@ -772,33 +862,45 @@ for F = 1:Nfreqs
 			% factors for RMS and microphone calibration
 			rmag_adjusted = RMSsin * rmag / (Gain(R)*frdata.rmagadjval(freq_index));
 			% update text display
-			update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(VtoPa*rmag_adjusted)));
+			update_ui_str(handles.RSPLText, sprintf('%.4f', ...
+																dbspl(VtoPa*rmag_adjusted)));
 			
 			% convert to Pascals (rms) and adjust phase measurements
 			mags{R}(freq_index, rep) = VtoPa*(rmag_adjusted);
 			phis{R}(freq_index, rep) = rphi - frdata.rphiadjval(freq_index);
 			distphis{R}(freq_index, rep) = rdistphi - frdata.rphiadjval(freq_index);
-			update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(mags{R}(freq_index, rep))));
+			update_ui_str(handles.RSPLText, ...
+									sprintf('%.4f', dbspl(mags{R}(freq_index, rep))));
 
 			% store attenuation
 			atten{R}(freq_index, rep) = Ratten;
 
 			if cal.CheckCal == R
-				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
+																1, iodev.Fs, freq);
 				mags{REF}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
 				phis{REF}(freq_index, rep) = tmpphi;
-				[tmpdistmag, tmpdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[tmpdistmag, tmpdistphi] = ...
+									fitsinvec(resp{inChan}(start_bin:end_bin), 1, ...
+													iodev.Fs, 2*freq);
 				dists{REF}(freq_index, rep) = tmpdistmag;
 				distphis{REF}(freq_index, rep) = tmpdistphi;					
-				fprintf('ref mag: %f    R mag: %f', dbspl(mags{REF}(freq_index, rep)), dbspl(mags{R}(freq_index, rep)) );
+				fprintf('ref mag: %f    R mag: %f', ...
+									dbspl(mags{REF}(freq_index, rep)), ...
+									dbspl(mags{R}(freq_index, rep)) );
 			elseif cal.CheckCal == BOTH
-				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
+															1, iodev.Fs, freq);
 				mags{REFR}(freq_index, rep) = VtoPa * RMSsin * tmpmag;
 				phis{REFR}(freq_index, rep) = tmpphi;
-				[tmpdistmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[tmpdistmag, tmpphi] = ...
+									fitsinvec(resp{inChan}(start_bin:end_bin), 1, ...
+													iodev.Fs, 2*freq);
 				dists{REFR}(freq_index, rep) = tmpdistmag;
 				distphis{REFR}(freq_index, rep) = tmpdistphi;
-				fprintf('refR mag: %f    R mag: %f', dbspl(mags{REFR}(freq_index, rep)), dbspl(mags{R}(freq_index, rep)) );
+				fprintf('refR mag: %f    R mag: %f', ...
+									dbspl(mags{REFR}(freq_index, rep)), ...
+									dbspl(mags{R}(freq_index, rep)) );
 			end
 
 			% if DEBUG is set, save the raw magnitude and phase values
@@ -817,8 +919,12 @@ for F = 1:Nfreqs
 
 			% if MeasureLeak is requested, measure it!
 			if handles.cal.MeasureLeak
-				[lleakmag, lleakphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, freq);
-				[lleakdistmag, lleakdistphi] = fitsinvec(resp{L}(start_bin:end_bin), 1, iodev.Fs, 2*freq);
+				[lleakmag, lleakphi] = ...
+									fitsinvec(resp{L}(start_bin:end_bin), 1, ...
+														iodev.Fs, freq);
+				[lleakdistmag, lleakdistphi] = ...
+							fitsinvec(resp{L}(start_bin:end_bin), 1, ...
+							iodev.Fs, 2*freq);
 				% update L text display
 				update_ui_str(handles.LValText, sprintf('%.4f', 1000*lleakmag));
 				% compute distortion measures before applying corrections
@@ -829,8 +935,10 @@ for F = 1:Nfreqs
 				% convert to Pascals (rms) and adjust phase measurements
 				leakmags{L}(freq_index, rep) = VtoPa*(lleakmag);
 				leakphis{L}(freq_index, rep) = lleakphi - frdata.lphiadjval(freq_index);
-				leakdistphis{L}(freq_index, rep) = lleakdistphi - frdata.lphiadjval(freq_index);
-				update_ui_str(handles.LSPLText, sprintf('%.4f', dbspl(leakmags{L}(freq_index, rep))));
+				leakdistphis{L}(freq_index, rep) = ...
+											lleakdistphi - frdata.lphiadjval(freq_index);
+				update_ui_str(handles.LSPLText, ...
+									sprintf('%.4f', dbspl(leakmags{L}(freq_index, rep))));
 			else
 				update_ui_str(handles.LValText, '---');
 				update_ui_str(handles.LSPLText, '---');				
@@ -842,12 +950,27 @@ for F = 1:Nfreqs
 			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
 			% plot fft
-			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
+			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, ...
+												length(resp{R}(start_bin:end_bin)));
 			refreshdata(H.Rfft, 'caller');
-			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, length(resp{L}(start_bin:end_bin)));
+			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
+												length(resp{L}(start_bin:end_bin)));
 			refreshdata(H.Lfft, 'caller');
 			drawnow
 
+			% draw spectrogram
+			[tmp, rspecF, rspecT, rspecP] = spectrogram(	resp{R}, ...
+													handles.SpectrumWindow, ...
+													floor(0.98*handles.SpectrumWindow), ...
+													512, ...
+													iodev.Fs	);
+			rspecT = 1000*rspecT;
+			rspecF = 0.001*rspecF;
+			rspecP = 20*log10(rspecP);
+			refreshdata(H.Rspec, 'caller');
+			clear tmp
+			
+			% save raw data
 			if handles.cal.SaveRawData
 				fp = fopen(rawfile, 'a');
 				writeCell(fp, resp); 				
@@ -899,7 +1022,8 @@ for F = 1:Nfreqs
 				%  running the calibration curves)
 				% adjust for the gain of the preamp and convert to Pascals
 				bgmags{R}(freq_index, rep) = VtoPa*(bgmag_adjusted);
-				update_ui_str(handles.RSPLText, sprintf('%.4f', dbspl(bgmags{R}(freq_index, rep))));			
+				update_ui_str(handles.RSPLText, ...
+									sprintf('%.4f', dbspl(bgmags{R}(freq_index, rep))));
 				update_ui_str(handles.LValText, '---');
 				update_ui_str(handles.LSPLText, '---');
 				% plot the response
@@ -909,7 +1033,8 @@ for F = 1:Nfreqs
 				refreshdata(H.Racq, 'caller');
 				% plot fft
 				figure(10)
-				[tmpf, tmpm] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, length(resp{R}(start_bin:end_bin)));
+				[tmpf, tmpm] = daqdbfft(resp{R}(start_bin:end_bin), ...
+											iodev.Fs, length(resp{R}(start_bin:end_bin)));
 				plot(tmpf, tmpm);
 				title('Right Background')
 
@@ -986,15 +1111,19 @@ for F = 1:Nfreqs
 	% if Check data, save it
 	if cal.CheckCal == L
 		magsraw{REF}(freq_index, :) = dbspl(mags{REF}(freq_index, :));
-		mags{REF}(freq_index, :) = dbspl(mags{REF}(freq_index, :)) + atten{L}(freq_index, :);
+		mags{REF}(freq_index, :) = dbspl(mags{REF}(freq_index, :)) + ...
+														atten{L}(freq_index, :);
 	elseif cal.CheckCal == R
 		magsraw{REF}(freq_index, :) = dbspl(mags{REF}(freq_index, :));
-		mags{REF}(freq_index, :) = dbspl(mags{REF}(freq_index, :)) + atten{R}(freq_index, :);
+		mags{REF}(freq_index, :) = dbspl(mags{REF}(freq_index, :)) + ...
+														atten{R}(freq_index, :);
 	elseif cal.CheckCal == BOTH
 		magsraw{REFL}(freq_index, :) = dbspl(mags{REFL}(freq_index, :));
 		magsraw{REFR}(freq_index, :) = dbspl(mags{REFR}(freq_index, :));
-		mags{REFL}(freq_index, :) = dbspl(mags{REFL}(freq_index, :)) + atten{L}(freq_index, :);
-		mags{REFR}(freq_index, :) = dbspl(mags{REFR}(freq_index, :)) + atten{R}(freq_index, :);
+		mags{REFL}(freq_index, :) = dbspl(mags{REFL}(freq_index, :)) + ...
+														atten{L}(freq_index, :);
+		mags{REFR}(freq_index, :) = dbspl(mags{REFR}(freq_index, :)) + ...
+														atten{R}(freq_index, :);
 	end
 	
 	% store in caldata struct
