@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 30-Nov-2012 18:03:02
+% Last Modified by GUIDE v2.5 16-Oct-2014 16:52:52
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -230,6 +230,25 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	handles.ColorMap = 'gray';
 	guidata(hObject, handles);
 
+	
+	%--------------------------------------------------
+	%--------------------------------------------------
+	% ToneStack settings
+	%--------------------------------------------------
+	%--------------------------------------------------
+	handles.ToneStack = 0;
+	set(handles.Menu_ToneStack, 'Checked', 'off');
+	guidata(hObject, handles);
+	%--------------------------------------------------
+	%--------------------------------------------------
+	% ToneSweep settings
+	%--------------------------------------------------
+	%--------------------------------------------------	
+	set(handles.Menu_ToneSweep, 'Checked', 'off');
+	handles.ToneStack = 0;
+	guidata(hObject, handles);
+
+	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% Update handles structure
@@ -270,7 +289,13 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
  	%---------------------------------------------------------------
 	switch read_ui_val(handles.TriggeredAcquisitionCtrl) 
 		case 0
-			NICal_RunCalibration
+			if handles.ToneStack
+				NICal_RunCalibration_ToneStack
+			elseif handles.ToneSweep
+				NICal_RunCalibration_ToneSweep
+			else
+				NICal_RunCalibration
+			end
 		case 1
 			NICal_RunTriggeredCalibration			
 	end
@@ -1447,11 +1472,29 @@ function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 
 
+%--------------------------------------------------------------------
+function Menu_ToneStack_Callback(hObject, eventdata, handles)
+	oldVal = get(handles.Menu_ToneStack, 'Checked');
+	if strcmpi(oldVal, 'off')
+		set(handles.Menu_ToneStack, 'Checked', 'on');
+		handles.ToneStack = 1;
+		set(handles.Menu_ToneSweep, 'Checked', 'off');
+		handles.ToneSweep = 0;
+	else
+		set(handles.Menu_ToneStack, 'Checked', 'off');
+		handles.ToneStack = 0;
+	end
+	guidata(hObject, handles);
 
-
-
-
-
-
-
-
+function Menu_ToneSweep_Callback(hObject, eventdata, handles)
+	oldVal = get(handles.Menu_ToneSweep, 'Checked');
+	if strcmpi(oldVal, 'off')
+		set(handles.Menu_ToneSweep, 'Checked', 'on');
+		handles.ToneSweep = 1;
+		set(handles.Menu_ToneStack, 'Checked', 'off');
+		handles.ToneStack = 0;
+	else
+		set(handles.Menu_ToneSweep, 'Checked', 'off');
+		handles.ToneStack = 0;
+	end
+	guidata(hObject, handles);

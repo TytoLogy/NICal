@@ -239,43 +239,6 @@ H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
 set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
 
 %-------------------------------------------------------
-% plot null data, save handles for spectrogram plots
-%-------------------------------------------------------
-% [tmp, lspecF, lspecT, lspecP] = spectrogram(	Lacq, ...
-% 													handles.SpectrumWindow, ...
-% 													floor(0.98*handles.SpectrumWindow), ...
-% 													512, ...
-% 													handles.iodev.Fs	);
-% lspecT = 1000 * lspecT;
-% lspecF = 0.001 * lspecF;
-% lspecP = 20*log10(ones(size(lspecP)));
-% H.Lspec = surf(handles.Lspecgram, lspecT, lspecF, lspecP, 'edgecolor', 'none');
-% % axis(H.Lspec, 'tight');
-% view(handles.Lspecgram, 0, 90);
-% colormap(handles.Lspecgram, handles.ColorMap);
-% set(H.Lspec,	'XDataSource', 'lspecT', ...
-% 					'YDataSource', 'lspecF', ...
-% 					'ZDataSource', 'lspecP');
-% 				
-% get(H.Lspec)
-% 
-% [tmp, rspecF, rspecT, rspecP] = spectrogram(	Racq, ...
-% 													handles.SpectrumWindow, ...
-% 													floor(0.98*handles.SpectrumWindow), ...
-% 													512, ...
-% 													handles.iodev.Fs	);
-% rspecT = 1000 * rspecT;
-% rspecF = 0.001 * rspecF;
-% rspecP = 20*log10(ones(size(rspecP)));
-% H.Rspec = surf(handles.Rspecgram, rspecT, rspecF, rspecP, 'edgecolor', 'none');
-% % axis(H.Rspec, 'tight');
-% view(handles.Rspecgram, 0, 90);
-% colormap(handles.Rspecgram, handles.ColorMap);
-% set(H.Lspec,	'XDataSource', 'rspecT', ...
-% 					'YDataSource', 'rspecF', ...
-% 					'ZDataSource', 'rspecP');
-
-%-------------------------------------------------------
 % plot null data, save handles for frequency-domain plots
 %-------------------------------------------------------
 H.Lfft = plot(handles.Lfftplot, fvec, Lfft);
@@ -455,9 +418,11 @@ for F = 1:Nfreqs
 
 			% plot the response
 			Lacq = downsample(resp{L}, handles.cal.deciFactor);
-			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
-			refreshdata(H.Racq, 'caller');
+			if handles.cal.MeasureLeak
+				Racq = downsample(resp{R}, handles.cal.deciFactor);
+				refreshdata(H.Racq, 'caller');
+			end
 		end		% END of L attenuation loop
 
 		pause(0.001*cal.ISI);
@@ -476,8 +441,10 @@ for F = 1:Nfreqs
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
 				resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
-				tmp = sin2array(resp{R}, 1, iodev.Fs);
-				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				if handles.cal.MeasureLeak
+					tmp = sin2array(resp{R}, 1, iodev.Fs);
+					resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				end
 				clear tmp
 			end
 
@@ -600,27 +567,33 @@ for F = 1:Nfreqs
 				update_ui_str(handles.RSPLText, '---');
 			end
 			
-			% plot the response
+			% plot the response and FFT
 			Lacq = downsample(resp{L}, handles.cal.deciFactor);
-			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
-			refreshdata(H.Racq, 'caller');
-			% plot fft
 			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), ...
 											iodev.Fs, length(resp{L}(start_bin:end_bin)));
 			refreshdata(H.Lfft, 'caller');
-			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), ...
-											iodev.Fs, length(resp{R}(start_bin:end_bin)));
-			refreshdata(H.Rfft, 'caller');
+			if handles.cal.MeasureLeak
+				Racq = downsample(resp{R}, handles.cal.deciFactor);
+				refreshdata(H.Racq, 'caller');
+				[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), ...
+												iodev.Fs, length(resp{R}(start_bin:end_bin)));
+				refreshdata(H.Rfft, 'caller');
+			end
 			drawnow
 			% draw spectrogram
 			axes(handles.Lspecgram);
 			myspectrogram(resp{L}, iodev.Fs, ...
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');
+			if handles.cal.MeasureLeak
+				axes(handles.Rspecgram);
+				myspectrogram(resp{R}, iodev.Fs, ...
+										[10 5], @hamming, handles.SpectrumWindow, ...
+										[-100 -1], false, 'default', false, 'per');			
+			end
 			
-			
-			
+% OLD method
 % 			[tmp, lspecF, lspecT, lspecP] = spectrogram(	resp{L}, ...
 % 													handles.SpectrumWindow, ...
 % 													floor(0.98*handles.SpectrumWindow), ...
@@ -636,7 +609,11 @@ for F = 1:Nfreqs
 			% save raw data
 			if handles.cal.SaveRawData
 				fp = fopen(rawfile, 'a');
-				writeCell(fp, resp);				
+				if handles.cal.MeasureLeak
+					writeCell(fp, resp);
+				else
+					writeCell(fp, resp(L));
+				end
 				fclose(fp);
 			end
 			
@@ -828,9 +805,11 @@ for F = 1:Nfreqs
 			end
 
 			% plot the response
-			Lacq = downsample(resp{L}, handles.cal.deciFactor);
+			if handles.cal.MeasureLeak
+				Lacq = downsample(resp{L}, handles.cal.deciFactor);
+				refreshdata(H.Lacq, 'caller');
+			end
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
-			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
 		end
 
@@ -846,8 +825,10 @@ for F = 1:Nfreqs
 
 			% filter the data if asked
 			if handles.cal.InputFilter
-				tmp = sin2array(resp{L}, 1, iodev.Fs);
-				resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				if handles.cal.MeasureLeak
+					tmp = sin2array(resp{L}, 1, iodev.Fs);
+					resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+				end
 				tmp = sin2array(resp{R}, 1, iodev.Fs);
 				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 				clear tmp
@@ -953,17 +934,19 @@ for F = 1:Nfreqs
 			end
 			
 			% plot the response
-			Lacq = downsample(resp{L}, handles.cal.deciFactor);
+			if handles.cal.MeasureLeak
+				Lacq = downsample(resp{L}, handles.cal.deciFactor);
+				refreshdata(H.Lacq, 'caller');
+				[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
+													length(resp{L}(start_bin:end_bin)));
+				refreshdata(H.Lfft, 'caller');
+			end
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
-			refreshdata(H.Lacq, 'caller');
 			refreshdata(H.Racq, 'caller');
-			% plot fft
+
 			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, ...
 												length(resp{R}(start_bin:end_bin)));
 			refreshdata(H.Rfft, 'caller');
-			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
-												length(resp{L}(start_bin:end_bin)));
-			refreshdata(H.Lfft, 'caller');
 			drawnow
 
 			% draw spectrogram
@@ -973,7 +956,7 @@ for F = 1:Nfreqs
 									[-100 -1], false, 'default', false, 'per');
 
 			
-			
+			% OLD
 % 			[tmp, rspecF, rspecT, rspecP] = spectrogram(	resp{R}, ...
 % 													handles.SpectrumWindow, ...
 % 													floor(0.98*handles.SpectrumWindow), ...
@@ -988,7 +971,11 @@ for F = 1:Nfreqs
 			% save raw data
 			if handles.cal.SaveRawData
 				fp = fopen(rawfile, 'a');
-				writeCell(fp, resp); 				
+				if handles.cal.MeasureLeak
+					writeCell(fp, resp);
+				else
+					writeCell(fp, resp(R));
+				end
 				fclose(fp);
 			end
 
