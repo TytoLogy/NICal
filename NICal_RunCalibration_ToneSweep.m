@@ -282,13 +282,14 @@ if cal.Side == 1 || cal.Side == 3
 		inChan = handles.cal.InputChannel;
 	end
 	
-keyboard
 	%-------------------------------------------------------
 	% Build stimulus output array for this frequency
 	%-------------------------------------------------------
 	% synthesize the sweep
 	% need time vector
-	t = 0:(1/iodev.Fs):0.001*cal.StimDuration;
+% 	t = 0:(1/iodev.Fs):0.001*cal.StimDuration;
+	t = (1/iodev.Fs) * (0:(ms2samples(cal.StimDuration, iodev.Fs)-1));
+
 	csig = chirp(t, Freqs(1), 0.001*cal.StimDuration, Freqs(end));
 	S = [csig; 0*csig];
 
