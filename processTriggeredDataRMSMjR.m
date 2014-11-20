@@ -330,12 +330,8 @@ for n = 1:nDaqFiles
 		%--------------------------------
 		case 'rms'
 			startidx = winstart/1000*Fs +1;
-<<<<<<< HEAD
-			rms_vals(n) = rms(micdata(startidx:end));
-=======
 % 			rms_vals(n) = rms(micdata(startidx:end));
 			rms_vals(n) = rms(micdata(300:1000));
->>>>>>> origin/master
 			dbvals(n) = dbspl(VtoPa * rms_vals(n));
 		
 		figure; 
