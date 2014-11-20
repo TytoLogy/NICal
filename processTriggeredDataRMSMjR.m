@@ -330,12 +330,7 @@ for n = 1:nDaqFiles
 		%--------------------------------
 		case 'rms'
 			startidx = winstart/1000*Fs +1;
-<<<<<<< HEAD
 			rms_vals(n) = rms(micdata(startidx:end));
-=======
-% 			rms_vals(n) = rms(micdata(startidx:end));
-			rms_vals(n) = rms(micdata(300:1000));
->>>>>>> origin/master
 			dbvals(n) = dbspl(VtoPa * rms_vals(n));
 		
 		figure; 
@@ -344,7 +339,6 @@ for n = 1:nDaqFiles
 		ylim([0 10e4]); title('Last Measured Signal (windowed)', 'fontweight','bold')
 		subplot(2,1,2)
 		plot(micdata(startidx:end))
-			
 	end
 	
 end
