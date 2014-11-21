@@ -1,4 +1,4 @@
-function varargout = processTriggeredData(varargin)
+function varargout = processTriggeredDataRMSMjR(varargin)
 
 clear all; close all;
 
