@@ -100,6 +100,11 @@ end
 % MICROPHONE SETTINGS
 %-----------------------------------------
 update_ui_val(handles.FRenableCtrl, cal.FRenable);
+if cal.FRenable
+	enable_ui(handles.MicFRFileCtrl);
+else
+	disable_ui(handles.MicFRFileCtrl);
+end
 update_ui_val(handles.InputChannelCtrl, cal.InputChannel);
 update_ui_str(handles.MicGainCtrl, cal.MicGain);
 update_ui_str(handles.MicSensitivityCtrl, cal.MicSensitivity);		

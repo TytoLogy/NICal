@@ -1,4 +1,4 @@
-function varargout = processTriggeredData(varargin)
+function varargout = processTriggeredDataRMSMjR(varargin)
 
 clear all; close all;
 
@@ -330,12 +330,7 @@ for n = 1:nDaqFiles
 		%--------------------------------
 		case 'rms'
 			startidx = winstart/1000*Fs +1;
-<<<<<<< HEAD
 			rms_vals(n) = rms(micdata(startidx:end));
-=======
-% 			rms_vals(n) = rms(micdata(startidx:end));
-			rms_vals(n) = rms(micdata(300:1000));
->>>>>>> 839f07165d1b2b89d2f708f0872ab74bd31ea57d
 			dbvals(n) = dbspl(VtoPa * rms_vals(n));
 		
 		figure; 
@@ -344,7 +339,6 @@ for n = 1:nDaqFiles
 		ylim([0 10e4]); title('Last Measured Signal (windowed)', 'fontweight','bold')
 		subplot(2,1,2)
 		plot(micdata(startidx:end))
-			
 	end
 	
 end
