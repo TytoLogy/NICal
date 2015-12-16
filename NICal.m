@@ -1327,6 +1327,50 @@ function Menu_DumpNISettings_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
 
+
+%--------------------------------------------------------------------
+function Menu_ToneStack_Callback(hObject, eventdata, handles)
+	newVal = get(handles.Menu_ToneStack, 'Checked');
+	if strcmpi(newVal, 'off')
+		set(handles.Menu_ToneStack, 'Checked', 'on');
+		handles.ToneStack = 1;
+		set(handles.Menu_ToneSweep, 'Checked', 'off');
+		handles.ToneSweep = 0;
+	else
+		set(handles.Menu_ToneStack, 'Checked', 'off');
+		handles.ToneStack = 0;
+	end
+	guidata(hObject, handles);
+
+function Menu_ToneSweep_Callback(hObject, eventdata, handles)
+	newVal = get(handles.Menu_ToneSweep, 'Checked');
+	if strcmpi(newVal, 'off')
+		set(handles.Menu_ToneSweep, 'Checked', 'on');
+		handles.ToneSweep = 1;
+		set(handles.Menu_ToneStack, 'Checked', 'off');
+		handles.ToneStack = 0;
+	else
+		set(handles.Menu_ToneSweep, 'Checked', 'off');
+		handles.ToneStack = 0;
+	end
+	guidata(hObject, handles);
+
+
+function Menu_ContinuousRecord_Callback(hObject, eventdata, handles)
+	newVal = get(handles.Menu_ContinuousRecord, 'Checked');
+	if strcmpi(newVal, 'off')
+		set(handles.Menu_ToneSweep, 'Checked', 'off');
+		handles.ToneSweep = 0;
+		set(handles.Menu_ToneStack, 'Checked', 'off');
+		handles.ToneStack = 0;
+		set(handles.Menu_ContinuousRecord, 'Checked', 'on');
+		handles.ContinuousRecord = 1;
+	else
+		set(handles.Menu_ContinuousRecord, 'Checked', 'off');
+		handles.ContinuousRecord = 0;
+	end
+	guidata(hObject, handles);
+
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
@@ -1479,47 +1523,3 @@ function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 		 set(hObject,'BackgroundColor','white');
 	end
 %-------------------------------------------------------------------------
-
-
-%--------------------------------------------------------------------
-function Menu_ToneStack_Callback(hObject, eventdata, handles)
-	newVal = get(handles.Menu_ToneStack, 'Checked');
-	if strcmpi(newVal, 'off')
-		set(handles.Menu_ToneStack, 'Checked', 'on');
-		handles.ToneStack = 1;
-		set(handles.Menu_ToneSweep, 'Checked', 'off');
-		handles.ToneSweep = 0;
-	else
-		set(handles.Menu_ToneStack, 'Checked', 'off');
-		handles.ToneStack = 0;
-	end
-	guidata(hObject, handles);
-
-function Menu_ToneSweep_Callback(hObject, eventdata, handles)
-	newVal = get(handles.Menu_ToneSweep, 'Checked');
-	if strcmpi(newVal, 'off')
-		set(handles.Menu_ToneSweep, 'Checked', 'on');
-		handles.ToneSweep = 1;
-		set(handles.Menu_ToneStack, 'Checked', 'off');
-		handles.ToneStack = 0;
-	else
-		set(handles.Menu_ToneSweep, 'Checked', 'off');
-		handles.ToneStack = 0;
-	end
-	guidata(hObject, handles);
-
-
-function Menu_ContinuousRecord_Callback(hObject, eventdata, handles)
-	newVal = get(handles.Menu_ContinuousRecord, 'Checked');
-	if strcmpi(newVal, 'off')
-		set(handles.Menu_ToneSweep, 'Checked', 'off');
-		handles.ToneSweep = 0;
-		set(handles.Menu_ToneStack, 'Checked', 'off');
-		handles.ToneStack = 0;
-		set(handles.Menu_ContinuousRecord, 'Checked', 'on');
-		handles.ContinuousRecord = 1;
-	else
-		set(handles.Menu_ContinuousRecord, 'Checked', 'off');
-		handles.ContinuousRecord = 0;
-	end
-	guidata(hObject, handles);
