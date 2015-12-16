@@ -288,6 +288,24 @@ for n = 1:nDaqFiles
 	micdata = sin2array(micdata', 1, Fs);
 	micdata = filter(fcoeffb, fcoeffa, micdata);
 	
+% MjR: for measuring RMS of narrow bandwidth noise, filter around the CF of the
+% noise prior to computing RMS below
+	%------------------------------------------------------------------------
+	% get highpass and lowpass filters for processing the data
+	%------------------------------------------------------------------------
+	% filter coefficients
+	[fcoeffbHI, fcoeffaHI] = butter(forder, 3000/Fs, 'high');
+	[fcoeffbLO, fcoeffaLO] = butter(forder, 5000/Fs, 'low');
+
+	%------------------------------------------------------------------------
+	% now process data
+	%------------------------------------------------------------------------
+	% window and filter the data
+	micdataHI = filter(fcoeffbHI, fcoeffaHI, micdata);
+	micdataHILO = filter(fcoeffbLO, fcoeffaLO, micdataHI);
+	micdata = micdataHILO;
+	
+	
 	%--------------------------------
 	% process data according to mode
 	%--------------------------------
