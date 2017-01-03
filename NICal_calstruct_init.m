@@ -167,6 +167,7 @@ cal.InputHPFc = 100;
 cal.InputLPFc = 125000;
 % for NI card, set default sampling rate here (kludge!!!!)
 cal.Fs = 500000;
+% cal.Fs = 250000;
 % Nyquist frequency
 fnyq = cal.Fs/2;
 % filter order
