@@ -82,6 +82,10 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 		pdir = ['C:\TytoLogy\Toolboxes\TytoLogySettings\' getenv('USERNAME')];
 		% development tree
 		% pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+		if strcmpi(version('-release'), '2016b')
+			errordlg('Incompatible MATLAB version: Please use matlab 2012b for now!');
+			error('Bad version');
+		end
 	elseif ismac
 		pdir = ['~/Work/Code/Matlab/dev/TytoLogy/TytoLogySettings/' getenv('USER')];
 	end
