@@ -79,10 +79,10 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 
 	if ispc
 		% directory when using installed version:
-		pdir = ['C:\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+		pdir = ['C:\TytoLogy\Toolbox\TytoLogySettings\' getenv('USERNAME')];
 		% development tree
 		% pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
-	else ismac
+	elseif ismac
 		pdir = ['~/Work/Code/Matlab/dev/TytoLogy/TytoLogySettings/' getenv('USER')];
 	end
 			
