@@ -69,7 +69,7 @@ function varargout = NICal(varargin)
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
+function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% Setup Paths
@@ -82,6 +82,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 		pdir = ['C:\TytoLogy\Toolboxes\TytoLogySettings\' getenv('USERNAME')];
 		% development tree
 		% pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
+		% check for version compatability
 		if strcmpi(version('-release'), '2016b')
 			errordlg('Incompatible MATLAB version: Please use matlab 2012b for now!');
 			error('Bad version');
@@ -146,13 +147,11 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	% Initial Calibration settings
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-
 	%---------------------------------------------
 	% KLUDGE!!!!!!!
 	%---------------------------------------------
 	handles.Nchannels = 2;
 	guidata(hObject, handles);
-
 	%------------------------------------------------------------
 	% first check to see if defaults file exists
 	%------------------------------------------------------------
@@ -163,11 +162,12 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 			INITDEFAULT = 1;
 		end
 	end
-	
+	% load defaults
 	handles.defaultsfile = fullfile(userconfigpath, [mfilename '_Defaults.mat']);
 	if exist(handles.defaultsfile, 'file') && (INITDEFAULT == 0)
 		cal = [];
-		fprintf('Loading cal settings from defaults file %s ...\n', handles.defaultsfile)
+		fprintf('Loading cal settings from defaults file %s ...\n', ...
+							handles.defaultsfile)
 		load(handles.defaultsfile);
 		handles.cal = cal;
 	else
@@ -182,12 +182,10 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 		clear cal;
 	end
 	guidata(hObject, handles);
-
 	%----------------------------------------------------------
 	% update user interface
 	%----------------------------------------------------------
 	NICal_UpdateUIFromCal(handles, handles.cal);
-	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% setup iodev NI device interface struct
@@ -201,7 +199,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	iodev.status = 0;
 	handles.iodev = iodev;
 	guidata(hObject, handles);
-	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% set function handles from configuration data
@@ -215,7 +212,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	handles.iofunction = config.IOFUNCTION;
 	handles.attfunction = config.ATTENFUNCTION;
 	guidata(hObject, handles);
-	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% set default output path/file for calibration data
@@ -224,7 +220,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	handles.cal.calfile = fullfile(config.DEFAULT_OUTPUT_PATH, 'nicaldata.cal');
 	update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
 	guidata(hObject, handles);
-	
 	%--------------------------------------------------
 	%--------------------------------------------------
 	% spectrum settings
@@ -233,8 +228,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	handles.SpectrumWindow = 512;
 	handles.ColorMap = 'gray';
 	guidata(hObject, handles);
-
-	
 	%--------------------------------------------------
 	%--------------------------------------------------
 	% ToneStack settings
@@ -258,8 +251,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	set(handles.Menu_ContinuousRecord, 'Checked', 'off');
 	handles.ContinuousRecord = 0;
 	guidata(hObject, handles);
-
-	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% Update handles structure
@@ -268,6 +259,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin)
 	handles.CalComplete = 0;
 	handles.output = hObject;
 	guidata(hObject, handles);
+%--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 
 
@@ -290,10 +282,11 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
 	show_uictrl(handles.AbortCtrl);
 	set(handles.AbortCtrl, 'Value', 0);
 	%---------------------------------------------------------------
-	% initialize complete flag
+	% initialize complete flag - COMPLETE is used in the scripts
+	% that do the heavy lifting...
 	%---------------------------------------------------------------
 	handles.CalComplete = 0;
-	COMPLETE = 0;
+	COMPLETE = 0; %#ok<NASGU>
 	guidata(hObject, handles);
 	%---------------------------------------------------------------
 	% run appropriate calibration script
@@ -318,7 +311,6 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
 	enable_ui(handles.RunCalibrationCtrl);
 	hide_uictrl(handles.AbortCtrl);
 	set(handles.AbortCtrl, 'Value', 0);
-
 	%---------------------------------------------------------------
 	% save handles
 	%---------------------------------------------------------------
@@ -471,7 +463,8 @@ function FminCtrl_Callback(hObject, eventdata, handles)
 	% check to make sure Fmin is in range [0.001 Fmax]
 	if ~between(tmp, 1e-3, handles.cal.Fmax)
 		% if not, revert to previous value and warn user with dialog box
-		tmpstr = sprintf('Min Freq must be greater than 0 & less than Fmax (%d)', handles.cal.Fmax);
+		tmpstr = sprintf(['Min Freq must be greater than 0 ' ...
+									'& less than Fmax (%d)'], handles.cal.Fmax);
 		warndlg(	tmpstr, 'Invalid Min Freq');
 		update_ui_str(hObject, handles.cal.Fmin);
 	% check that Fmin + Fstep is in range
@@ -592,7 +585,8 @@ function AttenFixCtrl_Callback(hObject, eventdata, handles)
 function AttenFixValueCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(handles.AttenFixValueCtrl, 'n');
 	if ~between(tmp, 0, 120)
-		warndlg('fixed attenuation must be between 0 and 120', 'Invalid Fixed Attenuation');
+		warndlg('fixed attenuation must be between 0 and 120', ...
+						'Invalid Fixed Attenuation');
 		update_ui_str(hObject, handles.cal.AttenFixValue);
 	else
 		handles.cal.AttenFixValue = tmp;
@@ -603,7 +597,8 @@ function AttenFixValueCtrl_Callback(hObject, eventdata, handles)
 function MinlevelCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	if ~between(tmp, 0, handles.cal.Maxlevel)
-		s = sprintf('Min Level must be between 0 & Max Level (%.1f) dB', handles.cal.Maxlevel);
+		s = sprintf('Min Level must be between 0 & Max Level (%.1f) dB', ...
+								handles.cal.Maxlevel);
 		warndlg(s, 'Invalid Min Level');
 		update_ui_str(hObject, handles.cal.Minlevel);
 	else
@@ -617,7 +612,8 @@ function MinlevelCtrl_Callback(hObject, eventdata, handles)
 function MaxlevelCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	if ~between(tmp, handles.cal.Minlevel, 120)
-		s = sprintf('Max Level must be between Min Level (%.1f) & 120 dB', handles.cal.Minlevel);
+		s = sprintf('Max Level must be between Min Level (%.1f) & 120 dB', ...
+							handles.cal.Minlevel);
 		warndlg(s, 'Invalid Max Level');
 		update_ui_str(hObject, handles.cal.Maxlevel);
 	else
@@ -631,7 +627,8 @@ function AttenStepCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	maxstep = handles.cal.Maxlevel - handles.cal.Minlevel;
 	if ~between(tmp, 0.1, maxstep)
-		s = sprintf('Atten Step must be between 0.1 & Max Level - Min Level (%.1f) dB', ...
+		s = sprintf(['Atten Step must be between 0.1 & Max Level - ' ...
+							'Min Level (%.1f) dB'], ...
 							handles.cal.Maxlevel - handles.cal.Minlevel);
 		warndlg(s, 'Invalid AttenStep');
 		% reset Attenstep to original value
@@ -648,7 +645,8 @@ function StartAttenCtrl_Callback(hObject, eventdata, handles)
 	NICal_Constants;
 	tmp = read_ui_str(hObject, 'n');
 	if ~between(tmp, 0.1, MAX_ATTEN)
-		s = sprintf('Start Atten must be between 0.1 & Max Atten (%.1f) dB', MAX_ATTEN);
+		s = sprintf('Start Atten must be between 0.1 & Max Atten (%.1f) dB', ...
+							MAX_ATTEN);
 		warndlg(s, 'Invalid StartAtten');
 		% reset Attenstep to original value
 		update_ui_str(hObject, handles.cal.StartAtten);
@@ -747,7 +745,8 @@ function StimRampCtrl_Callback(hObject, eventdata, handles)
 function ISICtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
 	if ~between(tmp, 0, 1000)
-		warndlg('Interval between stimuli must be between 0 & 1000', 'Invalid Interval');
+		warndlg('Interval between stimuli must be between 0 & 1000', ...
+						'Invalid Interval');
 		update_ui_str(hObject, handles.cal.ISI);
 	else
 		handles.cal.ISI = tmp;
@@ -762,13 +761,16 @@ function DAscaleCtrl_Callback(hObject, eventdata, handles)
 	newVal = read_ui_str(hObject, 'n');
 	% some checks first
 	if isempty(newVal)
-		warning('NICal:ValueOutOfRange', '%s: invalid tone level value %f', mfilename, newVal);
+		warning('NICal:ValueOutOfRange', ...
+					'%s: invalid tone level value %f', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.DAscale);
 	elseif ~all(isnumeric(newVal))
-		warning('NICal:ValueOutOfRange', '%s: invalid  tone level value %f', mfilename, newVal);
+		warning('NICal:ValueOutOfRange',	...
+						'%s: invalid tone level value %f', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.DAscale);
 	elseif ~between(newVal, 0, 10)
-		warning('NICal:ValueOutOfRange', '%s: invalid  tone level value %f', mfilename, newVal);
+		warning('NICal:ValueOutOfRange', ...
+							'%s: invalid tone level value %f', mfilename, newVal);
 		disp('tone level must be between 0 and 10 Volts!')
 		update_ui_str(hObject, handles.cal.DAscale);
 	elseif length(newVal) ~= 1
@@ -820,20 +822,24 @@ function HiPassFcCtrl_Callback(hObject, eventdata, handles)
 		warndlg(sprintf('%s: invalid HiPass Fc %.2f', mfilename, newVal));
 		update_ui_str(hObject, handles.cal.InputHPFc);
 	elseif ~all(isnumeric(newVal))
-		warning('NICal:ValueOutOfRange', '%s: invalid HiPassFc %.2f', mfilename, newVal);
+		warning('NICal:ValueOutOfRange', ...
+					'%s: invalid HiPassFc %.2f', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.InputHPFc);
 	elseif newVal <= 0
-		warning('NICal:ValueOutOfRange', '%s: HiPassFc (%.2f) must be greater than 0', mfilename, newVal);
+		warning('NICal:ValueOutOfRange', ...
+					'%s: HiPassFc (%.2f) must be greater than 0', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.InputHPFc);
 	elseif ~(newVal < handles.cal.InputLPFc)
-		warning('NICal:ValueOutOfRange', '%s: HiPassFc (%.2f) must be less than LoPass Fc (%.2f)', ...
-													mfilename, newVal, handles.cal.InputLPFc);
+		warning('NICal:ValueOutOfRange', ...
+					'%s: HiPassFc (%.2f) must be less than LoPass Fc (%.2f)', ...
+												mfilename, newVal, handles.cal.InputLPFc);
 		update_ui_str(hObject, handles.cal.InputHPFc);
 	elseif length(newVal) ~= 1
 		handles.cal.InputHPFc = newVal(1);
 		update_ui_str(hObject, handles.cal.InputHPFc);
 	elseif newVal > (handles.cal.Fs / 2)
-		warning('NICal:ValueOutOfRange', '%s: HiPassFc (%.2f) must be less than Fs/2 (%.2f)', ...
+		warning('NICal:ValueOutOfRange', ...
+					'%s: HiPassFc (%.2f) must be less than Fs/2 (%.2f)', ...
 													mfilename, newVal, handles.cal.Fs);
 		update_ui_str(hObject, handles.cal.InputHPFc);
 	else
@@ -858,19 +864,23 @@ function LoPassFcCtrl_Callback(hObject, eventdata, handles)
 		update_ui_str(hObject, handles.cal.InputLPFc);
 	elseif ~all(isnumeric(newVal))
 		% newval is not numeric
-		warning('NICal:ValueOutOfRange', '%s: invalid Lo Pass Fc %.2f', mfilename, newVal);
+		warning('NICal:ValueOutOfRange', ...
+						'%s: invalid Lo Pass Fc %.2f', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.InputLPFc);
 	elseif newVal <= 0
 		% newval is less than or eq to zero
-		warning('NICal:ValueOutOfRange', '%s: LoPassFc (%.2f) must be greater than 0', mfilename, newVal);
+		warning('NICal:ValueOutOfRange', ...
+					'%s: LoPassFc (%.2f) must be greater than 0', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.InputLPFc);
 	elseif ~(newVal > handles.cal.InputHPFc)
 		% newval is greater than hi pass value
-		warning('NICal:ValueOutOfRange', '%s: LoPassFc (%.2f) must be greater than HiPass Fc (%.2f)', ...
-													mfilename, newVal, handles.cal.InputHPFc);
+		warning('NICal:ValueOutOfRange', ...
+					'%s: LoPassFc (%.2f) must be greater than HiPass Fc (%.2f)', ...
+												mfilename, newVal, handles.cal.InputHPFc);
 		update_ui_str(hObject, handles.cal.InputLPFc);
 	elseif newVal > (handles.cal.Fs / 2)
-		warning('NICal:ValueOutOfRange', '%s: LoPassFc (%.2f) must be less than Fs/2 (%.2f)', ...
+		warning('NICal:ValueOutOfRange', ...
+					'%s: LoPassFc (%.2f) must be less than Fs/2 (%.2f)', ...
 													mfilename, newVal, handles.cal.Fs);
 		update_ui_str(hObject, handles.cal.InputLPFc);
 	elseif length(newVal) ~= 1
@@ -883,8 +893,6 @@ function LoPassFcCtrl_Callback(hObject, eventdata, handles)
 	% update handles
 	guidata(hObject, handles);
 %-------------------------------------------------------------------------
-
-
 
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
@@ -944,7 +952,7 @@ function MicGainCtrl_Callback(hObject, eventdata, handles)
 	% works on scalar inputs.  with 2 possible input channels, need to account
 	% for both
 	newVal = read_ui_str(hObject);
-	newVal = str2num(newVal);
+	newVal = str2num(newVal); %#ok<ST2NM>
 	if isempty(newVal)
 		warning('NICal:ValueOutOfRange', '%s: invalid MicGain value %f', mfilename, newVal);
 		update_ui_str(hObject, handles.cal.MicGain);
@@ -1115,11 +1123,12 @@ function AutoSaveCtrl_Callback(hObject, eventdata, handles)
 
 %--------------------------------------------------------------------------
 function Menu_SaveCal_Callback(hObject, eventdata, handles)
-	[calfile, calpath] = uiputfile('*.cal','Save headphone calibration data in file');
+	[calfile, calpath] = uiputfile('*.cal', ...
+												'Save headphone calibration data in file');
 	if calfile ~= 0
 		% save the sequence so we can match up with the RF data
 		datafile = fullfile(calpath, calfile);
-		caldata = handles.caldata;
+		caldata = handles.caldata; %#ok<NASGU>
 		save(datafile, '-MAT', 'caldata');
 	end
 %--------------------------------------------------------------------------
@@ -1163,7 +1172,7 @@ function Menu_CalibrateMicrophone_Callback(hObject, eventdata, handles)
 	% initialize complete flag
 	%---------------------------------------------------------------
 	handles.CalComplete = 0;
-	COMPLETE = 0;
+	COMPLETE = 0; %#ok<NASGU>
 	guidata(hObject, handles);
 	%---------------------------------------------------------------
 	% run microphone calibration script
@@ -1193,7 +1202,6 @@ function Menu_CalibrateMicrophone_Callback(hObject, eventdata, handles)
 function Menu_ProcessTriggeredData_Callback(hObject, eventdata, handles)
 	disp('This will process .dat data collected during triggered acquisition')
 %--------------------------------------------------------------------------
-
 
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
@@ -1229,7 +1237,7 @@ function Menu_SaveSettings_Callback(hObject, eventdata, handles)
 													'Save Calibration Settings...', ...
 													handles.userconfigpath );
 	if sfilename ~= 0
-		cal = handles.cal;
+		cal = handles.cal; %#ok<NASGU>
 		save(fullfile(sfilepath, sfilename), '-MAT', 'cal');
 	end
 %--------------------------------------------------------------------------
@@ -1267,7 +1275,8 @@ function Menu_EditCalibrationSettings_Callback(hObject, eventdata, handles)
 % Load default cal settings
 %--------------------------------------------------------------------------
 function Menu_ReloadDefaults_Callback(hObject, eventdata, handles)
-	fprintf('Reloading cal settings from defaults file %s ...\n', handles.defaultsfile)
+	fprintf('Reloading cal settings from defaults file %s ...\n', ...
+														handles.defaultsfile)
 	load(handles.defaultsfile, 'cal');
 	handles.cal = cal;
 	clear cal
@@ -1282,8 +1291,8 @@ function Menu_ReloadDefaults_Callback(hObject, eventdata, handles)
 function Menu_SaveAsDefaultSettings_Callback(hObject, eventdata, handles)
 	s = sprintf('Saving cal defaults in file %s', handles.defaultsfile);
 	msgbox(s, 'NICal: Save Defaults', 'non-modal');
-	cal = handles.cal;
-	uical = NICal_UpdateCalFromUI(handles);
+	cal = handles.cal; %#ok<NASGU>
+	uical = NICal_UpdateCalFromUI(handles); %#ok<NASGU>
 	save('calAB.mat', 'cal', 'uical', '-MAT');
 	save(handles.defaultsfile, 'cal');
 	clear cal
@@ -1295,25 +1304,22 @@ function Menu_DumpHandles_Callback(hObject, eventdata, handles)
 	save('NICalhandles.mat', 'handles', '-MAT')
 %--------------------------------------------------------------------------
 
-
 %--------------------------------------------------------------------------
 function Menu_DumpNISettings_Callback(hObject, eventdata, handles)
 	% Load the settings and constants
 	NICal_Constants;
 	NICal_settings;
 	% make a local copy of the cal settings structure
-	cal = handles.cal;
+	cal = handles.cal; %#ok<NASGU>
 	% save the GUI handle information
 	guidata(hObject, handles);
 	% make local copy of iodev struct
-	iodev = handles.iodev;
+	iodev = handles.iodev; %#ok<NASGU>
 	handles.Nchannels = 2;
 	guidata(hObject, handles);
-
 	% Start DAQ things
 	NICal_NIinit;
 	guidata(hObject, handles);
-	
 	% save handles
 	fname = fullfile(pwd, 'aiao.mat');
 	[fname, pname] = uiputfile('*.mat', 'Save ai and ao structs to file', fname);
@@ -1321,18 +1327,16 @@ function Menu_DumpNISettings_Callback(hObject, eventdata, handles)
 		fname = 'aiao.mat';
 		pname = pwd;
 	end
-
-	ai = handles.iodev.NI.ai;
-	ao = handles.iodev.NI.ao;
-	iodev = handles.iodev;
+	ai = handles.iodev.NI.ai; %#ok<NASGU>
+	ao = handles.iodev.NI.ao; %#ok<NASGU>
+	iodev = handles.iodev; %#ok<NASGU>
 	save(fullfile(pname, fname), 'ai', 'ao', 'iodev', '-MAT');
 	clear ai ao
+	% Stop DAQ
 	NICal_NIexit;
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-
-
-%--------------------------------------------------------------------
+%--------------------------------------------------------------------------
 function Menu_ToneStack_Callback(hObject, eventdata, handles)
 	newVal = get(handles.Menu_ToneStack, 'Checked');
 	if strcmpi(newVal, 'off')
@@ -1345,7 +1349,7 @@ function Menu_ToneStack_Callback(hObject, eventdata, handles)
 		handles.ToneStack = 0;
 	end
 	guidata(hObject, handles);
-
+%--------------------------------------------------------------------------
 function Menu_ToneSweep_Callback(hObject, eventdata, handles)
 	newVal = get(handles.Menu_ToneSweep, 'Checked');
 	if strcmpi(newVal, 'off')
@@ -1358,8 +1362,7 @@ function Menu_ToneSweep_Callback(hObject, eventdata, handles)
 		handles.ToneStack = 0;
 	end
 	guidata(hObject, handles);
-
-
+%--------------------------------------------------------------------------
 function Menu_ContinuousRecord_Callback(hObject, eventdata, handles)
 	newVal = get(handles.Menu_ContinuousRecord, 'Checked');
 	if strcmpi(newVal, 'off')
@@ -1374,6 +1377,7 @@ function Menu_ContinuousRecord_Callback(hObject, eventdata, handles)
 		handles.ContinuousRecord = 0;
 	end
 	guidata(hObject, handles);
+%--------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
@@ -1405,125 +1409,73 @@ function CloseRequestFcn(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+function bgcolorset(hObject)
+	if ispc && isequal(get(hObject,'BackgroundColor'), ...
+												get(0,'defaultUicontrolBackgroundColor'))
+		set(hObject,'BackgroundColor','white');
+	end
+%--------------------------------------------------------------------------
 function FreqValText_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function LValText_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function LSPLText_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function RValText_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function RSPLText_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function FminCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function FmaxCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function FstepCtrl_CreateFcn(hObject, eventdata, handles)
+	bgcolorset(hObject);
 function MinlevelCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function MaxlevelCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function AttenStepCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function NrepsCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function ISICtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function LAttenText_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function RAttenText_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function StartAttenCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function SideCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function CheckCalCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function AttenFixValueCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function MicFRFileCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-	    set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function InputChannelCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function MicGainCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function MicSensitivityCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function DAscaleCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function CalFileCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function HiPassFcCtrl_CreateFcn(hObject, eventdata, handles)
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+	bgcolorset(hObject);
 function LoPassFcCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function StimDurationCtrl_CreateFcn(hObject, eventdata, handles)
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+	bgcolorset(hObject);
 function SweepDurationCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function StimDelayCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
-	if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-		 set(hObject,'BackgroundColor','white');
-	end
+	bgcolorset(hObject);
 %-------------------------------------------------------------------------
