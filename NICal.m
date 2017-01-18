@@ -82,20 +82,29 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 		pdir = ['C:\TytoLogy\Toolboxes\TytoLogySettings\' getenv('USERNAME')];
 		% development tree
 		% pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
-		% check for version compatability
-		if strcmpi(version('-release'), '2016b')
-			errordlg('Incompatible MATLAB version: Please use matlab 2012b for now!');
-			error('Bad version');
-		end
 	elseif ismac
 		pdir = ['~/Work/Code/Matlab/dev/TytoLogy/TytoLogySettings/' getenv('USER')];
 	end
-			
 	if isempty(which('ms2samples'))
 		run(fullfile(pdir, 'tytopaths'))
 	else
 		disp([mfilename ': paths ok, launching programn'])
 	end
+	%----------------------------------------------------------
+	%----------------------------------------------------------
+	% check for version compatability
+	%----------------------------------------------------------
+	%----------------------------------------------------------
+	tmp = textscan(version, '%s');
+	tmp = tmp{1};
+	handles.MATversion = tmp{1};
+	if str2double(handles.MATversion(1)) < 8
+		warning('Using legacy interface');
+		handles.DAQSESSION = 0;
+	else
+		handles.DAQSESSION = 1;
+	end
+	guidata(hObject, handles);
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% load the configuration information, store in config structure
