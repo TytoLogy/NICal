@@ -76,7 +76,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	disp([mfilename ': checking paths'])
-
+	% behavior varies with platform
 	if ispc
 		% directory when using installed version:
 		pdir = ['C:\TytoLogy\Toolboxes\TytoLogySettings\' getenv('USERNAME')];
@@ -96,7 +96,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	else
 		disp([mfilename ': paths ok, launching programn'])
 	end
-	
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% load the configuration information, store in config structure
@@ -118,7 +117,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 									'Configuration Not Found', ...
 									'Yes', 'No', ...
 									'Yes' );
-								
 			switch uresp,
 				case 'Yes'
 					mkdir(userconfigpath);
@@ -141,7 +139,6 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	handles.userconfigpath = userconfigpath;
 	% save handles
 	guidata(hObject, handles);	
-
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% Initial Calibration settings
@@ -331,7 +328,6 @@ function MonitorCtrl_Callback(hObject, eventdata, handles)
 	NICal_Monitor;
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-
 
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------

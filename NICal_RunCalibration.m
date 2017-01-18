@@ -1,10 +1,15 @@
 %--------------------------------------------------------------------------
 % NICal_RunCalibration.m
 %--------------------------------------------------------------------------
+% TytoLogy -> Calibration -> NICal program
+%--------------------------------------------------------------------------
 % Runs the speaker calibration
+%--------------------------------------------------------------------------
 % if FR Correction is selected, apply mic correction using data from
 % MicrophoneCal program (earphone fr data)
 %--------------------------------------------------------------------------
+% See also: NICal
+%------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
 % Sharad Shanbhag
@@ -22,6 +27,7 @@
 %		Latten and Ratten instead of using MAX_ATTEN when needed), but 
 %		this is low priority
 %	 -	changed deciFactor to handles.cal.deciFactor
+%	18 Jan 2017 (SJS): updated comments
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -33,7 +39,6 @@ NICal_Constants;
 % local settings
 % set the COMPLETE flag to 0
 COMPLETE = 0;
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Initialization Scripts
@@ -45,7 +50,6 @@ COMPLETE = 0;
 NICal_settings;
 % save the GUI handle information
 guidata(hObject, handles);
-
 %-----------------------------------------------------------------------
 % check output  file - if it exists, check with user
 %-----------------------------------------------------------------------
@@ -66,7 +70,6 @@ if exist(handles.cal.calfile, 'file')
 		end
 	end
 end
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Start DAQ things
@@ -78,7 +81,6 @@ if initFlag == 0
 	warning('NICAL:HW', '%s: NIinit failure', mfilename)
 	return
 end
-
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Define a bandpass filter for processing the data
@@ -91,8 +93,11 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 % filter coefficients using a butterworth bandpass filter
 [handles.cal.fcoeffb, handles.cal.fcoeffa] = ...
 					butter(handles.cal.forder, handles.cal.fband, 'bandpass');
-
-				
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% Setup raw data file if needed
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 if handles.cal.SaveRawData
 	[pathstr, fname, fext] = fileparts(handles.cal.calfile);
 	rawfile = fullfile(pathstr, [fname '.dat']);
@@ -100,14 +105,12 @@ if handles.cal.SaveRawData
 	writeStruct(fp, handles.cal, 'cal');
 	fclose(fp);
 end
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Setup caldata struct for storing the calibration data
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_caldata_init;
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Preallocate some arrays that are used locally
@@ -138,7 +141,6 @@ if handles.cal.CollectBackground == 1
 	bgmags = tmpcell;
 	bgdb = bgmags;
 end
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % set the start and end bins for the calibration
@@ -151,7 +153,6 @@ if ~start_bin
 end
 end_bin = start_bin + ms2bin(handles.cal.StimDuration - handles.cal.StimRamp,...
 											handles.iodev.Fs);
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % create null stimulus and time vector for plots, set up plots
@@ -192,7 +193,6 @@ Nullstim = 0 * Nullstim;
 % insert delay
 Nullstim = insert_delay(Nullstim, handles.cal.StimDelay, handles.iodev.Fs);
 Nullstim_downsample =  downsample(Nullstim(1, :), handles.cal.deciFactor);
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Setup Plots
@@ -202,7 +202,6 @@ Nullstim_downsample =  downsample(Nullstim(1, :), handles.cal.deciFactor);
 % YDataSource for the respective plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-
 %-------------------------------------------------------
 % create arrays for plotting and plot them
 %-------------------------------------------------------
@@ -216,11 +215,10 @@ Racq = zeroacq;
 nfft = length(start_bin:end_bin);
 tmp = zeros(1, nfft);
 [fvec, Lfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
-[fvec, Rfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
+Rfft = Lfft;
 % convert fvec to kHz
 fvec = 0.001 * fvec;
 clear tmp
-
 %-------------------------------------------------------
 % plot null data, save handles for time-domain plots
 %-------------------------------------------------------
@@ -236,7 +234,6 @@ set(H.Lacq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Lacq');
 ylabel(handles.Lmicplot, 'V')
 H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
 set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
-
 %-------------------------------------------------------
 % plot null data, save handles for frequency-domain plots
 %-------------------------------------------------------
@@ -247,7 +244,6 @@ ylabel(handles.Lfftplot, 'dBV')
 H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
 set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
 xlabel(handles.Rfftplot, 'Frequency (kHz)');
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % setup attenuation
@@ -267,7 +263,6 @@ else
 	Latten = handles.cal.StartAtten;
 	Ratten = handles.cal.StartAtten;
 end
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -286,28 +281,26 @@ cal = handles.cal;
 % make local copy of iodev  control struct
 %---------------------------------------------------
 iodev = handles.iodev;
-
+%---------------------------------------------------
+% measure!
+%---------------------------------------------------
 %*******************************LOOP through the frequencies
 for F = 1:Nfreqs
 	% assign current frequency from Freqs list to freq
 	freq = Freqs(F);
-	
 	% update the frequency display value
 	update_ui_str(handles.FreqValText, sprintf('%d', round(freq)));
-
 	% check for abort button press
 	if read_ui_val(handles.AbortCtrl) == 1
 		% if so, stop
 		disp('abortion detected')
 		break
 	end
-
 	% if we're collecting check data, print the frequency on the
 	% command line
 	if cal.CheckCal
 		disp(['FREQ: ' num2str(freq) '...']);
 	end
-	
 	%------------------------------------------------------------------
 	% if cal.Side is 1 or 3 (LEFT or BOTH), calibrate L channel
 	% Side is set by the SideCtrl pulldown under CalibrationSettings
@@ -325,7 +318,6 @@ for F = 1:Nfreqs
 		else
 			inChan = handles.cal.InputChannel;
 		end
-		
 		%-------------------------------------------------------
 		% Build stimulus output array for this frequency
 		%-------------------------------------------------------
@@ -346,7 +338,6 @@ for F = 1:Nfreqs
 		Rstim = zerostim;
 		refreshdata(H.Lstim, 'caller');
 		refreshdata(H.Rstim, 'caller');
-		
 		%-------------------------------------------------------
 		% loop while figuring out the L attenuator value.
 		%-------------------------------------------------------
@@ -362,7 +353,6 @@ for F = 1:Nfreqs
 		else
 			retry = 1;
 		end
-
 		while retry
 			% need to set the attenuators - since this is for the
 			% L channel, set the R channel attenuator to MAX attenuation
@@ -371,10 +361,8 @@ for F = 1:Nfreqs
 			% update atten val display
 			update_ui_str(handles.LAttenText, Latten);
 			update_ui_str(handles.RAttenText, MAX_ATTEN);
-
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
-			
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -383,7 +371,6 @@ for F = 1:Nfreqs
 				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 				clear tmp
 			end
-			
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
 												1, iodev.Fs, freq);
@@ -394,7 +381,6 @@ for F = 1:Nfreqs
 			% compute dB SPL
 			lmagdB = dbspl(VtoPa*lmag);
 			update_ui_str(handles.LSPLText, sprintf('%.4f', lmagdB));
-
 			% check to see if the channel amplitude is in bounds
 			if lmagdB > cal.Maxlevel
 				Latten = Latten + cal.AttenStep;
@@ -414,7 +400,6 @@ for F = 1:Nfreqs
 			else
 				retry = 0;
 			end
-
 			% plot the response
 			Lacq = downsample(resp{L}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
@@ -521,7 +506,7 @@ for F = 1:Nfreqs
 
 			% if DEBUG is set, save the raw magnitude and phase values
 			if DEBUG
-				magsdbug{L}(freq_index, rep) = lmag;
+				magsdbug{L}(freq_index, rep) = lmag; %#ok<*SAGROW>
 				phisdbug{L}(freq_index, rep) = lphi;
 
 				if cal.CheckCal == L
@@ -591,20 +576,6 @@ for F = 1:Nfreqs
 										[10 5], @hamming, handles.SpectrumWindow, ...
 										[-100 -1], false, 'default', false, 'per');			
 			end
-			
-% OLD method
-% 			[tmp, lspecF, lspecT, lspecP] = spectrogram(	resp{L}, ...
-% 													handles.SpectrumWindow, ...
-% 													floor(0.98*handles.SpectrumWindow), ...
-% 													512, ...
-% 													iodev.Fs	);
-% 			lspecT = 1000*lspecT;
-% 			lspecF = 0.001*lspecF;
-% 			lspecP = 20*log10(lspecP);
-% 			refreshdata(H.Lspec, 'caller');
-% 			clear tmp
-
-			
 			% save raw data
 			if handles.cal.SaveRawData
 				fp = fopen(rawfile, 'a');
@@ -615,10 +586,8 @@ for F = 1:Nfreqs
 				end
 				fclose(fp);
 			end
-			
 			% Pause for ISI
 			pause(0.001*cal.ISI);
-			
 			% check for abort button press
 			if read_ui_val(handles.AbortCtrl) == 1
 				% if so, stop
@@ -626,7 +595,6 @@ for F = 1:Nfreqs
 				break
 			end
 		end
-		
 		%---------------------------------------------------------------------
 		% now, collect the background data for frequency FREQ, LEFT channel
 		%---------------------------------------------------------------------
@@ -689,7 +657,6 @@ for F = 1:Nfreqs
 					disp('abortion detected')
 					break
 				end
-
 			end		
 		end
 	end		% END OF L CHANNEL	
@@ -718,7 +685,6 @@ for F = 1:Nfreqs
 		else
 			inChan = handles.cal.InputChannel;
 		end
-		
 		% synthesize the R sine wave;
 		[S, stimspec.RMS, stimspec.phi] = ...
 					syn_calibrationtone2(cal.StimDuration, iodev.Fs, ...
@@ -736,8 +702,7 @@ for F = 1:Nfreqs
 		Rstim = downsample(S(2, :), handles.cal.deciFactor);
 		refreshdata(H.Lstim, 'caller');
 		refreshdata(H.Rstim, 'caller');
-
-		%loop while figuring out the R attenuator value.
+		% attenuation
 		if cal.AttenFix
 			% no need to test attenuation but, 
 			% do need to set the attenuators
@@ -750,17 +715,15 @@ for F = 1:Nfreqs
 		else
 			retry = 1;
 		end
-
+		%loop while figuring out the R attenuator value.
 		while retry
 			% need to set the attenuators
 			Satt(1, :) = handles.attfunction(S(1, :), MAX_ATTEN);
 			Satt(2, :) = handles.attfunction(S(2, :), Ratten);
 			update_ui_str(handles.LAttenText, MAX_ATTEN);
 			update_ui_str(handles.RAttenText, Ratten);
-
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
-			
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -769,7 +732,6 @@ for F = 1:Nfreqs
 				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 				clear tmp
 			end
-			
 			% determine the magnitude and phase of the response
 			[rmag, rphi] = fitsinvec(resp{inChan}(start_bin:end_bin), 1, ...
 												iodev.Fs, freq);
@@ -781,7 +743,6 @@ for F = 1:Nfreqs
 			% compute dB SPL
 			rmagdB = dbspl(VtoPa*rmag);
 			update_ui_str(handles.RSPLText, sprintf('%.4f', rmagdB));
-
 			% check to see if the channel amplitude is in bounds
 			if rmagdB > cal.Maxlevel
 				Ratten = Ratten + cal.AttenStep;
@@ -802,7 +763,6 @@ for F = 1:Nfreqs
 			else
 				retry = 0;
 			end
-
 			% plot the response
 			if handles.cal.MeasureLeak
 				Lacq = downsample(resp{L}, handles.cal.deciFactor);
@@ -811,17 +771,13 @@ for F = 1:Nfreqs
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Racq, 'caller');
 		end
-
 		pause(0.001*cal.ISI);
-
 		% now, collect the data for frequency FREQ, RIGHT headphone
 		for rep = 1:cal.Nreps
 			% update the reps display value
 			update_ui_str(handles.RepNumText, sprintf('%d R', rep));
-
 			% play the sound;
 			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
-
 			% filter the data if asked
 			if handles.cal.InputFilter
 				if handles.cal.MeasureLeak
@@ -832,16 +788,13 @@ for F = 1:Nfreqs
 				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 				clear tmp
 			end
-			
 			% determine the magnitude and phase of the response
 			[rmag, rphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
 														1, iodev.Fs, freq);
 			[rdistmag, rdistphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
 															1, iodev.Fs, 2*freq);				
-
 			% store peak mag (in Volts) in magsV 
 			magsV{R}(freq_index, rep) = rmag;
-
 			% update values in text fields
 			update_ui_str(handles.RValText, sprintf('%.4f', 1000*rmag));
 			% compute distortion measures before applying corrections
@@ -852,17 +805,14 @@ for F = 1:Nfreqs
 			% update text display
 			update_ui_str(handles.RSPLText, sprintf('%.4f', ...
 																dbspl(VtoPa*rmag_adjusted)));
-			
 			% convert to Pascals (rms) and adjust phase measurements
 			mags{R}(freq_index, rep) = VtoPa*(rmag_adjusted);
 			phis{R}(freq_index, rep) = rphi - frdata.rphiadjval(freq_index);
 			distphis{R}(freq_index, rep) = rdistphi - frdata.rphiadjval(freq_index);
 			update_ui_str(handles.RSPLText, ...
 									sprintf('%.4f', dbspl(mags{R}(freq_index, rep))));
-
 			% store attenuation
 			atten{R}(freq_index, rep) = Ratten;
-
 			if cal.CheckCal == R
 				[tmpmag, tmpphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
 																1, iodev.Fs, freq);
@@ -890,12 +840,10 @@ for F = 1:Nfreqs
 									dbspl(mags{REFR}(freq_index, rep)), ...
 									dbspl(mags{R}(freq_index, rep)) );
 			end
-
 			% if DEBUG is set, save the raw magnitude and phase values
 			if DEBUG
 				magsdbug{R}(freq_index, rep) = rmag;
 				phisdbug{R}(freq_index, rep) = rphi;
-
 				if cal.CheckCal == R
 					magsdbug{REF}(freq_index, rep) = tmpmag;
 					phisdbug{REF}(freq_index, rep) = tmpphi;
@@ -904,7 +852,6 @@ for F = 1:Nfreqs
 					phisdbug{REFR}(freq_index, rep) = tmpphi;
 				end
 			end
-
 			% if MeasureLeak is requested, measure it!
 			if handles.cal.MeasureLeak
 				[lleakmag, lleakphi] = ...
@@ -931,13 +878,12 @@ for F = 1:Nfreqs
 				update_ui_str(handles.LValText, '---');
 				update_ui_str(handles.LSPLText, '---');				
 			end
-			
 			% plot the response
 			if handles.cal.MeasureLeak
 				Lacq = downsample(resp{L}, handles.cal.deciFactor);
 				refreshdata(H.Lacq, 'caller');
 				[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
-													length(resp{L}(start_bin:end_bin)));
+													length(resp{L}(start_bin:end_bin))); %#ok<ASGLU>
 				refreshdata(H.Lfft, 'caller');
 			end
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
@@ -947,26 +893,11 @@ for F = 1:Nfreqs
 												length(resp{R}(start_bin:end_bin)));
 			refreshdata(H.Rfft, 'caller');
 			drawnow
-
 			% draw spectrogram
-			axes(handles.Rspecgram);
+			axes(handles.Rspecgram); %#ok<LAXES>
 			myspectrogram(resp{R}, iodev.Fs, ...
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');
-
-			
-			% OLD
-% 			[tmp, rspecF, rspecT, rspecP] = spectrogram(	resp{R}, ...
-% 													handles.SpectrumWindow, ...
-% 													floor(0.98*handles.SpectrumWindow), ...
-% 													512, ...
-% 													iodev.Fs	);
-% 			rspecT = 1000*rspecT;
-% 			rspecF = 0.001*rspecF;
-% 			rspecP = 20*log10(rspecP);
-% 			refreshdata(H.Rspec, 'caller');
-% 			clear tmp
-			
 			% save raw data
 			if handles.cal.SaveRawData
 				fp = fopen(rawfile, 'a');
@@ -977,7 +908,6 @@ for F = 1:Nfreqs
 				end
 				fclose(fp);
 			end
-
 			% pause for ISI (convert to seconds)
 			pause(0.001*cal.ISI);
 			% check for abort button press
@@ -986,9 +916,7 @@ for F = 1:Nfreqs
 				disp('abortion detected')
 				break
 			end
-
 		end
-		
 		%---------------------------------------------------------------------
 		% now, collect the background data for frequency FREQ, RIGHT channel
 		%---------------------------------------------------------------------
@@ -997,7 +925,6 @@ for F = 1:Nfreqs
 			Rstim = Nullstim_downsample;
 			refreshdata(H.Lstim, 'caller');
 			refreshdata(H.Rstim, 'caller');
-
 			for rep = 1:cal.Nreps
 				% update the reps display value
 				update_ui_str(handles.RepNumText, sprintf('%d R (bg)', rep));
@@ -1038,13 +965,12 @@ for F = 1:Nfreqs
 											iodev.Fs, length(resp{R}(start_bin:end_bin)));
 				plot(tmpf, tmpm);
 				title('Right Background')
-
+				% save raw data if necessary
 				if handles.cal.SaveRawData
 					fp = fopen(rawfile, 'a');
 					writeCell(fp, resp); 				
 					fclose(fp);
 				end
-				
 				% Pause for ISI
 				pause(0.001*cal.ISI);
 				% check for abort button press
@@ -1053,34 +979,29 @@ for F = 1:Nfreqs
 					disp('abortion detected')
 					break
 				end
-				
 			end
 		end
 	% END OF R CAL
 	end
-
 	% check for abort button press
 	if read_ui_val(handles.AbortCtrl) == 1
 		% if so, stop
 		disp('abortion detected')
 		break
 	end
-
-
+	% increment frequency counter
 	freq_index = freq_index + 1;
 end %********************End of Cal loop
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% Exit gracefully (close TDT objects, etc)
+% Exit gracefully (close DAQ objects, etc)
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_NIexit;
 
 % % update the reps display value
 % update_ui_str(handles.RepNumText, sprintf('%d R', rep));
-
-
 %-------------------------------------------------------
 % set COMPLETE if we made it to the last frequency, 
 % otherwise, assume that ABORT was engaged and exit the run
@@ -1091,7 +1012,6 @@ else
 	COMPLETE = 0;
 	return
 end
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Compute Averages

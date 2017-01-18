@@ -2,8 +2,7 @@ function NI = nidaq_aiao_init(iface, Dnum)
 %--------------------------------------------------------------------------
 % NI = nidaq_aiao_init.m
 %--------------------------------------------------------------------------
-% NICal program
-% TytoLogy Project
+% TytoLogy -> Calibration -> NICal program
 %--------------------------------------------------------------------------
 % initializes nidaq system
 %------------------------------------------------------------------------
@@ -31,14 +30,19 @@ function NI = nidaq_aiao_init(iface, Dnum)
 % Revisions:
 %	9 July, 2012 (SJS) renamed for NICal project
 %	19 Jul 2012 (JS): named to nidaq_aiao_init
+%	18 Jan 2017 (SJS): updated comments
 %--------------------------------------------------------------------------
 
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% some checks
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
 disp('...starting NI hardware...');
-
 if ~strcmpi(iface, 'NI')
-	error('%s: invalid interface %s', mfilename, iface);
+	errordlg('%s: invalid interface %s', mfilename, iface);
+	error('bad interface');
 end
-
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Now, Initialize the NI board (PCIe-6351)

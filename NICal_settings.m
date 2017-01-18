@@ -1,8 +1,12 @@
 %--------------------------------------------------------------------------
 % NICal_settings.m
 %--------------------------------------------------------------------------
+% TytoLogy -> Calibration -> NICal program
+%--------------------------------------------------------------------------
 % This sets up the NICal parameters
 %--------------------------------------------------------------------------
+% See also: NICal
+%------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
 % Sharad Shanbhag
@@ -16,17 +20,16 @@
 % 	 -	modifications to use NI hardware
 % 	27 Aug 2012 (SJS): removed handles.deciFactor 
 %							(changed to handles.cal.deciFactor in main function)
+%	18 Jan 2017 (SJS): updated comments
 %--------------------------------------------------------------------------
 
 disp('...general setup starting...');
-
 %---------------------------------------------
 %---------------------------------------------
 % Global Constants
 %---------------------------------------------
 %---------------------------------------------
 NICal_Constants;
-
 %---------------------------------------------
 %---------------------------------------------
 % Load Microphone calibration data
@@ -43,15 +46,15 @@ else
 	end
 	handles.cal.mic_fr = frdata;
 end
-	
 %---------------------------------------------
 %---------------------------------------------
-% settings
+% Channel, Mic settings
 %---------------------------------------------
 %---------------------------------------------
 % fix # gain values if Nchannels doesn't match # of gain values
 if handles.cal.Nchannels  ~= length(handles.cal.MicGain)
-	handles.cal.MicGain = handles.cal.MicGain(1) .* ones(1, handles.cal.Nchannels);
+	handles.cal.MicGain = handles.cal.MicGain(1) .* ...
+									ones(1, handles.cal.Nchannels);
 	update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
 	guidata(hObject, handles);
 end
@@ -69,7 +72,6 @@ end
 VtoPa = (CalMic_sense^-1);
 % precompute the volts -> RMS conversion factor for sinusoids (0.7071)
 RMSsin = 1/sqrt(2);
-
 %---------------------------------------------
 %---------------------------------------------
 % set up the calibration frequency range
@@ -77,10 +79,9 @@ RMSsin = 1/sqrt(2);
 %---------------------------------------------
 Freqs = handles.cal.Freqs;
 Nfreqs = length(Freqs);
-
-%-----------------------------------------------------------------------
+%---------------------------------------------
 % check calibration frequency range
-%------------------------------------------------
+%---------------------------------------------
 if handles.cal.FRenable
 	% is frequency in range of the fr data for the headphones?
 	% check low freq limit
@@ -94,5 +95,3 @@ if handles.cal.FRenable
 		return
 	end
 end
-
-

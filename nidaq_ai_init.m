@@ -2,8 +2,7 @@ function NI = nidaq_ai_init(iface, Dnum)
 %--------------------------------------------------------------------------
 % NI = nidaq_ai_init.m
 %--------------------------------------------------------------------------
-% NICal program
-% TytoLogy Project
+% TytoLogy -> Calibration -> NICal program
 %--------------------------------------------------------------------------
 % initializes nidaq system for analog acq
 %------------------------------------------------------------------------
@@ -27,14 +26,12 @@ function NI = nidaq_ai_init(iface, Dnum)
 % 				Created from nidaq_init.m
 % 
 % Revisions:
+%	18 Jan 2017 (SJS): updated comments
 %--------------------------------------------------------------------------
-
 disp('...starting NI hardware...');
-
 if ~strcmpi(iface, 'NI')
 	error('%s: invalid interface %s', mfilename, iface);
 end
-
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Now, Initialize the NI board (PCIe-6351)
@@ -44,7 +41,6 @@ end
 % DAQ Toolbox interface, Device number 1 (get this from the 
 % NI Measurement & Automation Explorer (a.k.a., MAX) program)
 %------------------------------------------------------------------------
-
 %------------------------------------------------------------------------
 % CONFIGURE ANALOG INPUT SUBSYSTEM
 %------------------------------------------------------------------------
@@ -57,21 +53,15 @@ catch errEvent
 	disp(errEvent)
 	return
 end
-
 % create AI channel
 fprintf('creating analog input channel...')
 chI = addchannel(ai, [0 1]);
 fprintf('...done\n');
-
 ai.Channel(1).ChannelName = 'responseL';
 ai.Channel(2).ChannelName = 'responseR';
-
 %-------------------------------------------------------
 % save in NI struct
 %-------------------------------------------------------
 NI.ai = ai;
 NI.chI = chI;
 NI.status = 1;
-
-
-

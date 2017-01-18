@@ -1,8 +1,12 @@
 %--------------------------------------------------------------------------
 % NICal_RunTriggeredCalibration.m
 %--------------------------------------------------------------------------
+% TytoLogy -> Calibration -> NICal program
+%--------------------------------------------------------------------------
 % Runs the TTL triggered speaker calibration
 %--------------------------------------------------------------------------
+% See also: NICal
+%------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
 % Sharad Shanbhag
@@ -17,7 +21,7 @@
 % 		function as well as to mirror NICal_RunCalibration
 % 	27 Aug 2012 (SJS)
 % 	 -	changed deciFactor to handles.cal.deciFactor
-% 
+%	18 Jan 2017 (SJS): updated comments
 %--------------------------------------------------------------------------
 % To do:  
 % 	-	some way to avoid global variables?
@@ -30,12 +34,10 @@
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-
 %---------------------------------------------
 % Global
 %---------------------------------------------
 NICal_Constants;
-
 %---------------------------------------------
 % Local
 %---------------------------------------------
@@ -49,7 +51,6 @@ COMPLETE = 0;
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-
 %---------------------------------------------
 %---------------------------------------------
 % Load Microphone calibration data
@@ -71,17 +72,16 @@ guidata(hObject, handles);
 
 %---------------------------------------------
 %---------------------------------------------
-% settings
+% Microphone settings
 %---------------------------------------------
 %---------------------------------------------
-
 % fix # gain values if Nchannels doesn't match # of gain values
 if handles.cal.Nchannels  ~= length(handles.cal.MicGain)
-	handles.cal.MicGain = handles.cal.MicGain(1) .* ones(1, handles.cal.Nchannels);
+	handles.cal.MicGain = handles.cal.MicGain(1) .* ...
+										ones(1, handles.cal.Nchannels);
 	update_ui_str(handles.MicGainCtrl, handles.cal.MicGain);
 	guidata(hObject, handles);
 end
-
 % read in the gain on the mic preamp
 Gain_dB = handles.cal.MicGain;
 % convert dB to linear scale
@@ -108,11 +108,9 @@ RMSsin = 1/sqrt(2);
 tmppath = fileparts(handles.cal.calfile);
 tmpname = sprintf('NICaldata-%s-1.daq', date);
 tmpfilename = fullfile(tmppath, tmpname);
-
 [filename, pathname] = uiputfile(	{'*.daq', 'Matlab DAQ file (*.daq)'}, ...
 												'Save Triggered data', ...
 												tmpfilename );
-											
 if isequal(filename, 0) || isequal(pathname, 0)
 	disp('Cancelling')
 	return
@@ -139,7 +137,6 @@ clear filename pathname tmppath tmpname tmpfilename
 %-----------------------------------------------------------------------
 [handles, init_status] = NICal_NIinit_triggeredacq(handles);
 guidata(hObject, handles);
-
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Define a bandpass filter for processing the data
@@ -152,7 +149,6 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 % filter coefficients using a butterworth bandpass filter
 [handles.cal.fcoeffb, handles.cal.fcoeffa] = ...
 					butter(handles.cal.forder, handles.cal.fband, 'bandpass');
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Setup caldata struct for storing the calibration data
@@ -162,7 +158,7 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% global vars for access by DAQ callback function
+% global vars for access by DAQ callback function - needed to plot
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 global	tvec_acq Lacq Racq fvec Lfft Rfft H SweepPoints ...
@@ -175,7 +171,6 @@ deciFactor = handles.cal.deciFactor;
 % create null response and time vector for plots, set up plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-
 % fake acquired data
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
 zeroacq = downsample(zeroacq, handles.cal.deciFactor);
@@ -184,7 +179,6 @@ acqpts = length(zeroacq);
 tvec_acq = 1000*(1/handles.iodev.Fs)*(0:(acqpts-1));
 % compute # of points per sweep
 SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Setup Plots
@@ -194,7 +188,6 @@ SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
 % YDataSource for the respective plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-
 %-------------------------------------------------------
 % create arrays for plotting (with null value)
 %-------------------------------------------------------
@@ -205,11 +198,10 @@ Racq = zeroacq;
 nfft = length(start_bin:end_bin);
 tmp = zeros(1, nfft);
 [fvec, Lfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
-[fvec, Rfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
+Rfft = Lfft;
 % convert fvec to kHz
 fvec = 0.001 * fvec;
 clear tmp
-
 %-------------------------------------------------------
 % plot null data, save handles for time-domain plots
 %-------------------------------------------------------
@@ -224,7 +216,6 @@ ylabel(handles.Lmicplot, 'V')
 H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
 set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
 xlabel(handles.Rmicplot, 'Time (ms)')
-
 %-------------------------------------------------------
 % plot null data, save handles for frequency-domain plots
 %-------------------------------------------------------
@@ -235,19 +226,19 @@ ylabel(handles.Lfftplot, 'dBV')
 H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
 set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
 xlabel(handles.Rfftplot, 'Frequency (kHz)')
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % set the start and end bins for the calibration based on 
 % front panel settings
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, handles.iodev.Fs);
+start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, ...
+							handles.iodev.Fs);
 if ~start_bin
 	start_bin = 1;
 end
-end_bin = start_bin + ms2bin(handles.cal.StimDuration-handles.cal.StimRamp, handles.iodev.Fs);
-
+end_bin = start_bin + ms2bin(handles.cal.StimDuration-handles.cal.StimRamp, ...
+											handles.iodev.Fs);
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -288,7 +279,6 @@ if userResp ~= 2
 			fprintf('abortion detected\n\n');
 			runFLAG = 0;
 		end
-		
 	end
 	% stop acquiring
 	fprintf('... terminating acquisition \n\n')
@@ -300,14 +290,12 @@ if userResp ~= 2
 else
 	fprintf('Cancelling acquisition!\n\n');
 end
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % get event log
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 EventLogAI = showdaqevents(handles.iodev.NI.ai);
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -322,11 +310,9 @@ EventLogAI = showdaqevents(handles.iodev.NI.ai);
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 disp('...closing NI devices...');
-
 % delete and clear ai and ch0 object
 delete(handles.iodev.NI.ai);
 clear handles.iodev.NI.ai
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % save settings information to mat file
@@ -340,15 +326,12 @@ if userResp ~= 2
 			'EventLogAI'			, ...
 			'-MAT' );
 end
-
 % save settings information to mat file
 if DEBUG
 	save(fullfile(pwd, 'NICal_EventLogs.mat'), ...
 			'EventLogAI'			, ...
 			'-MAT' );
 end
-
 COMPLETE = 1;
-
 disp('Finished.')
 
