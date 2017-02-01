@@ -86,12 +86,14 @@ if handles.cal.FRenable
 	% is frequency in range of the fr data for the headphones?
 	% check low freq limit
 	if Freqs(1) < frdata.range(1)
-		warning('NICal:Freq', [mfilename ': requested Min calibration frequency is out of FR file bounds']);
+		warning('NICal:Freq', [mfilename ...
+				': requested Min calibration frequency is out of FR file bounds']);
 		return
 	end
 	% check high freq limit
 	if Freqs(end) > frdata.range(2)
-		warning('NICal:Freq', [mfilename ': requested Max calibration frequency is out of FR file bounds']);
+		warning('NICal:Freq', [mfilename ...
+				': requested Max calibration frequency is out of FR file bounds']);
 		return
 	end
 end

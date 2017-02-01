@@ -292,11 +292,7 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
 			elseif handles.ContinuousRecord
 				NICal_RunCalibration_ContinuousRecord
 			else
-				if handles.DAQSESSION
-					NICal_RunCalibration_Session
-				else
-					NICal_RunCalibration
-				end
+				NICal_RunCalibration
 			end
 		case 1
 			NICal_RunTriggeredCalibration			

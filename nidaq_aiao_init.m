@@ -16,8 +16,8 @@ function NI = nidaq_aiao_init(iface, Dnum)
 % 
 % Output Arguments:
 % 	NI		struct containing settings for requested type
-% 		NI.ao		analog output object
-% 		NI.ai		analog input object
+% 		NI.ao		analog output object (LEGACY only)
+% 		NI.ai		analog input object (LEGACY only)
 % 		NI.chO	analog output channel object
 % 		NI.chI	analog input channel object
 %--------------------------------------------------------------------------
@@ -119,6 +119,7 @@ if strcmpi(iface, 'NI')
 	NI.chO = chO;
 	NI.status = 1;
 	return
+	
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Session Interface

@@ -13,6 +13,7 @@
 % Created:	16 Oct 2014 from NICal_RunCalibration,	SJS
 %
 % Revisions:
+%	1 Feb 2017 (SJS): updating for use with Session DAQ interface
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -21,7 +22,6 @@
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_Constants;
-
 % local settings
 % set the COMPLETE flag to 0
 COMPLETE = 0;
@@ -37,7 +37,6 @@ COMPLETE = 0;
 NICal_settings;
 % save the GUI handle information
 guidata(hObject, handles);
-
 %-----------------------------------------------------------------------
 % check output  file - if it exists, check with user
 %-----------------------------------------------------------------------
@@ -194,7 +193,6 @@ Nullstim_downsample =  downsample(Nullstim(1, :), handles.cal.deciFactor);
 % YDataSource for the respective plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-
 %-------------------------------------------------------
 % create arrays for plotting and plot them
 %-------------------------------------------------------
@@ -207,12 +205,11 @@ Racq = zeroacq;
 % FFT
 nfft = length(start_bin:end_bin);
 tmp = zeros(1, nfft);
-[fvec, Lfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
+[fvec, Lfft] = daqdbfft(tmp, handles.iodev.Fs, nfft); %#ok<ASGLU>
 [fvec, Rfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
 % convert fvec to kHz
 fvec = 0.001 * fvec;
 clear tmp
-
 %-------------------------------------------------------
 % plot null data, save handles for time-domain plots
 %-------------------------------------------------------
@@ -228,7 +225,6 @@ set(H.Lacq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Lacq');
 ylabel(handles.Lmicplot, 'V')
 H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
 set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
-
 %-------------------------------------------------------
 % plot null data, save handles for frequency-domain plots
 %-------------------------------------------------------
@@ -287,17 +283,14 @@ for F = 1:Nfreqs
 	freq_1 = 0.9 * freq;
 	% upper frequency of stack
 	freq1 = 1.1 * freq;
-	
 	% update the frequency display value
 	update_ui_str(handles.FreqValText, sprintf('%d', round(freq)));
-
 	% check for abort button press
 	if read_ui_val(handles.AbortCtrl) == 1
 		% if so, stop
 		disp('abortion detected')
 		break
 	end
-
 	% if we're collecting check data, print the frequency on the
 	% command line
 	if cal.CheckCal
@@ -321,7 +314,6 @@ for F = 1:Nfreqs
 		else
 			inChan = handles.cal.InputChannel;
 		end
-		
 		%-------------------------------------------------------
 		% Build stimulus output array for this frequency
 		%-------------------------------------------------------
@@ -378,10 +370,13 @@ for F = 1:Nfreqs
 			% update atten val display
 			update_ui_str(handles.LAttenText, Latten);
 			update_ui_str(handles.RAttenText, MAX_ATTEN);
-
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
-			
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -390,7 +385,6 @@ for F = 1:Nfreqs
 				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 				clear tmp
 			end
-			
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
 												1, iodev.Fs, freq);
@@ -401,7 +395,6 @@ for F = 1:Nfreqs
 			% compute dB SPL
 			lmagdB = dbspl(VtoPa*lmag);
 			update_ui_str(handles.LSPLText, sprintf('%.4f', lmagdB));
-
 			% check to see if the channel amplitude is in bounds
 			if lmagdB > cal.Maxlevel
 				Latten = Latten + cal.AttenStep;
@@ -421,7 +414,6 @@ for F = 1:Nfreqs
 			else
 				retry = 0;
 			end
-
 			% plot the response
 			Lacq = downsample(resp{L}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
@@ -430,30 +422,32 @@ for F = 1:Nfreqs
 				refreshdata(H.Racq, 'caller');
 			end
 		end		% END of L attenuation loop
-
+		% pause for ISI
 		pause(0.001*cal.ISI);
-
 		%-------------------------------------------------------
 		% now, collect the data for frequency FREQ, LEFT channel
 		%-------------------------------------------------------
 		for rep = 1:cal.Nreps
 			% update the reps display value
 			update_ui_str(handles.RepNumText, sprintf('%d L', rep));
-			
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
-
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
 				resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 				if handles.cal.MeasureLeak
 					tmp = sin2array(resp{R}, 1, iodev.Fs);
-					resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					resp{R} = filtfilt(handles.cal.fcoeffb, ...
+												handles.cal.fcoeffa, tmp);
 				end
 				clear tmp
 			end
-
 			% determine the magnitude and phase of the response
 			[lmag, lphi] = fitsinvec(resp{inChan}(start_bin:end_bin), ...
 											1, iodev.Fs, freq);
@@ -461,19 +455,15 @@ for F = 1:Nfreqs
 										fitsinvec(resp{inChan}(start_bin:end_bin), ...
 															1, iodev.Fs, 2*freq);		
 			update_ui_str(handles.LValText, sprintf('%.4f', 1000*lmag));
-
 			% store peak mag (in Volts) in magsV 
 			magsV{L}(freq_index, rep) = lmag;
-			
 			% compute harmonic distortion measures before 
 			% applying corrections for the knowles mic response
 			dists{L}(freq_index, rep) = ldistmag / lmag;
-
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
 			lmag_adjusted = RMSsin * lmag / ...
 									(Gain(L)*frdata.lmagadjval(freq_index));
-
 			% Store the values in the cell arrays for later averaging
 			% (we'll do the averages later in order to save time while
 			%  running the calibration curves)
@@ -482,14 +472,12 @@ for F = 1:Nfreqs
 			phis{L}(freq_index, rep) = lphi - frdata.lphiadjval(freq_index);
 			update_ui_str(handles.LSPLText, ...
 								sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
-
 			% store distortion and leak values
-			distphis{L}(freq_index, rep) = ldistphi - frdata.lphiadjval(freq_index);
-
+			distphis{L}(freq_index, rep) = ldistphi - ...
+															frdata.lphiadjval(freq_index);
 			% store the attenuator setting - will need this to compute
 			% maximum attainable SPL at this frequency
 			atten{L}(freq_index, rep) = Latten;
-
 			% if we are collecting "check" data using a reference
 			% microphone (i.e., B & K calibration mic), we have a few
 			% more things to do...
@@ -528,15 +516,15 @@ for F = 1:Nfreqs
 
 			% if DEBUG is set, save the raw magnitude and phase values
 			if DEBUG
-				magsdbug{L}(freq_index, rep) = lmag;
-				phisdbug{L}(freq_index, rep) = lphi;
+				magsdbug{L}(freq_index, rep) = lmag; %#ok<SAGROW>
+				phisdbug{L}(freq_index, rep) = lphi; %#ok<SAGROW>
 
 				if cal.CheckCal == L
-					magsdbug{REF}(freq_index, rep) = tmpmag;
-					phisdbug{REF}(freq_index, rep) = tmpphi;
+					magsdbug{REF}(freq_index, rep) = tmpmag;  %#ok<SAGROW>
+					phisdbug{REF}(freq_index, rep) = tmpphi; %#ok<SAGROW>
 				elseif cal.CheckCal == BOTH
-					magsdbug{REFL}(freq_index, rep) = tmpmag;
-					phisdbug{REFL}(freq_index, rep) = tmpphi;
+					magsdbug{REFL}(freq_index, rep) = tmpmag; %#ok<SAGROW>
+					phisdbug{REFL}(freq_index, rep) = tmpphi; %#ok<SAGROW>
 				end
 			end
 
@@ -583,12 +571,13 @@ for F = 1:Nfreqs
 				Racq = downsample(resp{R}, handles.cal.deciFactor);
 				refreshdata(H.Racq, 'caller');
 				[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), ...
-												iodev.Fs, length(resp{R}(start_bin:end_bin)));
+												iodev.Fs, ...
+												length(resp{R}(start_bin:end_bin)));
 				refreshdata(H.Rfft, 'caller');
 			end
 			drawnow
 			% draw spectrogram
-			axes(handles.Lspecgram);
+			axes(handles.Lspecgram); %#ok<*LAXES>
 			myspectrogram(resp{L}, iodev.Fs, ...
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');
@@ -597,21 +586,7 @@ for F = 1:Nfreqs
 				myspectrogram(resp{R}, iodev.Fs, ...
 										[10 5], @hamming, handles.SpectrumWindow, ...
 										[-100 -1], false, 'default', false, 'per');			
-			end
-			
-% OLD method
-% 			[tmp, lspecF, lspecT, lspecP] = spectrogram(	resp{L}, ...
-% 													handles.SpectrumWindow, ...
-% 													floor(0.98*handles.SpectrumWindow), ...
-% 													512, ...
-% 													iodev.Fs	);
-% 			lspecT = 1000*lspecT;
-% 			lspecF = 0.001*lspecF;
-% 			lspecP = 20*log10(lspecP);
-% 			refreshdata(H.Lspec, 'caller');
-% 			clear tmp
-
-			
+			end			
 			% save raw data
 			if handles.cal.SaveRawData
 				fp = fopen(rawfile, 'a');
@@ -622,10 +597,8 @@ for F = 1:Nfreqs
 				end
 				fclose(fp);
 			end
-			
 			% Pause for ISI
 			pause(0.001*cal.ISI);
-			
 			% check for abort button press
 			if read_ui_val(handles.AbortCtrl) == 1
 				% if so, stop
@@ -633,7 +606,6 @@ for F = 1:Nfreqs
 				break
 			end
 		end
-		
 		%---------------------------------------------------------------------
 		% now, collect the background data for frequency FREQ, LEFT channel
 		%---------------------------------------------------------------------
@@ -951,42 +923,26 @@ for F = 1:Nfreqs
 				update_ui_str(handles.LValText, '---');
 				update_ui_str(handles.LSPLText, '---');				
 			end
-			
 			% plot the response
 			if handles.cal.MeasureLeak
 				Lacq = downsample(resp{L}, handles.cal.deciFactor);
 				refreshdata(H.Lacq, 'caller');
-				[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
+				[~, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
 													length(resp{L}(start_bin:end_bin)));
 				refreshdata(H.Lfft, 'caller');
 			end
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Racq, 'caller');
 
-			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, ...
+			[~, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, ...
 												length(resp{R}(start_bin:end_bin)));
 			refreshdata(H.Rfft, 'caller');
 			drawnow
-
 			% draw spectrogram
 			axes(handles.Rspecgram);
 			myspectrogram(resp{R}, iodev.Fs, ...
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');
-
-			
-			% OLD
-% 			[tmp, rspecF, rspecT, rspecP] = spectrogram(	resp{R}, ...
-% 													handles.SpectrumWindow, ...
-% 													floor(0.98*handles.SpectrumWindow), ...
-% 													512, ...
-% 													iodev.Fs	);
-% 			rspecT = 1000*rspecT;
-% 			rspecF = 0.001*rspecF;
-% 			rspecP = 20*log10(rspecP);
-% 			refreshdata(H.Rspec, 'caller');
-% 			clear tmp
-			
 			% save raw data
 			if handles.cal.SaveRawData
 				fp = fopen(rawfile, 'a');
@@ -997,7 +953,6 @@ for F = 1:Nfreqs
 				end
 				fclose(fp);
 			end
-
 			% pause for ISI (convert to seconds)
 			pause(0.001*cal.ISI);
 			% check for abort button press
@@ -1006,9 +961,7 @@ for F = 1:Nfreqs
 				disp('abortion detected')
 				break
 			end
-
 		end
-		
 		%---------------------------------------------------------------------
 		% now, collect the background data for frequency FREQ, RIGHT channel
 		%---------------------------------------------------------------------
@@ -1017,7 +970,6 @@ for F = 1:Nfreqs
 			Rstim = Nullstim_downsample;
 			refreshdata(H.Lstim, 'caller');
 			refreshdata(H.Rstim, 'caller');
-
 			for rep = 1:cal.Nreps
 				% update the reps display value
 				update_ui_str(handles.RepNumText, sprintf('%d R (bg)', rep));
@@ -1026,18 +978,22 @@ for F = 1:Nfreqs
 				% filter the data if asked
 				if handles.cal.InputFilter
 					tmp = sin2array(resp{L}, 1, iodev.Fs);
-					resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					resp{L} = filtfilt(handles.cal.fcoeffb, ...
+																	handles.cal.fcoeffa, tmp);
 					tmp = sin2array(resp{R}, 1, iodev.Fs);
-					resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					resp{R} = filtfilt(handles.cal.fcoeffb, ...
+																handles.cal.fcoeffa, tmp);
 					clear tmp
 				end
 				% determine the magnitude and phase of the response
-				bgmag = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				bgmag = fitsinvec(resp{inChan}(start_bin:end_bin), 1, ...
+																				iodev.Fs, freq);
 				% update RValText
 				update_ui_str(handles.RValText, sprintf('%.4f', 1000*bgmag));
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				bgmag_adjusted = RMSsin * bgmag / (Gain(R)*frdata.rmagadjval(freq_index));
+				bgmag_adjusted = RMSsin * bgmag / ...
+												(Gain(R)*frdata.rmagadjval(freq_index));
 				% Store the values in the cell arrays for later averaging
 				% (we'll do the averages later in order to save time while
 				%  running the calibration curves)
@@ -1058,13 +1014,11 @@ for F = 1:Nfreqs
 											iodev.Fs, length(resp{R}(start_bin:end_bin)));
 				plot(tmpf, tmpm);
 				title('Right Background')
-
 				if handles.cal.SaveRawData
 					fp = fopen(rawfile, 'a');
 					writeCell(fp, resp); 				
 					fclose(fp);
 				end
-				
 				% Pause for ISI
 				pause(0.001*cal.ISI);
 				% check for abort button press
@@ -1073,20 +1027,17 @@ for F = 1:Nfreqs
 					disp('abortion detected')
 					break
 				end
-				
 			end
 		end
 	% END OF R CAL
 	end
-
 	% check for abort button press
 	if read_ui_val(handles.AbortCtrl) == 1
 		% if so, stop
 		disp('abortion detected')
 		break
 	end
-
-
+	% increment frequency counter
 	freq_index = freq_index + 1;
 end %********************End of Cal loop
 
@@ -1096,10 +1047,6 @@ end %********************End of Cal loop
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_NIexit;
-
-% % update the reps display value
-% update_ui_str(handles.RepNumText, sprintf('%d R', rep));
-
 
 %-------------------------------------------------------
 % set COMPLETE if we made it to the last frequency, 
@@ -1126,8 +1073,10 @@ for F = 1:Nfreqs
 	% magnitude (dB) = db(rms) + atten
 	magsraw{L}(freq_index, :) = dbspl(mags{L}(freq_index, :));
 	magsraw{R}(freq_index, :) = dbspl(mags{R}(freq_index, :));
-	mags{L}(freq_index, :) = dbspl(mags{L}(freq_index, :)) + atten{L}(freq_index, :);
-	mags{R}(freq_index, :) = dbspl(mags{R}(freq_index, :)) + atten{R}(freq_index, :);
+	mags{L}(freq_index, :) = dbspl(mags{L}(freq_index, :)) + ...
+												atten{L}(freq_index, :);
+	mags{R}(freq_index, :) = dbspl(mags{R}(freq_index, :)) + ...
+												atten{R}(freq_index, :);
 	
 	% if Check data, save it
 	if cal.CheckCal == L
@@ -1150,51 +1099,63 @@ for F = 1:Nfreqs
 	% store in caldata struct
 	for channel = 1:handles.Nchannels				
 		caldata.mag(channel, freq_index) = mean( mags{channel}(freq_index, :) );
-		caldata.mag_stderr(channel, freq_index) = std( mags{channel}(freq_index, :) );
+		caldata.mag_stderr(channel, freq_index) = ...
+														std( mags{channel}(freq_index, :) );
 
-		caldata.phase(channel, freq_index) = mean( unwrap(phis{channel}(freq_index, :)) );
-		caldata.phase_stderr(channel, freq_index) = std( unwrap(phis{channel}(freq_index, :)) );
+		caldata.phase(channel, freq_index) = ...
+											mean( unwrap(phis{channel}(freq_index, :)) );
+		caldata.phase_stderr(channel, freq_index) = ...
+											std( unwrap(phis{channel}(freq_index, :)) );
 
 		caldata.dist(channel, freq_index) = mean( dists{channel}(freq_index, :) );
-		caldata.dist_stderr(channel, freq_index) = std( dists{channel}(freq_index, :) );
+		caldata.dist_stderr(channel, freq_index) = ...
+													std( dists{channel}(freq_index, :) );
 	end
-	
 	% store leak data if collected
 	if handles.cal.MeasureLeak
 		% compute the averages for this frequency
 		leakmags{L}(freq_index, :) = dbspl(leakmags{L}(freq_index, :));
 		leakmags{R}(freq_index, :) = dbspl(leakmags{R}(freq_index, :));
-		leakphis{L}(freq_index, :) = leakphis{L}(freq_index, :) - phis{R}(freq_index, :);
-		leakphis{R}(freq_index, :) = leakphis{R}(freq_index, :) - phis{L}(freq_index, :);
+		leakphis{L}(freq_index, :) = leakphis{L}(freq_index, :) - ...
+																		phis{R}(freq_index, :);
+		leakphis{R}(freq_index, :) = leakphis{R}(freq_index, :) - ...
+																		phis{L}(freq_index, :);
 		
 		for channel = 1:handles.Nchannels
-			caldata.leakmag(channel, freq_index) = mean( leakmags{channel}(freq_index, :) );
-			caldata.leakmag_stderr(channel, freq_index) = std( leakmags{channel}(freq_index, :) );
+			caldata.leakmag(channel, freq_index) = ...
+											mean( leakmags{channel}(freq_index, :) );
+			caldata.leakmag_stderr(channel, freq_index) = ...
+											std( leakmags{channel}(freq_index, :) );
+			caldata.leakphase(channel, freq_index) = ...
+										mean( unwrap(leakphis{channel}(freq_index, :)) );
+			caldata.leakphase_stderr(channel, freq_index) = ...
+										std( unwrap(leakphis{channel}(freq_index, :)) );
 
-			caldata.leakphase(channel, freq_index) = mean( unwrap(leakphis{channel}(freq_index, :)) );
-			caldata.leakphase_stderr(channel, freq_index) = std( unwrap(leakphis{channel}(freq_index, :)) );
-
-			caldata.leakdist(channel, freq_index) = mean( leakdists{channel}(freq_index, :) );
-			caldata.leakdist_stderr(channel, freq_index) = std( leakdists{channel}(freq_index, :) );
-
-			caldata.leakdistphis(channel, freq_index) = mean( leakdistphis{channel}(freq_index, :) );
-			caldata.leakdistphis_stderr(channel, freq_index) = std( leakdistphis{channel}(freq_index, :) );
+			caldata.leakdist(channel, freq_index) = ...
+												mean( leakdists{channel}(freq_index, :) );
+			caldata.leakdist_stderr(channel, freq_index) = ...
+												std( leakdists{channel}(freq_index, :) );
+			caldata.leakdistphis(channel, freq_index) = ...
+											mean( leakdistphis{channel}(freq_index, :) );
+			caldata.leakdistphis_stderr(channel, freq_index) = ...
+											std( leakdistphis{channel}(freq_index, :) );
 		end
 		caldata.leakmags = leakmags;
 	end
-	
 	if handles.cal.CollectBackground
 		bgdb{L}(freq_index, :) = dbspl(bgmags{L}(freq_index, :));
 		bgdb{R}(freq_index, :) = dbspl(bgmags{R}(freq_index, :));		
 		for channel = 1:handles.Nchannels
-			caldata.background(channel, freq_index) = mean( bgdb{channel}(freq_index, :) );
-			caldata.background_stderr(channel, freq_index) = std( bgdb{channel}(freq_index, :) );
+			caldata.background(channel, freq_index) = ...
+													mean( bgdb{channel}(freq_index, :) );
+			caldata.background_stderr(channel, freq_index) = ...
+													std( bgdb{channel}(freq_index, :) );
 		end
 	end
-
+	% increment freq index
 	freq_index = freq_index + 1;
 end
-
+% assign to caldata struct
 caldata.magsraw = magsraw;
 caldata.magsV = magsV;
 caldata.atten = atten;

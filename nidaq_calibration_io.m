@@ -4,7 +4,7 @@ function [resp, index] = nidaq_calibration_io(iodev, stim, inpts)
 %--------------------------------------------------------------------------
 % TytoLogy -> Calibration -> NICal program
 %--------------------------------------------------------------------------
-% input/output for calibration
+% input/output for calibration (using legacy DAQ interface)
 %------------------------------------------------------------------------
 % Input Arguments:
 %	iodev		input/output struct
