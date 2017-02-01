@@ -80,10 +80,9 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	if ispc
 		% directory when using installed version:
 		pdir = ['C:\TytoLogy\Toolboxes\TytoLogySettings\' getenv('USERNAME')];
-		% development tree
-		% pdir = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME')];
 	elseif ismac
-		pdir = ['~/Work/Code/Matlab/dev/TytoLogy/TytoLogySettings/' getenv('USER')];
+		pdir = ['~/Work/Code/Matlab/dev/TytoLogy/TytoLogySettings/' ...
+							getenv('USER')];
 	end
 	if isempty(which('ms2samples'))
 		run(fullfile(pdir, 'tytopaths'))
@@ -113,20 +112,18 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	%----------------------------------------------------------
 	%----------------------------------------------------------
 	% define user config path
-	% path when using installed version:
-	userconfigpath = ['C:\TytoLogy\Toolboxes\TytoLogySettings\' getenv('USERNAME') '\NICal\'];
-	% path when using working version:
-	%userconfigpath = ['C:\Users\sshanbhag\Code\Matlab\TytoLogy\TytoLogySettings\' getenv('USERNAME') '\NICal\'];
-
+	userconfigpath = ['C:\TytoLogy\Toolboxes\TytoLogySettings\' ...
+								getenv('USERNAME') '\NICal\'];
 	% load the configuration information, store in config structure
 	if isempty(which('NICal_Configuration'))
 		if ~exist(userconfigpath, 'dir')
-			qstr = sprintf('User config directory %s does not exist!', userconfigpath);
+			qstr = sprintf('User config directory %s does not exist!', ...
+										userconfigpath);
 			uresp = questdlg(	{qstr, 'Shall I create it?'}, ...
 									'Configuration Not Found', ...
 									'Yes', 'No', ...
 									'Yes' );
-			switch uresp,
+			switch uresp
 				case 'Yes'
 					mkdir(userconfigpath);
 					addpath(userconfigpath);
@@ -219,48 +216,37 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	handles.attfunction = config.ATTENFUNCTION;
 	guidata(hObject, handles);
 	%----------------------------------------------------------
-	%----------------------------------------------------------
 	% set default output path/file for calibration data
-	%----------------------------------------------------------
 	%----------------------------------------------------------
 	handles.cal.calfile = fullfile(config.DEFAULT_OUTPUT_PATH, 'nicaldata.cal');
 	update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
 	guidata(hObject, handles);
 	%--------------------------------------------------
-	%--------------------------------------------------
 	% spectrum settings
-	%--------------------------------------------------
 	%--------------------------------------------------
 	handles.SpectrumWindow = 512;
 	handles.ColorMap = 'gray';
 	guidata(hObject, handles);
 	%--------------------------------------------------
-	%--------------------------------------------------
 	% ToneStack settings
-	%--------------------------------------------------
 	%--------------------------------------------------
 	handles.ToneStack = 0;
 	set(handles.Menu_ToneStack, 'Checked', 'off');
 	guidata(hObject, handles);
 	%--------------------------------------------------
-	%--------------------------------------------------
 	% ToneSweep settings
-	%--------------------------------------------------
 	%--------------------------------------------------	
 	set(handles.Menu_ToneSweep, 'Checked', 'off');
 	handles.ToneSweep = 0;
 	guidata(hObject, handles);
 	%--------------------------------------------------
 	% 	ContinuousRecord settings
-	%--------------------------------------------------
 	%--------------------------------------------------	
 	set(handles.Menu_ContinuousRecord, 'Checked', 'off');
 	handles.ContinuousRecord = 0;
 	guidata(hObject, handles);
 	%----------------------------------------------------------
-	%----------------------------------------------------------
 	% Update handles structure
-	%----------------------------------------------------------
 	%----------------------------------------------------------
 	handles.CalComplete = 0;
 	handles.output = hObject;
@@ -306,7 +292,11 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
 			elseif handles.ContinuousRecord
 				NICal_RunCalibration_ContinuousRecord
 			else
-				NICal_RunCalibration
+				if handles.DAQSESSION
+					NICal_RunCalibration_Session
+				else
+					NICal_RunCalibration
+				end
 			end
 		case 1
 			NICal_RunTriggeredCalibration			
