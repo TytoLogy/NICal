@@ -32,10 +32,8 @@ function [resp, varargout] = nidaq_session_io(iodev, stim, sweepduration)
 
 % load stimulus onto NI memory
 queueOutputData(iodev.NI.S, stim');
-
-%START ACQUIRING
+% START ACQUIRING
 [rawdata, timestamps, triggertime] = startForeground(iodev.NI.S);
-
 % stop acquiring
 stop(iodev.NI.S);
 % reformat output into cell (legacy)

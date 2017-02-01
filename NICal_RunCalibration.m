@@ -28,7 +28,9 @@
 %		this is low priority
 %	 -	changed deciFactor to handles.cal.deciFactor
 %	18 Jan 2017 (SJS): updated comments
+%	1 Feb 2017 (SJS): updated for session interface
 %--------------------------------------------------------------------------
+
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -362,7 +364,12 @@ for F = 1:Nfreqs
 			update_ui_str(handles.LAttenText, Latten);
 			update_ui_str(handles.RAttenText, MAX_ATTEN);
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -417,17 +424,21 @@ for F = 1:Nfreqs
 		for rep = 1:cal.Nreps
 			% update the reps display value
 			update_ui_str(handles.RepNumText, sprintf('%d L', rep));
-			
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
-
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
 				resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 				if handles.cal.MeasureLeak
 					tmp = sin2array(resp{R}, 1, iodev.Fs);
-					resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					resp{R} = filtfilt(handles.cal.fcoeffb, ...
+												handles.cal.fcoeffa, tmp);
 				end
 				clear tmp
 			end
@@ -462,7 +473,8 @@ for F = 1:Nfreqs
 								sprintf('%.4f', dbspl(mags{L}(freq_index, rep))));
 
 			% store distortion and leak values
-			distphis{L}(freq_index, rep) = ldistphi - frdata.lphiadjval(freq_index);
+			distphis{L}(freq_index, rep) = ldistphi - ...
+														frdata.lphiadjval(freq_index);
 
 			% store the attenuator setting - will need this to compute
 			% maximum attainable SPL at this frequency
@@ -561,12 +573,12 @@ for F = 1:Nfreqs
 				Racq = downsample(resp{R}, handles.cal.deciFactor);
 				refreshdata(H.Racq, 'caller');
 				[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), ...
-												iodev.Fs, length(resp{R}(start_bin:end_bin)));
+											iodev.Fs, length(resp{R}(start_bin:end_bin)));
 				refreshdata(H.Rfft, 'caller');
 			end
 			drawnow
 			% draw spectrogram
-			axes(handles.Lspecgram);
+			axes(handles.Lspecgram); %#ok<*LAXES>
 			myspectrogram(resp{L}, iodev.Fs, ...
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');
@@ -574,7 +586,7 @@ for F = 1:Nfreqs
 				axes(handles.Rspecgram);
 				myspectrogram(resp{R}, iodev.Fs, ...
 										[10 5], @hamming, handles.SpectrumWindow, ...
-										[-100 -1], false, 'default', false, 'per');			
+										[-100 -1], false, 'default', false, 'per');
 			end
 			% save raw data
 			if handles.cal.SaveRawData
@@ -607,17 +619,25 @@ for F = 1:Nfreqs
 				% update the reps display value
 				update_ui_str(handles.RepNumText, sprintf('%d L (bg)', rep));
 				% play the sound;
-				[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+					if handles.DAQSESSION
+						[resp, indx] = handles.iofunction(iodev, Satt, ...
+																handles.cal.SweepDuration);
+					else
+						[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+					end
 				% filter the data if asked
 				if handles.cal.InputFilter
 					tmp = sin2array(resp{L}, 1, iodev.Fs);
-					resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					resp{L} = filtfilt(handles.cal.fcoeffb, ...
+															handles.cal.fcoeffa, tmp);
 					tmp = sin2array(resp{R}, 1, iodev.Fs);
-					resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					resp{R} = filtfilt(handles.cal.fcoeffb, ...
+															handles.cal.fcoeffa, tmp);
 					clear tmp
 				end
 				% determine the magnitude and phase of the response
-				bgmag = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				bgmag = fitsinvec(resp{inChan}(start_bin:end_bin), ...
+																			1, iodev.Fs, freq);
 				% update LValText
 				update_ui_str(handles.LValText, sprintf('%.4f', 1000*bgmag));
 				% adjust for the gain of the preamp and apply correction
@@ -630,7 +650,8 @@ for F = 1:Nfreqs
 				% adjust for the gain of the preamp and convert to Pascals
 				bgmags{L}(freq_index, rep) = VtoPa*(bgmag_adjusted);
 				update_ui_str(handles.LSPLText, ...
-										sprintf('%.4f', dbspl(bgmags{L}(freq_index, rep))));			
+										sprintf('%.4f', ...
+														dbspl(bgmags{L}(freq_index, rep))));
 				update_ui_str(handles.RValText, '---');
 				update_ui_str(handles.RSPLText, '---');
 				% plot the response
@@ -723,7 +744,12 @@ for F = 1:Nfreqs
 			update_ui_str(handles.LAttenText, MAX_ATTEN);
 			update_ui_str(handles.RAttenText, Ratten);
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -777,12 +803,18 @@ for F = 1:Nfreqs
 			% update the reps display value
 			update_ui_str(handles.RepNumText, sprintf('%d R', rep));
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				if handles.cal.MeasureLeak
 					tmp = sin2array(resp{L}, 1, iodev.Fs);
-					resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					resp{L} = filtfilt(handles.cal.fcoeffb, ...
+													handles.cal.fcoeffa, tmp);
 				end
 				tmp = sin2array(resp{R}, 1, iodev.Fs);
 				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
@@ -801,14 +833,16 @@ for F = 1:Nfreqs
 			dists{R}(freq_index, rep) = rdistmag / rmag;
 			% adjust for the gain of the preamp and apply correction
 			% factors for RMS and microphone calibration
-			rmag_adjusted = RMSsin * rmag / (Gain(R)*frdata.rmagadjval(freq_index));
+			rmag_adjusted = RMSsin * rmag / ...
+										(Gain(R)*frdata.rmagadjval(freq_index));
 			% update text display
 			update_ui_str(handles.RSPLText, sprintf('%.4f', ...
 																dbspl(VtoPa*rmag_adjusted)));
 			% convert to Pascals (rms) and adjust phase measurements
 			mags{R}(freq_index, rep) = VtoPa*(rmag_adjusted);
 			phis{R}(freq_index, rep) = rphi - frdata.rphiadjval(freq_index);
-			distphis{R}(freq_index, rep) = rdistphi - frdata.rphiadjval(freq_index);
+			distphis{R}(freq_index, rep) = rdistphi - ...
+															frdata.rphiadjval(freq_index);
 			update_ui_str(handles.RSPLText, ...
 									sprintf('%.4f', dbspl(mags{R}(freq_index, rep))));
 			% store attenuation
@@ -866,14 +900,17 @@ for F = 1:Nfreqs
 				leakdists{L}(freq_index, rep) = lleakdistmag / lleakmag;
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				lleakmag = RMSsin * lleakmag / (Gain(L)*frdata.lmagadjval(freq_index));
+				lleakmag = RMSsin * lleakmag / ...
+													(Gain(L)*frdata.lmagadjval(freq_index));
 				% convert to Pascals (rms) and adjust phase measurements
 				leakmags{L}(freq_index, rep) = VtoPa*(lleakmag);
-				leakphis{L}(freq_index, rep) = lleakphi - frdata.lphiadjval(freq_index);
+				leakphis{L}(freq_index, rep) = lleakphi - ...
+															frdata.lphiadjval(freq_index);
 				leakdistphis{L}(freq_index, rep) = ...
 											lleakdistphi - frdata.lphiadjval(freq_index);
 				update_ui_str(handles.LSPLText, ...
-									sprintf('%.4f', dbspl(leakmags{L}(freq_index, rep))));
+										sprintf('%.4f', ...
+												dbspl(leakmags{L}(freq_index, rep))));
 			else
 				update_ui_str(handles.LValText, '---');
 				update_ui_str(handles.LSPLText, '---');				
@@ -883,7 +920,7 @@ for F = 1:Nfreqs
 				Lacq = downsample(resp{L}, handles.cal.deciFactor);
 				refreshdata(H.Lacq, 'caller');
 				[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
-													length(resp{L}(start_bin:end_bin))); %#ok<ASGLU>
+												length(resp{L}(start_bin:end_bin))); %#ok<*ASGLU>
 				refreshdata(H.Lfft, 'caller');
 			end
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
@@ -894,7 +931,7 @@ for F = 1:Nfreqs
 			refreshdata(H.Rfft, 'caller');
 			drawnow
 			% draw spectrogram
-			axes(handles.Rspecgram); %#ok<LAXES>
+			axes(handles.Rspecgram);
 			myspectrogram(resp{R}, iodev.Fs, ...
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');
@@ -929,22 +966,31 @@ for F = 1:Nfreqs
 				% update the reps display value
 				update_ui_str(handles.RepNumText, sprintf('%d R (bg)', rep));
 				% play the sound;
-				[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+				if handles.DAQSESSION
+					[resp, indx] = handles.iofunction(iodev, Satt, ...
+															handles.cal.SweepDuration);
+				else
+					[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+				end
 				% filter the data if asked
 				if handles.cal.InputFilter
 					tmp = sin2array(resp{L}, 1, iodev.Fs);
-					resp{L} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					resp{L} = filtfilt(handles.cal.fcoeffb, ...
+													handles.cal.fcoeffa, tmp);
 					tmp = sin2array(resp{R}, 1, iodev.Fs);
-					resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
+					resp{R} = filtfilt(handles.cal.fcoeffb, ...
+													handles.cal.fcoeffa, tmp);
 					clear tmp
 				end
 				% determine the magnitude and phase of the response
-				bgmag = fitsinvec(resp{inChan}(start_bin:end_bin), 1, iodev.Fs, freq);
+				bgmag = fitsinvec(resp{inChan}(start_bin:end_bin), 1, ...
+														iodev.Fs, freq);
 				% update RValText
 				update_ui_str(handles.RValText, sprintf('%.4f', 1000*bgmag));
 				% adjust for the gain of the preamp and apply correction
 				% factors for RMS and microphone calibration
-				bgmag_adjusted = RMSsin * bgmag / (Gain(R)*frdata.rmagadjval(freq_index));
+				bgmag_adjusted = RMSsin * bgmag / ...
+												(Gain(R)*frdata.rmagadjval(freq_index));
 				% Store the values in the cell arrays for later averaging
 				% (we'll do the averages later in order to save time while
 				%  running the calibration curves)
@@ -1026,9 +1072,10 @@ for F = 1:Nfreqs
 	% magnitude (dB) = db(rms) + atten
 	magsraw{L}(freq_index, :) = dbspl(mags{L}(freq_index, :));
 	magsraw{R}(freq_index, :) = dbspl(mags{R}(freq_index, :));
-	mags{L}(freq_index, :) = dbspl(mags{L}(freq_index, :)) + atten{L}(freq_index, :);
-	mags{R}(freq_index, :) = dbspl(mags{R}(freq_index, :)) + atten{R}(freq_index, :);
-	
+	mags{L}(freq_index, :) = dbspl(mags{L}(freq_index, :)) + ...
+												atten{L}(freq_index, :);
+	mags{R}(freq_index, :) = dbspl(mags{R}(freq_index, :)) + ...
+												atten{R}(freq_index, :);
 	% if Check data, save it
 	if cal.CheckCal == L
 		magsraw{REF}(freq_index, :) = dbspl(mags{REF}(freq_index, :));
@@ -1050,13 +1097,17 @@ for F = 1:Nfreqs
 	% store in caldata struct
 	for channel = 1:handles.Nchannels				
 		caldata.mag(channel, freq_index) = mean( mags{channel}(freq_index, :) );
-		caldata.mag_stderr(channel, freq_index) = std( mags{channel}(freq_index, :) );
+		caldata.mag_stderr(channel, freq_index) = ...
+													std( mags{channel}(freq_index, :) );
 
-		caldata.phase(channel, freq_index) = mean( unwrap(phis{channel}(freq_index, :)) );
-		caldata.phase_stderr(channel, freq_index) = std( unwrap(phis{channel}(freq_index, :)) );
+		caldata.phase(channel, freq_index) = ...
+											mean( unwrap(phis{channel}(freq_index, :)) );
+		caldata.phase_stderr(channel, freq_index) = ...
+											std( unwrap(phis{channel}(freq_index, :)) );
 
 		caldata.dist(channel, freq_index) = mean( dists{channel}(freq_index, :) );
-		caldata.dist_stderr(channel, freq_index) = std( dists{channel}(freq_index, :) );
+		caldata.dist_stderr(channel, freq_index) = ...
+														std( dists{channel}(freq_index, :) );
 	end
 	
 	% store leak data if collected
@@ -1064,37 +1115,45 @@ for F = 1:Nfreqs
 		% compute the averages for this frequency
 		leakmags{L}(freq_index, :) = dbspl(leakmags{L}(freq_index, :));
 		leakmags{R}(freq_index, :) = dbspl(leakmags{R}(freq_index, :));
-		leakphis{L}(freq_index, :) = leakphis{L}(freq_index, :) - phis{R}(freq_index, :);
-		leakphis{R}(freq_index, :) = leakphis{R}(freq_index, :) - phis{L}(freq_index, :);
-		
+		leakphis{L}(freq_index, :) = leakphis{L}(freq_index, :) - ...
+																phis{R}(freq_index, :);
+		leakphis{R}(freq_index, :) = leakphis{R}(freq_index, :) - ...
+																phis{L}(freq_index, :);
 		for channel = 1:handles.Nchannels
-			caldata.leakmag(channel, freq_index) = mean( leakmags{channel}(freq_index, :) );
-			caldata.leakmag_stderr(channel, freq_index) = std( leakmags{channel}(freq_index, :) );
-
-			caldata.leakphase(channel, freq_index) = mean( unwrap(leakphis{channel}(freq_index, :)) );
-			caldata.leakphase_stderr(channel, freq_index) = std( unwrap(leakphis{channel}(freq_index, :)) );
-
-			caldata.leakdist(channel, freq_index) = mean( leakdists{channel}(freq_index, :) );
-			caldata.leakdist_stderr(channel, freq_index) = std( leakdists{channel}(freq_index, :) );
-
-			caldata.leakdistphis(channel, freq_index) = mean( leakdistphis{channel}(freq_index, :) );
-			caldata.leakdistphis_stderr(channel, freq_index) = std( leakdistphis{channel}(freq_index, :) );
+			caldata.leakmag(channel, freq_index) = ...
+											mean( leakmags{channel}(freq_index, :) );
+			caldata.leakmag_stderr(channel, freq_index) = ...
+											std( leakmags{channel}(freq_index, :) );
+			caldata.leakphase(channel, freq_index) = ...
+									mean( unwrap(leakphis{channel}(freq_index, :)) );
+			caldata.leakphase_stderr(channel, freq_index) = ...
+									std( unwrap(leakphis{channel}(freq_index, :)) );
+			caldata.leakdist(channel, freq_index) = ...
+									mean( leakdists{channel}(freq_index, :) );
+			caldata.leakdist_stderr(channel, freq_index) = ...
+									std( leakdists{channel}(freq_index, :) );
+			caldata.leakdistphis(channel, freq_index) = ...
+									mean( leakdistphis{channel}(freq_index, :) );
+			caldata.leakdistphis_stderr(channel, freq_index) = ...
+									std( leakdistphis{channel}(freq_index, :) );
 		end
 		caldata.leakmags = leakmags;
 	end
-	
+	% if background data were collected, process and save them
 	if handles.cal.CollectBackground
 		bgdb{L}(freq_index, :) = dbspl(bgmags{L}(freq_index, :));
 		bgdb{R}(freq_index, :) = dbspl(bgmags{R}(freq_index, :));		
 		for channel = 1:handles.Nchannels
-			caldata.background(channel, freq_index) = mean( bgdb{channel}(freq_index, :) );
-			caldata.background_stderr(channel, freq_index) = std( bgdb{channel}(freq_index, :) );
+			caldata.background(channel, freq_index) =...
+														mean( bgdb{channel}(freq_index, :) );
+			caldata.background_stderr(channel, freq_index) =...
+														std( bgdb{channel}(freq_index, :) );
 		end
 	end
-
+	% go to next frequency!
 	freq_index = freq_index + 1;
 end
-
+% assign to caldata struct
 caldata.magsraw = magsraw;
 caldata.magsV = magsV;
 caldata.atten = atten;
@@ -1137,5 +1196,4 @@ catch errMsg
 end
 
 disp('Finished.')
-
 

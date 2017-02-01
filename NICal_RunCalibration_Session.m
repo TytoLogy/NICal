@@ -352,7 +352,12 @@ for F = 1:Nfreqs
 			update_ui_str(handles.LAttenText, Latten);
 			update_ui_str(handles.RAttenText, MAX_ATTEN);
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -407,10 +412,13 @@ for F = 1:Nfreqs
 		for rep = 1:cal.Nreps
 			% update the reps display value
 			update_ui_str(handles.RepNumText, sprintf('%d L', rep));
-			
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
-
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -556,7 +564,7 @@ for F = 1:Nfreqs
 			end
 			drawnow
 			% draw spectrogram
-			axes(handles.Lspecgram);
+			axes(handles.Lspecgram); %#ok<*LAXES>
 			myspectrogram(resp{L}, iodev.Fs, ...
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');
@@ -597,7 +605,12 @@ for F = 1:Nfreqs
 				% update the reps display value
 				update_ui_str(handles.RepNumText, sprintf('%d L (bg)', rep));
 				% play the sound;
-				[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+					if handles.DAQSESSION
+						[resp, indx] = handles.iofunction(iodev, Satt, ...
+																handles.cal.SweepDuration);
+					else
+						[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+					end
 				% filter the data if asked
 				if handles.cal.InputFilter
 					tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -713,7 +726,12 @@ for F = 1:Nfreqs
 			update_ui_str(handles.LAttenText, MAX_ATTEN);
 			update_ui_str(handles.RAttenText, Ratten);
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -767,7 +785,12 @@ for F = 1:Nfreqs
 			% update the reps display value
 			update_ui_str(handles.RepNumText, sprintf('%d R', rep));
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Satt, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				if handles.cal.MeasureLeak
@@ -873,7 +896,7 @@ for F = 1:Nfreqs
 				Lacq = downsample(resp{L}, handles.cal.deciFactor);
 				refreshdata(H.Lacq, 'caller');
 				[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
-													length(resp{L}(start_bin:end_bin))); %#ok<ASGLU>
+													length(resp{L}(start_bin:end_bin))); %#ok<*ASGLU>
 				refreshdata(H.Lfft, 'caller');
 			end
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
@@ -884,7 +907,7 @@ for F = 1:Nfreqs
 			refreshdata(H.Rfft, 'caller');
 			drawnow
 			% draw spectrogram
-			axes(handles.Rspecgram); %#ok<LAXES>
+			axes(handles.Rspecgram);
 			myspectrogram(resp{R}, iodev.Fs, ...
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');
@@ -919,7 +942,12 @@ for F = 1:Nfreqs
 				% update the reps display value
 				update_ui_str(handles.RepNumText, sprintf('%d R (bg)', rep));
 				% play the sound;
-				[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+				if handles.DAQSESSION
+					[resp, indx] = handles.iofunction(iodev, Satt, ...
+															handles.cal.SweepDuration);
+				else
+					[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+				end
 				% filter the data if asked
 				if handles.cal.InputFilter
 					tmp = sin2array(resp{L}, 1, iodev.Fs);
