@@ -179,13 +179,16 @@ function [handles, init_status] = session_init(handles)
 	handles.iodev.Fs = ActualRate;
 	handles.cal.Fs = ActualRate;
 	%-----------------------------------------------------------------------
-	% set input range
+	% input, output channel properties
 	%-----------------------------------------------------------------------
 	% range needs to be in [RangeMin RangeMax] format
 	aiaoRange = 5 * [-1 1];
-	% set analog input range
 	for n = 1:length(handles.iodev.NI.chI)
+		% set analog input range
 		handles.iodev.NI.chI(n).Range = aiaoRange;
+		% set input TerminalConfig to 'SingleEnded' (default is
+		% 'Differential')
+		handles.iodev.NI.chI(n).TerminalConfig = 'SingleEnded';
 	end
 	% set analog output range
 	for n = 1:length(handles.iodev.NI.chO)
@@ -196,9 +199,6 @@ function [handles, init_status] = session_init(handles)
 	%------------------------------------------------------------------------
 	% only 1 "sweep" per trigger event 
 	handles.iodev.NI.S.TriggersPerRun = 1;
-	set(handles.iodev.NI.ai, 'TriggerRepeat', 0);
-	% set DurationInSeconds for each trigger event
-	handles.iodev.NI.S.DurationInSeconds = 0.001 * handles.cal.SweepDuration;
 	%-------------------------------------------------------
 	% set init_status to 1
 	%-------------------------------------------------------

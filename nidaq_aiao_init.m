@@ -44,9 +44,9 @@ function NI = nidaq_aiao_init(iface, Dnum)
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 disp('...starting NI hardware...');
-if ~any(strcmpi(iface, {'NI', 'NI_SESSION'}))
-	errordlg('%s: invalid interface %s', mfilename, iface);
-	error('unknown interface');
+if ~any(strcmpi(iface, {'NI', 'NI-SESSION'}))
+	errordlg(sprintf('%s: invalid interface %s', mfilename, iface));
+	error('%s: invalid interface %s', mfilename, iface);
 end
 
 %------------------------------------------------------------------------

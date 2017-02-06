@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 07-Nov-2014 10:59:46
+% Last Modified by GUIDE v2.5 06-Feb-2017 15:51:45
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -266,7 +266,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 %-------------------------------------------------------------------------
 % Run Calibration callback
 %-------------------------------------------------------------------------
-function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
+function RunCalibrationCtrl_Callback(hObject, eventdata, handles) %#ok<*DEFNU>
 	%---------------------------------------------------------------
 	% turn off calibration ctrl, enable abort ctrl
 	%---------------------------------------------------------------
@@ -312,7 +312,7 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 % Abort running calibration
 %--------------------------------------------------------------------------
-function AbortCtrl_Callback(hObject, eventdata, handles)
+function AbortCtrl_Callback(hObject, eventdata, handles) 
 	disp('ABORTING Calibration!')
 %--------------------------------------------------------------------------
 
@@ -1200,7 +1200,7 @@ function Menu_ProcessTriggeredData_Callback(hObject, eventdata, handles)
 
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-% Settings Menu
+% Calibration Settings Menu
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 
@@ -1291,10 +1291,13 @@ function Menu_SaveAsDefaultSettings_Callback(hObject, eventdata, handles)
 
 
 %--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+% DEBUG Menu
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
 function Menu_DumpHandles_Callback(hObject, eventdata, handles)
 	save('NICalhandles.mat', 'handles', '-MAT')
-%--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 function Menu_DumpNISettings_Callback(hObject, eventdata, handles)
 	% Load the settings and constants
@@ -1326,6 +1329,29 @@ function Menu_DumpNISettings_Callback(hObject, eventdata, handles)
 	% Stop DAQ
 	NICal_NIexit;
 	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+function Menu_Keyboard_Callback(hObject, eventdata, handles)
+	keyboard
+%-------------------------------------------------------------------------
+function Menu_DAQReset_Callback(hObject, eventdata, handles)
+	if handles.DAQSESSION
+		try
+			daqreset
+		catch errMsg
+			fprintf('\nProblem with daqreset!\n\n')
+			disp(errMsg)
+			return
+		end
+	else
+		warning('%s: not using NIDAQ Session interface', mfilename);
+	end			
+%-------------------------------------------------------------------------
+
+
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+% Options Menu
+%--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function Menu_ToneStack_Callback(hObject, eventdata, handles)
@@ -1377,14 +1403,12 @@ function Menu_ContinuousRecord_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % --- Outputs from this function are returned to the command line.
 function varargout = NICal_OutputFcn(hObject, eventdata, handles) 
 	% Get default command line output from handles structure
 	varargout{1} = [];
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 function CloseRequestFcn(hObject, eventdata, handles)
 	pause(0.1);
@@ -1407,7 +1431,7 @@ function bgcolorset(hObject)
 		set(hObject,'BackgroundColor','white');
 	end
 %--------------------------------------------------------------------------
-function FreqValText_CreateFcn(hObject, eventdata, handles)
+function FreqValText_CreateFcn(hObject, eventdata, handles) %#ok<*INUSD>
 	bgcolorset(hObject);
 function LValText_CreateFcn(hObject, eventdata, handles)
 	bgcolorset(hObject);
@@ -1470,3 +1494,6 @@ function StimDelayCtrl_CreateFcn(hObject, eventdata, handles)
 function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 	bgcolorset(hObject);
 %-------------------------------------------------------------------------
+
+
+
