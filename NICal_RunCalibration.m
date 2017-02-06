@@ -29,6 +29,7 @@
 %	 -	changed deciFactor to handles.cal.deciFactor
 %	18 Jan 2017 (SJS): updated comments
 %	1 Feb 2017 (SJS): updated for session interface
+%	6 Feb 2017 (SJS): modifying stimulus to include pre/post stim time
 %--------------------------------------------------------------------------
 
 
@@ -160,10 +161,26 @@ end_bin = start_bin + ms2bin(handles.cal.StimDuration - handles.cal.StimRamp,...
 % create null stimulus and time vector for plots, set up plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% calculate difference between SweepDuration and StimDelay + StimDuration
+% this will be used to pad end of stimulus
+PostDuration = handles.cal.SweepDuration - ...
+						(handles.cal.StimDelay + handles.cal.StimDuration);
+% make sure PostDuration is ok (greater than or equal to 0)
+if PostDuration < 0
+	errordlg('SweepDuration must be greater than StimDelay + StimDuration');
+	NICal_NIexit;
+	COMPLETE = 0;
+	return
+else
+	% if ok, create poststim
+	poststim = syn_null(PostDuration, handles.iodev.Fs, 0);
+end
 % create null stimulus
 zerostim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 0);
 % insert stim delay
 zerostim = insert_delay(zerostim, handles.cal.StimDelay, handles.iodev.Fs);
+% append post-stim
+zerostim = [zerostim poststim];
 % downsample (no need to plot all points)
 zerostim = downsample(zerostim, handles.cal.deciFactor);
 % downsample-factor adjusted sample interval
@@ -172,9 +189,6 @@ dt = handles.cal.deciFactor/handles.iodev.Fs;
 outpts = length(zerostim);
 % time vector for stimulus plots
 tvec_stim = 1000*dt*(0:(outpts-1));
-% stimulus start and end points
-stim_start = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
-stim_end = stim_start + outpts - 1;
 % fake acquired data
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
 zeroacq = downsample(zeroacq, handles.cal.deciFactor);
@@ -183,6 +197,9 @@ acqpts = length(zeroacq);
 tvec_acq = 1000*dt*(0:(acqpts-1));
 % compute # of points per sweep
 SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
+% stimulus start and end points
+stim_start = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
+stim_end = stim_start + ms2bin(handles.cal.StimDuration, handles.iodev.Fs) - 1;
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Build null output array
@@ -194,6 +211,9 @@ Nullstim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 1);
 Nullstim = 0 * Nullstim;
 % insert delay
 Nullstim = insert_delay(Nullstim, handles.cal.StimDelay, handles.iodev.Fs);
+% add end pad
+Nullstim = [Nullstim syn_null(PostDuration, handles.iodev.Fs, 1)];
+% downsampled, single channel version for plotting
 Nullstim_downsample =  downsample(Nullstim(1, :), handles.cal.deciFactor);
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -329,13 +349,15 @@ for F = 1:Nfreqs
 																	iodev.Fs, freq, 0, 'L');
 		% scale the sound
 		S = cal.DAscale * S;
-		% apply the sin^2 amplitude envelope to the stimulus
+		% apply the sin^2 amplitude envelope to the stimulus before adding 
+		% pre and post zeros
 		S = sin2array(S, cal.StimRamp, iodev.Fs);
-		% insert delay
-		S = insert_delay(S, cal.StimDelay, iodev.Fs);
+		% insert delay, add zeros to pad end
+		S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
+									syn_null(PostDuration, iodev.Fs, 1)];
 		% save in Satt
 		Satt = S;
-		% plot the stimuli - set R stim to zero
+		% plot the stimuli - first downsample then set R stim to zero
 		Lstim = downsample(S(1, :), handles.cal.deciFactor);
 		Rstim = zerostim;
 		refreshdata(H.Lstim, 'caller');
@@ -714,8 +736,9 @@ for F = 1:Nfreqs
 		S = cal.DAscale * S;
 		% apply the sin^2 amplitude envelope to the stimulus
 		S = sin2array(S, cal.StimRamp, iodev.Fs);
-		% insert delay
-		S = insert_delay(S, cal.StimDelay, iodev.Fs);
+		% insert delay, add zeros to pad end
+		S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
+									syn_null(PostDuration, iodev.Fs, 1)];
 		% save in Satt
 		Satt = S;
 		% plot the stimulus arrays
