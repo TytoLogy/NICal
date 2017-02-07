@@ -5,20 +5,26 @@ function NI = nidaq_ai_init(iface, Dnum)
 % TytoLogy -> Calibration -> NICal program
 %--------------------------------------------------------------------------
 % initializes nidaq system for analog acq
+% designed for use with National Instruments' PCIe-6351 board
 %------------------------------------------------------------------------
 % Input Arguments:
 % 	iface		must be:
 % 				'NI' (for traditional interface) 
 % 					-OR-
 % 				'NI-SESSSION' (for new, session interface)
+%
 %	Dnum		device id (usually 'Dev1')
 % 
 % Output Arguments:
-% 	NI		struct containing settings for requested type
-% 		NI.ai		analog input object (LEGACY only)
-% 		NI.chI	analog input channel object
+% 	NI		struct containing interface for hardware
+%		SESSION:
+%			NI.S		DAQ Toolbox Session interface object
+%			NI.chI	analog input channel object
+%		LEGACY:
+%			NI.ai		analog input object (LEGACY only)
+%			NI.chI	analog input channel object
 %------------------------------------------------------------------------
-% See also: NICal
+% See also: NICal, nidaq_aiao_init, DAQ Toolbox (Matlab)
 %------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
@@ -36,7 +42,7 @@ disp('nidaq_ai_init: starting NI hardware...');
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-% Initialize the NI board (PCIe-6351)
+% Initializes the NI board 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 

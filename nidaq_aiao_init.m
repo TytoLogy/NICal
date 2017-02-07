@@ -5,6 +5,7 @@ function NI = nidaq_aiao_init(iface, Dnum)
 % TytoLogy -> Calibration -> NICal program
 %--------------------------------------------------------------------------
 % initializes nidaq system for analog input and output (2 channels of each)
+% designed for use with National Instruments' PCIe-6351 board
 %--------------------------------------------------------------------------
 % Input Arguments:
 % 	iface		must be:
@@ -16,12 +17,17 @@ function NI = nidaq_aiao_init(iface, Dnum)
 % 
 % Output Arguments:
 % 	NI		struct containing settings for requested type
-% 		NI.ao		analog output object (LEGACY only)
-% 		NI.ai		analog input object (LEGACY only)
-% 		NI.chO	analog output channel object
-% 		NI.chI	analog input channel object
+%		SESSION:
+%			NI.S		DAQ Toolbox Session interface object
+%	 		NI.chO	analog output channel object
+%	 		NI.chI	analog input channel object
+%		LEGACY:
+%			NI.ao		analog output object (LEGACY only)
+%			NI.ai		analog input object (LEGACY only)
+%			NI.chO	analog output channel object
+%			NI.chI	analog input channel object
 %--------------------------------------------------------------------------
-% See also: NICal
+% See also: NICal, nidaq_ai_init, DAQ Toolbox (Matlab)
 %--------------------------------------------------------------------------
 
 %--------------------------------------------------------------------------
@@ -36,6 +42,7 @@ function NI = nidaq_aiao_init(iface, Dnum)
 %	19 Jul 2012 (JS): named to nidaq_aiao_init
 %	18 Jan 2017 (SJS): updated comments
 %	1 Feb 2017 (SJS): beginning transition to session DAQ interface
+%	7 Feb 2017 (SJS): updated documentation
 %--------------------------------------------------------------------------
 
 %------------------------------------------------------------------------

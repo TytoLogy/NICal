@@ -14,15 +14,17 @@
 % 	- adapted from monitordB script
 %
 % Revisions:
+%	7 Feb 2017 (SJS): updated for DAQ Session interface
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-% Global Constants
+% Constants
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
+% NICal
 NICal_Constants;
-
+% global (needed for use by callback)
 global VtoPa Gain fcoeffa fcoeffb ...
 		tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints
 

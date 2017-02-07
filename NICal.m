@@ -348,6 +348,7 @@ function TriggeredAcquisitionCtrl_Callback(hObject, eventdata, handles)
 	guidata(hObject, handles);
 	% load list of handles to disable
 	trig_handles_list;
+	% need to select proper nidaq init function
 	if handles.cal.TriggeredAcquisition == 1
 		handles.initfunction = @nidaq_ai_init;
 		disable_ui(trigger_handles);
