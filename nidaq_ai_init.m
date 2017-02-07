@@ -32,13 +32,11 @@ function NI = nidaq_ai_init(iface, Dnum)
 %	18 Jan 2017 (SJS): updated comments
 %	1 Feb 2017 (SJS): beginning transition to session DAQ interface
 %--------------------------------------------------------------------------
-disp('...starting NI hardware...');
-if ~strcmpi(iface, 'NI')
-	error('%s: invalid interface %s', mfilename, iface);
-end
+disp('nidaq_ai_init: starting NI hardware...');
+
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-% Now, Initialize the NI board (PCIe-6351)
+% Initialize the NI board (PCIe-6351)
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 
