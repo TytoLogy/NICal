@@ -29,12 +29,12 @@ NICal_Constants;
 %-----------------------------------------------------------------------
 % global vars for access by DAQ callback function - needed to plot
 %-----------------------------------------------------------------------
-global	VtoPa Gain fcoeffa fcoeffb ...
+global	VtoPa Gain fcoeffa fcoeffb start_bin end_bin...
 			tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints side
 % assign plot decimation factor to deciFactor
 deciFactor = handles.cal.deciFactor;
 % channel being calibrated: 1 = L, 2 = R, 3 = Both
-side = handles.cal.side;
+side = handles.cal.Side;
 %---------------------------------------------
 % Local
 %---------------------------------------------
@@ -200,6 +200,19 @@ ylabel(handles.Lfftplot, 'dBV')
 H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
 set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
 xlabel(handles.Rfftplot, 'Frequency (kHz)')
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% set the start and end bins for the calibration based on 
+% front panel settings
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, ...
+							handles.iodev.Fs);
+if ~start_bin
+	start_bin = 1;
+end
+end_bin = start_bin + ms2bin(handles.cal.StimDuration-handles.cal.StimRamp, ...
+											handles.iodev.Fs);
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -221,14 +234,16 @@ userResp = menu('Acquiring Triggered Data', 'Start', 'Cancel');
 %----------------------------------------------------------------
 if userResp ~= 2
 	runFLAG = 1;
+	% START ACQUIRING
+	startBackground(handles.iodev.NI.S);
+	guidata(hObject, handles);
+	fprintf('Writing to file %s \n', ...
+						fullfile(handles.OutputDataPath, handles.OutputDataFile));
+	% wait for triggers
 	while runFLAG
-		%START ACQUIRING
-		start(handles.iodev.NI.ai);
-		guidata(hObject, handles);
-		fprintf('Writing to file %s \n', handles.iodev.NI.ai.LogFileName);
-		% wait for TriggerTimeout seconds
 		try
-			wait(handles.iodev.NI.ai, handles.cal.TriggerSettings.TriggerTimeout);
+			% wait for TriggerTimeout seconds
+			handles.iodev.NI.S.wait(handles.cal.TriggerSettings.TriggerTimeout);
 		catch errEvent
 			% if timeout occurs (more than handles.cal.TriggerTimeout seconds
 			% elapse since prior trigger), set runFLAG to 0 to end looping
@@ -242,9 +257,6 @@ if userResp ~= 2
 			runFLAG = 0;
 		end
 	end
-	% stop acquiring
-	fprintf('... terminating acquisition \n\n')
-	stop(handles.iodev.NI.ai);
 	guidata(hObject, handles);
 %----------------------------------------------------------------
 % otherwise, cancel
@@ -254,27 +266,26 @@ else
 end
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% get event log
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-EventLogAI = showdaqevents(handles.iodev.NI.ai);
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
 % Exit gracefully (close TDT objects, etc)
-%-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
 % Close hardware
 %-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-disp('...closing NI devices...');
-% delete and clear ai and ch0 object
-delete(handles.iodev.NI.ai);
-clear handles.iodev.NI.ai
+% stop acquiring
+fprintf('... terminating acquisition \n\n')
+% stop acquisition
+handles.iodev.NI.S.stop();
+% stop continuous acq
+handles.iodev.NI.S.IsContinuous = false;
+% delete callback
+delete(handles.iodev.hl);
+% release hardware
+release(handles.iodev.NI.S);
+% clear
+clear handles.iodev.NI.S;
+
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % save settings information to mat file
@@ -285,13 +296,6 @@ if userResp ~= 2
 	save(fullfile(handles.OutputDataPath, handles.OutputMatFile), ...
 			'cal'			, ...
 			'VtoPa'					, ...
-			'EventLogAI'			, ...
-			'-MAT' );
-end
-% save settings information to mat file
-if DEBUG
-	save(fullfile(pwd, 'NICal_EventLogs.mat'), ...
-			'EventLogAI'			, ...
 			'-MAT' );
 end
 COMPLETE = 1;

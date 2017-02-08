@@ -308,7 +308,7 @@ else
 	if handles.DAQSESSION
 		fprintf('Stopping Monitor\n');
 		% stop acquisition
-		stop(handles.iodev.NI.S);
+		handles.iodev.NI.S.stop();
 		% stop continuous acq
 		handles.iodev.NI.S.IsContinuous = false;
 		% delete callback

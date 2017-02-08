@@ -95,12 +95,15 @@ if handles.DAQSESSION
 		handles.iodev.NI.chI(n).TerminalConfig = 'SingleEnded';
 	end
 	% make session continuous
-	handles.iodev.NI.S.IsContinuous = true;
+	handles.iodev.NI.S.IsContinuous = false;
 	%------------------------------------------------------------------------
 	% add trigger, configure
 	%------------------------------------------------------------------------
+% 	addTriggerConnection(handles.iodev.NI.S, 'External', ...
+% 															'Dev1/PFI0', ...
+% 															'StartTrigger');
 	addTriggerConnection(handles.iodev.NI.S, 'External', ...
-															'Dev1/PFI0', ...
+															'Dev1/RTSI0', ...
 															'StartTrigger');
 	% trigger on rising edge
 	handles.iodev.NI.S.Connections(1).TriggerCondition = 'RisingEdge';
@@ -115,8 +118,16 @@ if handles.DAQSESSION
 	handles.iodev.NI.S.NotifyWhenDataAvailableExceeds = ...
 					ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
 	%-----------------------------------------------------------------------
+	% Trigger timeout
+	%-----------------------------------------------------------------------
+	handles.iodev.NI.S.ExternalTriggerTimeout = ...
+										handles.cal.TriggerSettings.TriggerTimeout;
+	%-----------------------------------------------------------------------
 	%-----------------------------------------------------------------------
 	
+%-----------------------------------------------------------------------
+% end of SESSION
+%-----------------------------------------------------------------------
 else
 	%-----------------------------------------------------------------------
 	%-----------------------------------------------------------------------

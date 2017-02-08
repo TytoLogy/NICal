@@ -295,7 +295,11 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles) %#ok<*DEFNU>
 				NICal_RunCalibration
 			end
 		case 1
-			NICal_RunTriggeredCalibration			
+			if handles.DAQSESSION
+				NICal_RunTriggeredCalibration_Session;
+			else
+				NICal_RunTriggeredCalibration;
+			end
 	end
 	%---------------------------------------------------------------
 	% enable Calibration ctrl, disable abort ctrl
@@ -331,7 +335,6 @@ function MonitorCtrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % --- Executes on selection change in SideCtrl.
 %--------------------------------------------------------------------------
@@ -339,7 +342,6 @@ function SideCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.Side = read_ui_val(hObject);
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 % --- Executes on button press in TriggeredAcquisitionCtrl.
 %-------------------------------------------------------------------------
@@ -358,7 +360,7 @@ function TriggeredAcquisitionCtrl_Callback(hObject, eventdata, handles)
 	end
 	guidata(hObject, handles);
 %-------------------------------------------------------------------------
-	
+
 %-------------------------------------------------------------------------
 % --- Executes on button press in FreqListCtrl.
 %-------------------------------------------------------------------------
@@ -447,8 +449,6 @@ function FreqListCtrl_Callback(hObject, eventdata, handles)
 	end
 	guidata(hObject, handles)
 %-------------------------------------------------------------------------
-	
-	
 %-------------------------------------------------------------------------
 function FminCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -473,7 +473,6 @@ function FminCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-	
 %-------------------------------------------------------------------------
 function FmaxCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -497,7 +496,6 @@ function FmaxCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function FstepCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -516,7 +514,6 @@ function FstepCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-	
 %-------------------------------------------------------------------------
 function NrepsCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -528,7 +525,6 @@ function NrepsCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % runs when AttenFixCtrl is checked or unchecked
 %--------------------------------------------------------------------------
@@ -572,7 +568,6 @@ function AttenFixCtrl_Callback(hObject, eventdata, handles)
 	end
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 function AttenFixValueCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(handles.AttenFixValueCtrl, 'n');
@@ -599,7 +594,6 @@ function MinlevelCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function MaxlevelCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -613,7 +607,6 @@ function MaxlevelCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function AttenStepCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -631,7 +624,6 @@ function AttenStepCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function StartAttenCtrl_Callback(hObject, eventdata, handles)
 	NICal_Constants;
@@ -648,7 +640,6 @@ function StartAttenCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 function CollectBackgroundCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.CollectBackground = read_ui_val(hObject);
