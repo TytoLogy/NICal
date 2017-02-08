@@ -260,7 +260,7 @@ userResp = menu('Acquiring Triggered Data', 'Start', 'Cancel');
 if userResp ~= 2
 	runFLAG = 1;
 	while runFLAG
-		%START ACQUIRING
+		% START ACQUIRING
 		start(handles.iodev.NI.ai);
 		guidata(hObject, handles);
 		fprintf('Writing to file %s \n', handles.iodev.NI.ai.LogFileName);

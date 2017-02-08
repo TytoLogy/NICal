@@ -97,31 +97,22 @@ if handles.DAQSESSION
 	% make session continuous
 	handles.iodev.NI.S.IsContinuous = false;
 	%------------------------------------------------------------------------
-	% add trigger, configure
+	% add trigger, configure (cal.TriggerSettings are assigned (initially)
+	% in NICal_calstruct_init
 	%------------------------------------------------------------------------
-% 	addTriggerConnection(handles.iodev.NI.S, 'External', ...
-% 															'Dev1/PFI0', ...
-% 															'StartTrigger');
 	addTriggerConnection(handles.iodev.NI.S, 'External', ...
-															'Dev1/RTSI0', ...
+															'Dev1/PFI0', ...
 															'StartTrigger');
 	% trigger on rising edge
-	handles.iodev.NI.S.Connections(1).TriggerCondition = 'RisingEdge';
-	%------------------------------------------------------------------------
-	% EVENT and CALLBACK PARAMETERS
-	%------------------------------------------------------------------------
-	% add listener for DataAvailable trigger
-	handles.iodev.hl = addlistener(handles.iodev.NI.S, 'DataAvailable', ...
-												@triggered_sessioncallback);
-	% set the object to trigger the DataAvailable callback when
-	% BufferSize # of points are available
-	handles.iodev.NI.S.NotifyWhenDataAvailableExceeds = ...
-					ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
-	%-----------------------------------------------------------------------
+	handles.iodev.NI.S.Connections(1).TriggerCondition = ...
+										handles.cal.TriggerSettings.TriggerCondition;
 	% Trigger timeout
-	%-----------------------------------------------------------------------
 	handles.iodev.NI.S.ExternalTriggerTimeout = ...
 										handles.cal.TriggerSettings.TriggerTimeout;
+	% set TriggersPerRun to Inf to allow unlimited number of triggers
+	handles.iodev.NI.S.TriggersPerRun = Inf;
+	% set acquisition duration
+	handles.iodev.NI.S.DurationInSeconds = 0.001 * handles.cal.SweepDuration;
 	%-----------------------------------------------------------------------
 	%-----------------------------------------------------------------------
 	

@@ -1,12 +1,12 @@
-function triggered_sessioncallback(obj, event, datafile) 
+function triggered_sessioncallback(src, event, datafile) 
 %------------------------------------------------------------------------
-% triggered_sessioncallback(obj, event, fid)
+% triggered_sessioncallback(src, event, fid)
 %------------------------------------------------------------------------
 % TytoLogy -> Calibration -> NICal
 %------------------------------------------------------------------------
 % callback for logging triggered data
 %
-%	obj	caller (event source)
+%	src	caller (event source)
 %	event	struct from caller (has Data)
 %	T		struct with fields:
 %				VtoPa		conversion factor from volts to Pascal
@@ -37,11 +37,13 @@ function triggered_sessioncallback(obj, event, datafile)
 % Revisions:
 %------------------------------------------------------------------------
 
+fprintf('Triggered at %f\n', rem(event.TriggerTime, 1));
+
 %---------------------------------------------------------------
 % global variables
 %---------------------------------------------------------------
- global VtoPa Gain fcoeffa fcoeffb ...
-			Lacq Racq Lfft Rfft H SweepPoints side
+ global VtoPa Gain fcoeffa fcoeffb deciFactor start_bin end_bin ...
+			tvec_acq fvec Lacq Racq Lfft Rfft H nfft side %#ok<NUSED>
 
 %---------------------------------------------------------------
 % read data from ai object and write to file
@@ -65,26 +67,30 @@ fclose(fp);
 %---------------------------------------------------------------
 if any(side == [1 3])
 	% zero pad and filter data
-	Lacq = buffer_filter(tmpdata(:, 1)', 5, obj.Rate, fcoeffb, fcoeffa);
+	tmp = buffer_filter(tmpdata(:, 1)', 5, src.Rate, fcoeffb, fcoeffa);
+	% downsample acquired data for plotting
+	Lacq = downsample(tmp, deciFactor);
 	% find peak value (mV)
-	maxval(1) = 1000*max(abs(Lacq));
+	maxval(1) = 1000*max(abs(tmp));
 	% compute dB and update the dB SPL value
-	dbSPLval(1) = dbspl(VtoPa * (rms(Lacq) ./ Gain(1)));
+	dbSPLval(1) = dbspl(VtoPa * (rms(tmp) ./ Gain(1)));
 	% update fft data
-	[~, Lfft] = daqdbfft(Lacq, obj.Rate, SweepPoints);
+	[~, Lfft] = daqdbfft(tmp(start_bin:end_bin), src.Rate, nfft);
 	% update display on GUI
 	update_ui_str(H.LValText, sprintf('%.4f', maxval(1)));
 	update_ui_str(H.LSPLText, sprintf('%.2f', dbSPLval(1)));
 end
 if any(side == [2 3])
 	% zero pad and filter data
-	Racq = buffer_filter(tmpdata(:, 2)', 5, obj.Rate, fcoeffb, fcoeffa);
+	tmp = buffer_filter(tmpdata(:, 2)', 5, src.Rate, fcoeffb, fcoeffa);
+	% downsample acquired data for plotting
+	Racq = downsample(tmp, deciFactor);
 	% find peak value (mV)
-	maxval(2) = 1000*max(abs(Racq));
+	maxval(2) = 1000*max(abs(tmp));
 	% compute dB and update the dB SPL value
-	dbSPLval(2) = dbspl(VtoPa * (rms(Racq) ./ Gain(2)));
+	dbSPLval(2) = dbspl(VtoPa * (rms(tmp) ./ Gain(2)));
 	% update fft data
-	[~, Rfft] = daqdbfft(Racq, obj.Rate, SweepPoints);
+	[~, Rfft] = daqdbfft(tmp(start_bin:end_bin), src.Rate, nfft);
 	% update display on GUI
 	update_ui_str(H.RValText, sprintf('%.4f', maxval(2)));
 	update_ui_str(H.RSPLText, sprintf('%.2f', dbSPLval(2)));

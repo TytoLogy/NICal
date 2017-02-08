@@ -140,3 +140,92 @@ ans =
     'Dev1/PairedCtrInternalOutput'
     'Dev1/PairedCtrOutputPulse'
     'Dev1/FrequencyOutput'
+
+lp = 10;
+%{
+I am converting a data acquisition application I wrote using Matlab R2012
+to use the session-based interface in Matlab R2016b.
+
+In my original application, data acquisition is triggered by a TTL-level
+pulse on the PFI0 input on a BNC-2110 breakout adapter connected to a
+National Instruments PCIe-6351 card.
+	 
+However, when I examine the available connections using daq.getDevices() in
+R2016b, I do not see any of the PFI channels listed (see attached file
+"daqhardware.m" for output from daq.getDevices() command).
+
+I tried using the addTriggerConnection() method as follows:
+
+addTriggerConnection(S, 'External', ... 'Dev1/PFI0', ... 'StartTrigger');
+S.Connections(1).TriggerCondition = 'RisingEdge';
+
+but it did not work - the acquisition would not trigger. Furthermore, when
+I look at the properties of the session object I see this:
+
+>> S.getProperties()
+
+AutoSyncDSA: false NumberOfScans: 500000 DurationInSeconds: 1 Rate: 500000
+IsContinuous: false NotifyWhenDataAvailableExceeds: 250000
+IsNotifyWhenDataAvailableExceedsAuto: false NotifyWhenScansQueuedBelow:
+250000 IsNotifyWhenScansQueuedBelowAuto: true ExternalTriggerTimeout: 10
+TriggersPerRun: 1 Vendor: National Instruments Channels: [1x2
+daq.ni.AnalogInputVoltageChannel] Connections: [1x1
+daq.ni.StartTriggerConnection] IsRunning: false IsLogging: false IsDone:
+false IsWaitingForExternalTrigger: false TriggersRemaining: 1 RateLimit:
+[0.1 500000.0] ScansQueued: 0 ScansOutputByHardware: 0 ScansAcquired: 0
+
+Notice that the IsWaitingForExternalTrigger property is 'false' - according
+to the DAQ Toolbox documentation
+(http://www.mathworks.com/help/daq/ref/iswaitingforexternaltrigger.html?searchHighlight=IsWaitingForExternalTrigger&s_tid=doc_srchtitle)
+
+"When working with the session-based interface, the
+read-onlyIsWaitingForExternalTrigger property indicates if the acquisition
+or generation session is waiting for a trigger from an external device. If
+you have added an external trigger, this property displays true, if not, it
+displays false."
+
+What channel can I use for my application and how can I add it to my DAQ
+session object using the addTriggerConnection method?
+
+%}
+
+
+
+
+%{
+>> daq.getDevices()
+
+ans = 
+
+ni: National Instruments PCIe-6351 (Device ID: 'Dev1')
+   Analog input subsystem supports:
+      7 ranges supported
+      Rates from 0.1 to 1250000.0 scans/sec
+      16 channels ('ai0' - 'ai15')
+      'Voltage' measurement type
+   
+   Analog output subsystem supports:
+      -5.0 to +5.0 Volts,-10 to +10 Volts ranges
+      Rates from 0.1 to 2857142.9 scans/sec
+      2 channels ('ao0','ao1')
+      'Voltage' measurement type
+   
+   Digital subsystem supports:
+      Rates from 0.1 to 10000000.0 scans/sec
+      24 channels ('port0/line0' - 'port2/line7')
+      'InputOnly','OutputOnly','Bidirectional' measurement types
+   
+   Counter input subsystem supports:
+      Rates from 0.1 to 100000000.0 scans/sec
+      4 channels ('ctr0','ctr1','ctr2','ctr3')
+      'EdgeCount','PulseWidth','Frequency','Position' measurement types
+   
+   Counter output subsystem supports:
+      Rates from 0.1 to 100000000.0 scans/sec
+      4 channels ('ctr0','ctr1','ctr2','ctr3')
+      'PulseGeneration' measurement type
+   
+
+
+	 
+%}

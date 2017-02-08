@@ -29,8 +29,8 @@ NICal_Constants;
 %-----------------------------------------------------------------------
 % global vars for access by DAQ callback function - needed to plot
 %-----------------------------------------------------------------------
-global	VtoPa Gain fcoeffa fcoeffb start_bin end_bin...
-			tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints side
+global	VtoPa Gain fcoeffa fcoeffb deciFactor start_bin end_bin ...
+			tvec_acq fvec Lacq Racq Lfft Rfft H nfft side
 % assign plot decimation factor to deciFactor
 deciFactor = handles.cal.deciFactor;
 % channel being calibrated: 1 = L, 2 = R, 3 = Both
@@ -139,9 +139,22 @@ fcoeffa = handles.cal.fcoeffa;
 % write file header (FIGURE THIS OUT!!!!!!!!)
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-fp = fopen(fullfile(handles.OutputDataPath, handles.OutputDataFile), ...
-					'w');
+datafile = fullfile(handles.OutputDataPath, handles.OutputDataFile);
+fp = fopen(datafile,	'w');
+writeStruct(fp, handles.cal, 'cal');
 fclose(fp);
+
+%-----------------------------------------------------------------------
+% set the start and end bins for the calibration based on 
+% front panel settings
+%-----------------------------------------------------------------------
+start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, ...
+							handles.iodev.Fs);
+if ~start_bin
+	start_bin = 1;
+end
+end_bin = start_bin + ms2bin(handles.cal.StimDuration-handles.cal.StimRamp, ...
+											handles.iodev.Fs);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -159,29 +172,31 @@ fclose(fp);
 %-----------------------------------------------------------------------
 % fake acquired data
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
-zeroacq = downsample(zeroacq, handles.cal.deciFactor);
+plotacq = downsample(zeroacq, handles.cal.deciFactor);
 acqpts = length(zeroacq);
 % time vector for stimulus plots
-tvec_acq = 1000*(1/handles.iodev.Fs)*(0:(acqpts-1));
-% compute # of points per sweep
-SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
+tvec_acq = 1000*(handles.cal.deciFactor/handles.iodev.Fs) * ...
+															(0:(length(plotacq)-1));
+% % compute # of points per sweep
+% SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
 % acq
-Lacq = zeroacq;
-Racq = zeroacq;
+Lacq = plotacq;
+Racq = plotacq;
 % FFT
-nfft = length(start_bin:end_bin);
-tmp = zeros(1, nfft);
-[fvec, Lfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
+temp = zeroacq(start_bin:end_bin);
+nfft = length(temp);
+temp = zeros(1, nfft);
+[fvec, Lfft] = daqdbfft(temp, handles.iodev.Fs, nfft);
 Rfft = Lfft;
 % convert fvec to kHz
 fvec = 0.001 * fvec;
-clear tmp
+clear temp
 %-------------------------------------------------------
 % plot null data, save handles for time-domain plots
 %-------------------------------------------------------
-% stimulus
-H.Lstim = plot(0);
-H.Rstim = plot(0);
+% stimulus (null)
+H.Lstim = plot(handles.Lstimplot, 0);
+H.Rstim = plot(handles.Rstimplot, 0);
 % response
 H.Lacq = plot(handles.Lmicplot, tvec_acq, Lacq, 'g');
 set(H.Lacq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Lacq');
@@ -200,20 +215,25 @@ ylabel(handles.Lfftplot, 'dBV')
 H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
 set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
 xlabel(handles.Rfftplot, 'Frequency (kHz)')
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-% set the start and end bins for the calibration based on 
-% front panel settings
-%-----------------------------------------------------------------------
-%-----------------------------------------------------------------------
-start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, ...
-							handles.iodev.Fs);
-if ~start_bin
-	start_bin = 1;
-end
-end_bin = start_bin + ms2bin(handles.cal.StimDuration-handles.cal.StimRamp, ...
-											handles.iodev.Fs);
+% assign handles for text displays
+H.LValText = handles.LValText;
+H.LSPLText = handles.LSPLText;
+H.RValText = handles.RValText;
+H.RSPLText = handles.RSPLText;
 
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% EVENT and CALLBACK PARAMETERS
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% add listener for DataAvailable trigger
+handles.iodev.hl = addlistener(handles.iodev.NI.S, 'DataAvailable', ...
+				@(src, event) triggered_sessioncallback(src, event, datafile));
+% set the object to trigger the DataAvailable callback when
+% BufferSize # of points are available
+handles.iodev.NI.S.NotifyWhenDataAvailableExceeds = ...
+				ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
+			
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -233,30 +253,36 @@ userResp = menu('Acquiring Triggered Data', 'Start', 'Cancel');
 % if user hit start, begin acquisition at triggers
 %----------------------------------------------------------------
 if userResp ~= 2
-	runFLAG = 1;
+% 	runFLAG = 1;
 	% START ACQUIRING
 	startBackground(handles.iodev.NI.S);
 	guidata(hObject, handles);
 	fprintf('Writing to file %s \n', ...
 						fullfile(handles.OutputDataPath, handles.OutputDataFile));
-	% wait for triggers
-	while runFLAG
-		try
-			% wait for TriggerTimeout seconds
-			handles.iodev.NI.S.wait(handles.cal.TriggerSettings.TriggerTimeout);
-		catch errEvent
-			% if timeout occurs (more than handles.cal.TriggerTimeout seconds
-			% elapse since prior trigger), set runFLAG to 0 to end looping
-			fprintf('\n\n*** TIMEOUT!!! ***\n');
-			runFLAG = 0;
-		end
-		% check for abort button press
-		if read_ui_val(handles.AbortCtrl) == 1
-			% if so, stop
-			fprintf('abortion detected\n\n');
-			runFLAG = 0;
-		end
-	end
+
+	% wait for TriggerTimeout
+	handles.iodev.NI.S.wait();
+	fprintf('done...\n\n\n');
+% 	runFLAG = 0;
+
+% 	% wait for triggers
+% 	while runFLAG
+% 		try
+% 			% wait for TriggerTimeout seconds
+% 			handles.iodev.NI.S.wait(handles.cal.TriggerSettings.TriggerTimeout);
+% 		catch errEvent
+% 			% if timeout occurs (more than handles.cal.TriggerTimeout seconds
+% 			% elapse since prior trigger), set runFLAG to 0 to end looping
+% 			fprintf('\n\n*** TIMEOUT!!! ***\n');
+% 			runFLAG = 0;
+% 		end
+% 		% check for abort button press
+% 		if read_ui_val(handles.AbortCtrl) == 1
+% 			% if so, stop
+% 			fprintf('abortion detected\n\n');
+% 			runFLAG = 0;
+% 		end
+% 	end
 	guidata(hObject, handles);
 %----------------------------------------------------------------
 % otherwise, cancel
@@ -277,8 +303,6 @@ end
 fprintf('... terminating acquisition \n\n')
 % stop acquisition
 handles.iodev.NI.S.stop();
-% stop continuous acq
-handles.iodev.NI.S.IsContinuous = false;
 % delete callback
 delete(handles.iodev.hl);
 % release hardware
