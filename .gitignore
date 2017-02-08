@@ -18,3 +18,6 @@ NICal_EventLogs.mat
 
 # Matlab .asv files
 *.asv
+
+# binary files
+*.bin
