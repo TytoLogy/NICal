@@ -56,23 +56,15 @@ guidata(hObject, handles);
 %-----------------------------------------------------------------------
 % check output  file - if it exists, check with user
 %-----------------------------------------------------------------------
-if exist(handles.cal.calfile, 'file')
-	resp = uiyesno('title', 'Save File', 'string', ...
-							'File exists! Overwrite?', 'default', 'No');
-	if strcmpi(resp, 'No')
-		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
-		[newname, newpath] = uiputfile('*.cal', ...
-													'Save calibration data to file', ...
-													fullfile(pathstr, [fname '_1' fext]));
-		if isequal(newname, 0) || isequal(newpath, 0)
-			return
-		else
-			handles.cal.calfile = fullfile(newpath, newname);
-			update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
-			guidata(hObject, handles);
-		end
-	end
+calfile = check_output_file(handles);
+if isequal(calfile, 0)
+	return
+else
+	handles.cal.calfile = calfile;
+	update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
+	guidata(hObject, handles);
 end
+
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Start DAQ things
@@ -163,6 +155,9 @@ end_bin = start_bin + ms2bin(handles.cal.StimDuration - handles.cal.StimRamp,...
 %-----------------------------------------------------------------------
 % calculate difference between SweepDuration and StimDelay + StimDuration
 % this will be used to pad end of stimulus
+% this is due to the session DAQ interface using # of cued output samples to
+% determine the number of samples to read in. For the legacy interface,
+% this shouldn't make a difference
 PostDuration = handles.cal.SweepDuration - ...
 						(handles.cal.StimDelay + handles.cal.StimDuration);
 % make sure PostDuration is ok (greater than or equal to 0)
@@ -185,10 +180,8 @@ zerostim = [zerostim poststim];
 zerostim = downsample(zerostim, handles.cal.deciFactor);
 % downsample-factor adjusted sample interval
 dt = handles.cal.deciFactor/handles.iodev.Fs;
-% # output points
-outpts = length(zerostim);
 % time vector for stimulus plots
-tvec_stim = 1000*dt*(0:(outpts-1));
+tvec_stim = 1000*dt*(0:(length(zerostim)-1));
 % fake acquired data
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
 zeroacq = downsample(zeroacq, handles.cal.deciFactor);
@@ -205,7 +198,7 @@ stim_end = stim_start + ms2bin(handles.cal.StimDuration, handles.iodev.Fs) - 1;
 % Build null output array
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-% synthesize the L sine wave;
+% synthesize null stimulus;
 Nullstim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 1);
 % scale the sound
 Nullstim = 0 * Nullstim;
@@ -375,6 +368,7 @@ for F = 1:Nfreqs
 			% set retry to 0 to skip testing
 			retry = 0;
 		else
+			% set retry to 1 in order to enter the attenuation set loop
 			retry = 1;
 		end
 		while retry
@@ -438,6 +432,10 @@ for F = 1:Nfreqs
 			end
 		end		% END of L attenuation loop
 
+		
+		%-------------------------------------------------------
+		% pause for ISI 
+		%-------------------------------------------------------
 		pause(0.001*cal.ISI);
 
 		%-------------------------------------------------------
