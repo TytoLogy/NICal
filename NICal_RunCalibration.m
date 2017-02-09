@@ -30,8 +30,8 @@
 %	18 Jan 2017 (SJS): updated comments
 %	1 Feb 2017 (SJS): updated for session interface
 %	6 Feb 2017 (SJS): modifying stimulus to include pre/post stim time
+%	9 Feb 2017 (SJS): some cleaning up, added check_output_file call
 %--------------------------------------------------------------------------
-
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -141,13 +141,7 @@ end
 % set the start and end bins for the calibration
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, ...
-								handles.iodev.Fs);
-if ~start_bin
-	start_bin = 1;
-end
-end_bin = start_bin + ms2bin(handles.cal.StimDuration - handles.cal.StimRamp,...
-											handles.iodev.Fs);
+[start_bin, end_bin] = startendbins(handles);
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % create null stimulus and time vector for plots, set up plots

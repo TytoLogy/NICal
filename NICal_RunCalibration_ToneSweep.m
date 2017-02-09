@@ -1,6 +1,8 @@
 %--------------------------------------------------------------------------
 % NICal_RunCalibration_ToneSweep.m
 %--------------------------------------------------------------------------
+% TytoLogy -> Calibration -> NICal program
+%--------------------------------------------------------------------------
 % Runs the speaker calibration
 % if FR Correction is selected, apply mic correction using data from
 % MicrophoneCal program (earphone fr data)
@@ -14,6 +16,7 @@
 %
 % Revisions:
 %	1 Feb 2017 (SJS): updated for session interface
+%	9 Feb 2017 (SJS): modifying stimulus to include pre/post stim time
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -41,23 +44,15 @@ guidata(hObject, handles);
 %-----------------------------------------------------------------------
 % check output  file - if it exists, check with user
 %-----------------------------------------------------------------------
-if exist(handles.cal.calfile, 'file')
-	resp = uiyesno('title', 'Save File', 'string', ...
-							'File exists! Overwrite?', 'default', 'No');
-	if strcmpi(resp, 'No')
-		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
-		[newname, newpath] = uiputfile('*.cal', ...
-													'Save calibration data to file', ...
-													fullfile(pathstr, [fname '_1' fext]));
-		if isequal(newname, 0) || isequal(newpath, 0)
-			return
-		else
-			handles.cal.calfile = fullfile(newpath, newname);
-			update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
-			guidata(hObject, handles);
-		end
-	end
+calfile = check_output_file(handles);
+if isequal(calfile, 0)
+	return
+else
+	handles.cal.calfile = calfile;
+	update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
+	guidata(hObject, handles);
 end
+
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -115,34 +110,42 @@ NICal_caldata_init;
 % set the start and end bins for the calibration
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, ...
-								handles.iodev.Fs);
-if ~start_bin
-	start_bin = 1;
-end
-end_bin = start_bin + ms2bin(handles.cal.StimDuration - handles.cal.StimRamp,...
-											handles.iodev.Fs);
+[start_bin, end_bin] = startendbins(handles);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % create null stimulus and time vector for plots, set up plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% calculate difference between SweepDuration and StimDelay + StimDuration
+% this will be used to pad end of stimulus
+% this is due to the session DAQ interface using # of cued output samples to
+% determine the number of samples to read in. For the legacy interface,
+% this shouldn't make a difference
+PostDuration = handles.cal.SweepDuration - ...
+						(handles.cal.StimDelay + handles.cal.StimDuration);
+% make sure PostDuration is ok (greater than or equal to 0)
+if PostDuration < 0
+	errordlg('SweepDuration must be greater than StimDelay + StimDuration');
+	NICal_NIexit;
+	COMPLETE = 0;
+	return
+else
+	% if ok, create poststim
+	poststim = syn_null(PostDuration, handles.iodev.Fs, 0);
+end
 % create null stimulus
 zerostim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 0);
 % insert stim delay
 zerostim = insert_delay(zerostim, handles.cal.StimDelay, handles.iodev.Fs);
+% append post-stim
+zerostim = [zerostim poststim];
 % downsample (no need to plot all points)
 zerostim = downsample(zerostim, handles.cal.deciFactor);
 % downsample-factor adjusted sample interval
 dt = handles.cal.deciFactor/handles.iodev.Fs;
-% # output points
-outpts = length(zerostim);
 % time vector for stimulus plots
-tvec_stim = 1000*dt*(0:(outpts-1));
-% stimulus start and end points
-stim_start = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
-stim_end = stim_start + outpts - 1;
+tvec_stim = 1000*dt*(0:(length(zerostim)-1));
 % fake acquired data
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
 zeroacq = downsample(zeroacq, handles.cal.deciFactor);
@@ -151,6 +154,9 @@ acqpts = length(zeroacq);
 tvec_acq = 1000*dt*(0:(acqpts-1));
 % compute # of points per sweep
 SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
+% stimulus start and end points
+stim_start = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
+stim_end = stim_start + outpts - 1;
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Build null output array
@@ -173,7 +179,6 @@ Nullstim_downsample =  downsample(Nullstim(1, :), handles.cal.deciFactor);
 % YDataSource for the respective plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-
 %-------------------------------------------------------
 % create arrays for plotting and plot them
 %-------------------------------------------------------
@@ -247,8 +252,6 @@ end
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 stopFlag = 0;
-
-
 %---------------------------------------------------
 % make a local copy of the cal settings structure
 %---------------------------------------------------
@@ -257,7 +260,6 @@ cal = handles.cal;
 % make local copy of iodev  control struct
 %---------------------------------------------------
 iodev = handles.iodev;
-
 % update the frequency display value
 update_ui_str(handles.FreqValText, 'Tone Sweep');
 
@@ -296,10 +298,12 @@ if cal.Side == 1 || cal.Side == 3
 	S = [csig; 0*csig];
 	% scale the sound
 	S = cal.DAscale * S;
-	% apply the sin^2 amplitude envelope to the stimulus
+	% apply the sin^2 amplitude envelope to the stimulus before adding 
+	% pre and post zeros
 	S = sin2array(S, cal.StimRamp, iodev.Fs);
-	% insert delay
-	S = insert_delay(S, cal.StimDelay, iodev.Fs);
+	% insert delay, add zeros to pad end
+	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
+								syn_null(PostDuration, iodev.Fs, 1)];
 	% save in Satt
 	Satt = S;
 	% plot the stimuli - set R stim to zero
@@ -475,8 +479,9 @@ if cal.Side == 2 || cal.Side == 3
 	S = cal.DAscale * S;
 	% apply the sin^2 amplitude envelope to the stimulus
 	S = sin2array(S, cal.StimRamp, iodev.Fs);
-	% insert delay
-	S = insert_delay(S, cal.StimDelay, iodev.Fs);
+	% insert delay, add zeros to pad end
+	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
+								syn_null(PostDuration, iodev.Fs, 1)];
 	% save in Satt
 	Satt = S;
 	% plot the stimulus arrays
