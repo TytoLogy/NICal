@@ -15,3 +15,10 @@ Desktop.ini
 # NICAl things
 NICalhandles.mat
 NICal_EventLogs.mat
+*.mat
+
+# Matlab .asv files
+*.asv
+
+# binary files
+*.bin

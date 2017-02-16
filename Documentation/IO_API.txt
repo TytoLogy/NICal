@@ -1,0 +1,43 @@
+API
+
+
+create/define hardware interface
+
+initialize interface
+
+adjust settings
+
+input/output
+
+close/delete hardware interface
+
+
+
+% create session object
+s = daq.createSession(?ni?);
+
+% add analog input channel
+addAnalogInputChannel(s, ?Dev1?, 1, ?Voltage?);
+
+% set sample rate
+s.rate = 250000;
+
+% set analog input parameters for 2 channels
+ch = addAnalogInputChannel(s, ?Dev1?, 0:1, ?Voltage?);
+ch(1).TerminalConfig = ?SingleEnded?;
+ch(1).Range = [-10 10];
+ch(2).TerminalConfig = ?SingleEnded?;
+ch(2).Range = [-10 10];
+
+%Create an external trigger connection and set the trigger to run one time.
+addTriggerConnection(s,'External', 'Dev1/PFI0', 'StartTrigger');
+s.Connections(1).TriggerCondition = 'RisingEdge';
+s.TriggersPerRun = 1;
+
+%Set the rate and the duration of the acquisition.
+s.Rate = 50000;
+s.DurationInSeconds = 0.01;
+
+%Acquire data in the foreground and plot the data.
+[data,timestamps] = startForeground(s);
+plot(timestamps,data)
