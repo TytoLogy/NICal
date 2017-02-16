@@ -11,7 +11,7 @@ function NI = nidaq_aiao_init(iface, Dnum)
 % 	iface		must be:
 % 				'NI' (for traditional interface) 
 % 					-OR-
-% 				'NI-SESSSION' (for new, session interface)
+% 				'NI-SESSION' (for new, session interface)
 % 					
 %	Dnum		device id (usually 'Dev1')
 % 
@@ -176,11 +176,13 @@ elseif strcmpi(iface, 'NI-SESSION')
 	end
 	% set outputs to 0
 	outputSingleScan(NI.S, [0 0]);
-	%---------------------------------------------------------------------
-	% save in NI struct
-	%---------------------------------------------------------------------
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% Unknown, so throw error
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
 else
-	errordlg('Unknown interface')
-	error('Unknown interface');
+	errordlg(sprintf('Unknown interface %s', iface));
+	error('%s: Unknown interface %s', mfilename, iface);
 end
 
