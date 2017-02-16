@@ -1,3 +1,4 @@
+function [handle] = myspectrogram(s, fs, T, w, nfft, Slim, alpha, cmap, cbar, type)
 %______________________________________________________________________________________________________________________
 % 
 % @file         myspectrogram.m
@@ -26,7 +27,6 @@
 % @examples     [handle] = myspectrogram(speech, 8000, [18 1], @hamming, 1024, [-45 -2], false, 'default', false, 'lp');
 %               [handle] = myspectrogram(speech, 8000, [18 1], @hamming, 1024, [-45 -2], [1 -0.97], 'default', true, 'per');
 %______________________________________________________________________________________________________________________
-function [handle] = myspectrogram(s, fs, T, w, nfft, Slim, alpha, cmap, cbar, type)
 
     %__________________________________________________________________________________________________________________
     % VALIDATE INPUTS, SET DEFAULTS
@@ -95,15 +95,6 @@ function [handle] = myspectrogram(s, fs, T, w, nfft, Slim, alpha, cmap, cbar, ty
         colormap(1-map);    
     otherwise, colormap(cmap);
     end
-
-
-
-
-
-
-
-
-
 
 
 %______________________________________________________________________________________________________________________

@@ -34,6 +34,8 @@ function out = NICal_DefaultConfiguration
 %	14 Oct 2014 (SJS):
 %	 -	some cleanup
 %	 -	added settings for data output path
+%	1 Feb 2017 (SJS):
+%	 - added settings for use with DAQ toolbox Session interface
 %--------------------------------------------------------------------------
 % TO DO:	there's gotta be a better way to manage 
 % 			different hardware setups.... HELP!!!!  
@@ -48,14 +50,14 @@ function out = NICal_DefaultConfiguration
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This is for using National instruments
-% board and Data Acq Toolbox for 
+% board and Data Acq Toolbox SESSION interface for
 % sound input and output 
 %
 % Used for Calibration system, NEOMED Auditory Group
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 out.CONFIGNAME = 'NI';
-out.IOFUNCTION = @nidaq_calibration_io;
+out.IOFUNCTION = @nidaq_session_io;
 out.IOINITFUNCTION = @nidaq_aiao_init;
 out.TYTOLOGY_ROOT_PATH = 'C:\TytoLogy';
 out.TYTOLOGY_SETTINGS_PATH = TytoLogySettingsPath;
@@ -67,6 +69,30 @@ out.BK_PRESSURE_FILE = '';
 out.ATTENFUNCTION = @simPA5setatten;
 out.DEFAULT_OUTPUT_PATH = pwd;
 %------------------------------------------------------------------------
+
+% %------------------------------------------------------------------------
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % This is for using National instruments
+% % board and Data Acq Toolbox for 
+% % sound input and output 
+% %
+% % Used for Calibration system, NEOMED Auditory Group
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% out.CONFIGNAME = 'NI';
+% out.IOFUNCTION = @nidaq_calibration_io;
+% out.IOINITFUNCTION = @nidaq_aiao_init;
+% out.TYTOLOGY_ROOT_PATH = 'C:\TytoLogy';
+% out.TYTOLOGY_SETTINGS_PATH = TytoLogySettingsPath;
+% out.TDTLOCKFILE = [out.TYTOLOGY_SETTINGS_PATH '.tdtlock.mat'];
+% out.CIRCUIT_PATH = '';
+% out.CIRCUIT_NAME = '';
+% out.IODEVNUM = 1;
+% out.BK_PRESSURE_FILE = '';
+% out.ATTENFUNCTION = @simPA5setatten;
+% out.DEFAULT_OUTPUT_PATH = pwd;
+% %------------------------------------------------------------------------
 
 
 % %------------------------------------------------------------------------

@@ -2,6 +2,8 @@ function cal = NICal_calstruct_init()
 %--------------------------------------------------------------------------
 % cal = NICal_calstruct_init
 %--------------------------------------------------------------------------
+% TytoLogy -> Calibration -> NICal program
+%--------------------------------------------------------------------------
 %	returns initialized cal structure that contains settings
 % for running calibration in NICal
 %--------------------------------------------------------------------------
@@ -20,6 +22,7 @@ function cal = NICal_calstruct_init()
 %	27 Aug 2012 (SJS): modified fr and cal filenames
 %	28 Aug 2012 (SJS): added gain, adjusted MicGain for Nchannels
 %	10 Oct 2012 (SJS): added SaveRawData option
+%	8 Feb 2017 (SJS): updating for daq session interface
 %--------------------------------------------------------------------------
 
 %----------------------------------------------------------------
@@ -153,7 +156,6 @@ cal.MeasureLeak = 0;
 %----------------------------------------------------------------
 cal.SaveRawData = 0;
 
-
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 % Define a bandpass filter for processing the data
@@ -194,22 +196,19 @@ cal.TriggeredAcquisition = 0;
 %----------------------------------------------------------------
 % *these settings only apply for triggered acquisition*
 %----------------------------------------------------------------
-
 %--------------------------
 % trigger timeout
 %--------------------------
 % time to wait for TTL trigger in seconds
 cal.TriggerSettings.TriggerTimeout = 10;
-
 %--------------------------
 % trigger level (TriggerConditionLevel)
 %--------------------------
 % triggering level (Volts) (used to set the TriggerConditionLevel setting
-% in NI-DAQ hardware)
+% in NI-DAQ hardware) (obsolete for SESSION interface)
 cal.TriggerSettings.TriggerLevel = 4;
-
 %--------------------------
-% trigger type
+% trigger type (OBSOLETE)
 %--------------------------
 % <string>, options:
 % 'HwDigital'				The trigger source is an external digital signal. 
@@ -227,9 +226,8 @@ cal.TriggerSettings.TriggerLevel = 4;
 %								only for Traditional NIDAQ devices. It is not supported 
 %								for NIDAQmx devices.HWDigitalTriggerSource	
 cal.TriggerSettings.TriggerType = 'HwDigital';
-
 %--------------------------
-% trigger source
+% trigger source 
 %--------------------------
 % if TriggerType = HwAnalogChannel or HwAnalogPin
 % 	source for analog trigger input is first active	analog channel 
@@ -241,7 +239,7 @@ cal.TriggerSettings.TriggerType = 'HwDigital';
 cal.TriggerSettings.TriggerSource = 'PFI0';
 
 %--------------------------
-% Trigger condition
+% Trigger condition (OBSOLETE)
 %--------------------------
 % The following trigger conditions are available for AI objects 
 % when TriggerType is HwDigital. 
@@ -266,7 +264,8 @@ cal.TriggerSettings.TriggerSource = 'PFI0';
 % 'HighHysteresis'	The trigger occurs when the analog signal is 
 % 								greater than the specified high value with 
 % 								hysteresis given by the specified low value
-cal.TriggerSettings.TriggerCondition = 'PositiveEdge';
+% cal.TriggerSettings.TriggerCondition = 'PositiveEdge';
+cal.TriggerSettings.TriggerCondition = 'RisingEdge';
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------

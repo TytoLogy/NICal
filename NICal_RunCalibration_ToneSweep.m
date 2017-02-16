@@ -1,6 +1,8 @@
 %--------------------------------------------------------------------------
 % NICal_RunCalibration_ToneSweep.m
 %--------------------------------------------------------------------------
+% TytoLogy -> Calibration -> NICal program
+%--------------------------------------------------------------------------
 % Runs the speaker calibration
 % if FR Correction is selected, apply mic correction using data from
 % MicrophoneCal program (earphone fr data)
@@ -13,6 +15,8 @@
 % Created:	16 Oct 2014 from NICal_RunCalibration_ToneStack,	SJS
 %
 % Revisions:
+%	1 Feb 2017 (SJS): updated for session interface
+%	9 Feb 2017 (SJS): modifying stimulus to include pre/post stim time
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -21,7 +25,6 @@
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_Constants;
-
 % local settings
 % set the COMPLETE flag to 0
 COMPLETE = 0;
@@ -41,23 +44,15 @@ guidata(hObject, handles);
 %-----------------------------------------------------------------------
 % check output  file - if it exists, check with user
 %-----------------------------------------------------------------------
-if exist(handles.cal.calfile, 'file')
-	resp = uiyesno('title', 'Save File', 'string', ...
-							'File exists! Overwrite?', 'default', 'No');
-	if strcmpi(resp, 'No')
-		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
-		[newname, newpath] = uiputfile('*.cal', ...
-													'Save calibration data to file', ...
-													fullfile(pathstr, [fname '_1' fext]));
-		if isequal(newname, 0) || isequal(newpath, 0)
-			return
-		else
-			handles.cal.calfile = fullfile(newpath, newname);
-			update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
-			guidata(hObject, handles);
-		end
-	end
+calfile = check_output_file(handles);
+if isequal(calfile, 0)
+	return
+else
+	handles.cal.calfile = calfile;
+	update_ui_str(handles.CalFileCtrl, handles.cal.calfile);
+	guidata(hObject, handles);
 end
+
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -84,7 +79,11 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 [handles.cal.fcoeffb, handles.cal.fcoeffa] = ...
 					butter(handles.cal.forder, handles.cal.fband, 'bandpass');
 
-				
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% if raw data are to be saved, initialize the file
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
 if handles.cal.SaveRawData
 	[pathstr, fname, fext] = fileparts(handles.cal.calfile);
 	rawfile = fullfile(pathstr, [fname '.dat']);
@@ -111,34 +110,42 @@ NICal_caldata_init;
 % set the start and end bins for the calibration
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, ...
-								handles.iodev.Fs);
-if ~start_bin
-	start_bin = 1;
-end
-end_bin = start_bin + ms2bin(handles.cal.StimDuration - handles.cal.StimRamp,...
-											handles.iodev.Fs);
+[start_bin, end_bin] = startendbins(handles);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % create null stimulus and time vector for plots, set up plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% calculate difference between SweepDuration and StimDelay + StimDuration
+% this will be used to pad end of stimulus
+% this is due to the session DAQ interface using # of cued output samples to
+% determine the number of samples to read in. For the legacy interface,
+% this shouldn't make a difference
+PostDuration = handles.cal.SweepDuration - ...
+						(handles.cal.StimDelay + handles.cal.StimDuration);
+% make sure PostDuration is ok (greater than or equal to 0)
+if PostDuration < 0
+	errordlg('SweepDuration must be greater than StimDelay + StimDuration');
+	NICal_NIexit;
+	COMPLETE = 0;
+	return
+else
+	% if ok, create poststim
+	poststim = syn_null(PostDuration, handles.iodev.Fs, 0);
+end
 % create null stimulus
 zerostim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 0);
 % insert stim delay
 zerostim = insert_delay(zerostim, handles.cal.StimDelay, handles.iodev.Fs);
+% append post-stim
+zerostim = [zerostim poststim];
 % downsample (no need to plot all points)
 zerostim = downsample(zerostim, handles.cal.deciFactor);
 % downsample-factor adjusted sample interval
 dt = handles.cal.deciFactor/handles.iodev.Fs;
-% # output points
-outpts = length(zerostim);
 % time vector for stimulus plots
-tvec_stim = 1000*dt*(0:(outpts-1));
-% stimulus start and end points
-stim_start = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
-stim_end = stim_start + outpts - 1;
+tvec_stim = 1000*dt*(0:(length(zerostim)-1));
 % fake acquired data
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
 zeroacq = downsample(zeroacq, handles.cal.deciFactor);
@@ -147,6 +154,9 @@ acqpts = length(zeroacq);
 tvec_acq = 1000*dt*(0:(acqpts-1));
 % compute # of points per sweep
 SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
+% stimulus start and end points
+stim_start = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
+stim_end = stim_start + outpts - 1;
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Build null output array
@@ -169,7 +179,6 @@ Nullstim_downsample =  downsample(Nullstim(1, :), handles.cal.deciFactor);
 % YDataSource for the respective plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
-
 %-------------------------------------------------------
 % create arrays for plotting and plot them
 %-------------------------------------------------------
@@ -182,7 +191,7 @@ Racq = zeroacq;
 % FFT
 nfft = length(start_bin:end_bin);
 tmp = zeros(1, nfft);
-[fvec, Lfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
+[fvec, Lfft] = daqdbfft(tmp, handles.iodev.Fs, nfft); %#ok<ASGLU>
 [fvec, Rfft] = daqdbfft(tmp, handles.iodev.Fs, nfft);
 % convert fvec to kHz
 fvec = 0.001 * fvec;
@@ -243,8 +252,6 @@ end
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 stopFlag = 0;
-
-
 %---------------------------------------------------
 % make a local copy of the cal settings structure
 %---------------------------------------------------
@@ -253,7 +260,6 @@ cal = handles.cal;
 % make local copy of iodev  control struct
 %---------------------------------------------------
 iodev = handles.iodev;
-
 % update the frequency display value
 update_ui_str(handles.FreqValText, 'Tone Sweep');
 
@@ -261,7 +267,7 @@ update_ui_str(handles.FreqValText, 'Tone Sweep');
 if read_ui_val(handles.AbortCtrl) == 1
 	% if so, stop
 	disp('abortion detected')
-	break
+	return
 end
 
 %------------------------------------------------------------------
@@ -287,18 +293,17 @@ if cal.Side == 1 || cal.Side == 3
 	%-------------------------------------------------------
 	% synthesize the sweep
 	% need time vector
-% 	t = 0:(1/iodev.Fs):0.001*cal.StimDuration;
 	t = (1/iodev.Fs) * (0:(ms2samples(cal.StimDuration, iodev.Fs)-1));
-
 	csig = chirp(t, Freqs(1), 0.001*cal.StimDuration, Freqs(end));
 	S = [csig; 0*csig];
-
 	% scale the sound
 	S = cal.DAscale * S;
-	% apply the sin^2 amplitude envelope to the stimulus
+	% apply the sin^2 amplitude envelope to the stimulus before adding 
+	% pre and post zeros
 	S = sin2array(S, cal.StimRamp, iodev.Fs);
-	% insert delay
-	S = insert_delay(S, cal.StimDelay, iodev.Fs);
+	% insert delay, add zeros to pad end
+	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
+								syn_null(PostDuration, iodev.Fs, 1)];
 	% save in Satt
 	Satt = S;
 	% plot the stimuli - set R stim to zero
@@ -306,7 +311,6 @@ if cal.Side == 1 || cal.Side == 3
 	Rstim = zerostim;
 	refreshdata(H.Lstim, 'caller');
 	refreshdata(H.Rstim, 'caller');
-
 	%-------------------------------------------------------
 	% set the L attenuator value.
 	%-------------------------------------------------------
@@ -316,19 +320,20 @@ if cal.Side == 1 || cal.Side == 3
 	Satt(2, :) = handles.attfunction(S(2, :), MAX_ATTEN);
 	update_ui_str(handles.LAttenText, Latten);
 	update_ui_str(handles.RAttenText, MAX_ATTEN);
-
 	pause(0.001*cal.ISI);
-
 	%-------------------------------------------------------
 	% now, collect the data for frequency FREQ, LEFT channel
 	%-------------------------------------------------------
 	for rep = 1:cal.Nreps
 		% update the reps display value
 		update_ui_str(handles.RepNumText, sprintf('%d L', rep));
-
 		% play the sound;
-		[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
-
+		if handles.DAQSESSION
+			[resp, indx] = handles.iofunction(iodev, Satt, ...
+													handles.cal.SweepDuration);
+		else
+			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+		end
 		% filter the data if asked
 		if handles.cal.InputFilter
 			tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -339,7 +344,6 @@ if cal.Side == 1 || cal.Side == 3
 			end
 			clear tmp
 		end
-
 		% plot the response and FFT
 		Lacq = downsample(resp{L}, handles.cal.deciFactor);
 		refreshdata(H.Lacq, 'caller');
@@ -355,7 +359,7 @@ if cal.Side == 1 || cal.Side == 3
 		end
 		drawnow
 		% draw spectrogram
-		axes(handles.Lspecgram);
+		axes(handles.Lspecgram); %#ok<*LAXES>
 		myspectrogram(resp{L}, iodev.Fs, ...
 								[10 5], @hamming, handles.SpectrumWindow, ...
 								[-100 -1], false, 'default', false, 'per');
@@ -365,7 +369,6 @@ if cal.Side == 1 || cal.Side == 3
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');			
 		end
-
 		% save raw data
 		if handles.cal.SaveRawData
 			fp = fopen(rawfile, 'a');
@@ -376,7 +379,6 @@ if cal.Side == 1 || cal.Side == 3
 			end
 			fclose(fp);
 		end
-
 		% Pause for ISI
 		pause(0.001*cal.ISI);
 
@@ -387,7 +389,6 @@ if cal.Side == 1 || cal.Side == 3
 			break
 		end
 	end
-
 	%---------------------------------------------------------------------
 	% now, collect the background data for frequency FREQ, LEFT channel
 	%---------------------------------------------------------------------
@@ -400,7 +401,12 @@ if cal.Side == 1 || cal.Side == 3
 			% update the reps display value
 			update_ui_str(handles.RepNumText, sprintf('%d L (bg)', rep));
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Nullstim, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -433,7 +439,6 @@ if cal.Side == 1 || cal.Side == 3
 				disp('abortion detected')
 				break
 			end
-
 		end		
 	end
 end		% END OF L CHANNEL	
@@ -444,7 +449,7 @@ end		% END OF L CHANNEL
 if read_ui_val(handles.AbortCtrl) == 1
 	% if so, stop
 	disp('abortion detected')
-	break
+	return
 end
 %------------------------------------
 % pause for ISI
@@ -462,7 +467,6 @@ if cal.Side == 2 || cal.Side == 3
 	else
 		inChan = handles.cal.InputChannel;
 	end
-
 	%-------------------------------------------------------------
 	% synthesize the R sine wave;
 	%-------------------------------------------------------------
@@ -471,13 +475,13 @@ if cal.Side == 2 || cal.Side == 3
 	t = 0:(1/iodev.Fs):0.001*cal.StimDuration;
 	csig = chirp(t, Freqs(1), 0.001*cal.StimDuration, Freqs(end));
 	S = [0*csig; csig];
-		
 	% scale the sound
 	S = cal.DAscale * S;
 	% apply the sin^2 amplitude envelope to the stimulus
 	S = sin2array(S, cal.StimRamp, iodev.Fs);
-	% insert delay
-	S = insert_delay(S, cal.StimDelay, iodev.Fs);
+	% insert delay, add zeros to pad end
+	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
+								syn_null(PostDuration, iodev.Fs, 1)];
 	% save in Satt
 	Satt = S;
 	% plot the stimulus arrays
@@ -485,7 +489,6 @@ if cal.Side == 2 || cal.Side == 3
 	Rstim = downsample(S(2, :), handles.cal.deciFactor);
 	refreshdata(H.Lstim, 'caller');
 	refreshdata(H.Rstim, 'caller');
-
 	% set R attenuator value.
 	% no need to test attenuation but, 
 	% do need to set the attenuators
@@ -494,15 +497,17 @@ if cal.Side == 2 || cal.Side == 3
 	update_ui_str(handles.LAttenText, MAX_ATTEN);
 	update_ui_str(handles.RAttenText, Ratten);
 	pause(0.001*cal.ISI);
-
 	% now, collect the data for frequency FREQ, RIGHT headphone
 	for rep = 1:cal.Nreps
 		% update the reps display value
 		update_ui_str(handles.RepNumText, sprintf('%d R', rep));
-
 		% play the sound;
-		[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
-
+		if handles.DAQSESSION
+			[resp, indx] = handles.iofunction(iodev, Satt, ...
+													handles.cal.SweepDuration);
+		else
+			[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+		end
 		% filter the data if asked
 		if handles.cal.InputFilter
 			if handles.cal.MeasureLeak
@@ -513,12 +518,11 @@ if cal.Side == 2 || cal.Side == 3
 			resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 			clear tmp
 		end
-
 		% plot the response
 		if handles.cal.MeasureLeak
 			Lacq = downsample(resp{L}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
-			[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
+			[~, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
 												length(resp{L}(start_bin:end_bin)));
 			refreshdata(H.Lfft, 'caller');
 		end
@@ -529,13 +533,11 @@ if cal.Side == 2 || cal.Side == 3
 											length(resp{R}(start_bin:end_bin)));
 		refreshdata(H.Rfft, 'caller');
 		drawnow
-
 		% draw spectrogram
 		axes(handles.Rspecgram);
 		myspectrogram(resp{R}, iodev.Fs, ...
 								[10 5], @hamming, handles.SpectrumWindow, ...
 								[-100 -1], false, 'default', false, 'per');
-
 		% save raw data
 		if handles.cal.SaveRawData
 			fp = fopen(rawfile, 'a');
@@ -546,7 +548,6 @@ if cal.Side == 2 || cal.Side == 3
 			end
 			fclose(fp);
 		end
-
 		% pause for ISI (convert to seconds)
 		pause(0.001*cal.ISI);
 		% check for abort button press
@@ -555,7 +556,6 @@ if cal.Side == 2 || cal.Side == 3
 			disp('abortion detected')
 			break
 		end
-
 	end
 
 	%---------------------------------------------------------------------
@@ -566,12 +566,16 @@ if cal.Side == 2 || cal.Side == 3
 		Rstim = Nullstim_downsample;
 		refreshdata(H.Lstim, 'caller');
 		refreshdata(H.Rstim, 'caller');
-
 		for rep = 1:cal.Nreps
 			% update the reps display value
 			update_ui_str(handles.RepNumText, sprintf('%d R (bg)', rep));
 			% play the sound;
-			[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+			if handles.DAQSESSION
+				[resp, indx] = handles.iofunction(iodev, Nullstim, ...
+														handles.cal.SweepDuration);
+			else
+				[resp, indx] = handles.iofunction(iodev, Nullstim, SweepPoints);
+			end
 			% filter the data if asked
 			if handles.cal.InputFilter
 				tmp = sin2array(resp{L}, 1, iodev.Fs);
@@ -591,13 +595,12 @@ if cal.Side == 2 || cal.Side == 3
 										iodev.Fs, length(resp{R}(start_bin:end_bin)));
 			plot(tmpf, tmpm);
 			title('Right Background')
-
+			% save raw data
 			if handles.cal.SaveRawData
 				fp = fopen(rawfile, 'a');
 				writeCell(fp, resp); 				
 				fclose(fp);
 			end
-
 			% Pause for ISI
 			pause(0.001*cal.ISI);
 			% check for abort button press
@@ -606,19 +609,16 @@ if cal.Side == 2 || cal.Side == 3
 				disp('abortion detected')
 				break
 			end
-
 		end
 	end
 % END OF R CAL
 end
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Exit gracefully (close TDT objects, etc)
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 NICal_NIexit;
-
 disp('Finished.')
 
 
