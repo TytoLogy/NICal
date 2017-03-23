@@ -14,6 +14,7 @@
 %
 % Revisions:
 %	1 Feb 2017 (SJS): updating for use with Session DAQ interface
+%	23 Mar 2017 (SJS): touch up
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -83,7 +84,11 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 [handles.cal.fcoeffb, handles.cal.fcoeffa] = ...
 					butter(handles.cal.forder, handles.cal.fband, 'bandpass');
 
-				
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% Setup raw data output
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 if handles.cal.SaveRawData
 	[pathstr, fname, fext] = fileparts(handles.cal.calfile);
 	rawfile = fullfile(pathstr, [fname '.dat']);

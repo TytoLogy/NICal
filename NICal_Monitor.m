@@ -15,6 +15,7 @@
 %
 % Revisions:
 %	7 Feb 2017 (SJS): updated for DAQ Session interface
+%	23 Mar 2017 (SJS): fixing ignored handles.cal.InputFilter
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------

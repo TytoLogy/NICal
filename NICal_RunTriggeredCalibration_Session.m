@@ -15,6 +15,7 @@
 % Created:	7 February, 2017 NICal_RunTriggeredCalibration
 %
 % Revisions:
+%	23 Mar 2017 (SJS): fixing ignored handles.cal.InputFilter
 %--------------------------------------------------------------------------
 % To do:  
 % 	-	some way to avoid global variables?
@@ -30,7 +31,7 @@ NICal_Constants;
 % global vars for access by DAQ callback function - needed to plot
 %-----------------------------------------------------------------------
 global	VtoPa Gain fcoeffa fcoeffb deciFactor start_bin end_bin ...
-			tvec_acq fvec Lacq Racq Lfft Rfft H nfft side
+			filtEnable tvec_acq fvec Lacq Racq Lfft Rfft H nfft side
 % assign plot decimation factor to deciFactor
 deciFactor = handles.cal.deciFactor;
 % channel being calibrated: 1 = L, 2 = R, 3 = Both
@@ -134,6 +135,9 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 					butter(handles.cal.forder, handles.cal.fband, 'bandpass');
 fcoeffb = handles.cal.fcoeffb;
 fcoeffa = handles.cal.fcoeffa;
+% assign filter/no filter to filtEnable
+filtEnable = handles.cal.InputFilter;
+
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % write file header (FIGURE THIS OUT!!!!!!!!)
