@@ -35,6 +35,7 @@ function triggered_sessioncallback(src, event, datafile)
 % Created: 7 February, 2017 (SJS) from monitor_sessioncallback
 %
 % Revisions:
+%	23 Mar 2017 (SJS): fixing ignored handles.cal.InputFilter
 %------------------------------------------------------------------------
 
 fprintf('Triggered at %f\n', rem(event.TriggerTime, 1));
@@ -43,7 +44,7 @@ fprintf('Triggered at %f\n', rem(event.TriggerTime, 1));
 % global variables
 %---------------------------------------------------------------
  global VtoPa Gain fcoeffa fcoeffb deciFactor start_bin end_bin ...
-			tvec_acq fvec Lacq Racq Lfft Rfft H nfft side %#ok<NUSED>
+			filtEnable tvec_acq fvec Lacq Racq Lfft Rfft H nfft side %#ok<NUSED>
 
 %---------------------------------------------------------------
 % read data from ai object and write to file
@@ -67,7 +68,11 @@ fclose(fp);
 %---------------------------------------------------------------
 if any(side == [1 3])
 	% zero pad and filter data
-	tmp = buffer_filter(tmpdata(:, 1)', 5, src.Rate, fcoeffb, fcoeffa);
+	if filtEnable
+		tmp = buffer_filter(tmpdata(:, 1)', 5, src.Rate, fcoeffb, fcoeffa);
+	else
+		tmp = tmpdata(:, 1)';
+	end
 	% downsample acquired data for plotting
 	Lacq = downsample(tmp, deciFactor);
 	% find peak value (mV)
@@ -82,7 +87,11 @@ if any(side == [1 3])
 end
 if any(side == [2 3])
 	% zero pad and filter data
-	tmp = buffer_filter(tmpdata(:, 2)', 5, src.Rate, fcoeffb, fcoeffa);
+	if filtEnable
+		tmp = buffer_filter(tmpdata(:, 2)', 5, src.Rate, fcoeffb, fcoeffa);
+	else
+		tmp = tmpdata(:, 2)';
+	end
 	% downsample acquired data for plotting
 	Racq = downsample(tmp, deciFactor);
 	% find peak value (mV)

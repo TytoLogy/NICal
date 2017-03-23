@@ -15,6 +15,7 @@
 %
 % Revisions:
 %	7 Feb 2017 (SJS): updated for DAQ Session interface
+%	23 Mar 2017 (SJS): fixing ignored handles.cal.InputFilter
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -25,7 +26,7 @@
 % NICal
 NICal_Constants;
 % global (needed for use by callback)
-global VtoPa Gain fcoeffa fcoeffb ...
+global VtoPa Gain fcoeffa fcoeffb filtEnable ...
 		tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints
 
 %------------------------------------------------------------------------
@@ -274,9 +275,10 @@ if currentState == 1
 	% passband definition
 	fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 	% filter coefficients using a butterworth bandpass filter
-	[fcoeffb,fcoeffa] = ...
+	[fcoeffb, fcoeffa] = ...
 						butter(handles.cal.forder, fband, 'bandpass');
-	
+	% assign filter/no filter to filtEnable
+	filtEnable = handles.cal.InputFilter;
 	%------------------------------------------------------------------------
 	%------------------------------------------------------------------------
 	% START ACQUIRING

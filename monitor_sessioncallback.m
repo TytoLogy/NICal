@@ -16,12 +16,13 @@ function monitor_sessioncallback(obj, event)
 % Created: 7 February, 2017 (SJS) from monitor_callback
 %
 % Revisions:
+%	23 Mar 2017 (SJS): fixed filter on/off issue
 %------------------------------------------------------------------------
 
 %---------------------------------------------------------------
 % global variables
 %---------------------------------------------------------------
-global VtoPa Gain fcoeffa fcoeffb ...
+global VtoPa Gain fcoeffa fcoeffb filtEnable ...
 		tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints %#ok<NUSED>
 
 %---------------------------------------------------------------
@@ -31,8 +32,13 @@ tmpdata = event.Data;
 %---------------------------------------------------------------
 % zero pad and filter data
 %---------------------------------------------------------------
-Lacq = buffer_filter(tmpdata(:, 1)', 5, obj.Rate, fcoeffb, fcoeffa);
-Racq = buffer_filter(tmpdata(:, 2)', 5, obj.Rate, fcoeffb, fcoeffa);
+if filtEnable
+	Lacq = buffer_filter(tmpdata(:, 1)', 5, obj.Rate, fcoeffb, fcoeffa);
+	Racq = buffer_filter(tmpdata(:, 2)', 5, obj.Rate, fcoeffb, fcoeffa);
+else
+	Lacq = tmpdata(:, 1)';
+	Racq = tmpdata(:, 2)';
+end
 %---------------------------------------------------------------
 % find peak value
 %---------------------------------------------------------------
