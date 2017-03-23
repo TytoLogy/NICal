@@ -17,18 +17,26 @@ function monitor_callback(obj, event)
 %
 % Revisions:
 %	13 Sep 2012 (SJS): fixed incorrect Rfft calculation from daqdbfft
+%	23 Mar 2017 (SJS): fixed filter on/off issue
 %------------------------------------------------------------------------
 
 % global variables
-global VtoPa Gain fcoeffa fcoeffb ...
+global VtoPa Gain fcoeffa fcoeffb filtEnable ...
 		tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints
 
 % read data from ai object
 tmpdata = getdata(obj, SweepPoints);
 % Lacq = filtfilt(fcoeffb, fcoeffa, sin2array(tmpdata(:, 1)', 5, obj.SampleRate));
 % Racq = filtfilt(fcoeffb, fcoeffa, sin2array(tmpdata(:, 2)', 5, obj.SampleRate));
-Lacq = buffer_filter(tmpdata(:, 1)', 5, obj.SampleRate, fcoeffb, fcoeffa);
-Racq = buffer_filter(tmpdata(:, 2)', 5, obj.SampleRate, fcoeffb, fcoeffa);
+
+if filtEnable
+	Lacq = buffer_filter(tmpdata(:, 1)', 5, obj.SampleRate, fcoeffb, fcoeffa);
+	Racq = buffer_filter(tmpdata(:, 2)', 5, obj.SampleRate, fcoeffb, fcoeffa);
+else
+	Lacq = tmpdata(:, 1)';
+	Racq = tmpdata(:, 2)';
+end
+
 % find peak value
 maxval(1) = max(abs(Lacq));
 maxval(2) = max(abs(Racq));
