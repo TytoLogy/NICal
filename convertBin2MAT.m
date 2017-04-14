@@ -40,8 +40,8 @@ function varargout = convertBin2MAT(varargin)
 %------------------------------------------------------------------------
 % set basepath and basename to empty and
 % use default calibration mode ('tones')
-inputfile = ''; %#ok<NASGU>
-outputfile = ''; %#ok<NASGU>
+inputfile = ''; 
+outputfile = ''; 
 matfile = ''; %#ok<NASGU>
 
 %------------------------------------------------------------------------
@@ -57,12 +57,12 @@ while index <= nargin
 	switch lower(varargin{index})
 		case 'inputfile'
 			% set inputfile
-			inputfile = varargin{index+1}; %#ok<NASGU>
+			inputfile = varargin{index+1}; 
 			% increment index by 2 places
 			index = index + 2;
 			
 		case 'outputfile'
-			outputfile = varargin{index+1}; %#ok<NASGU>
+			outputfile = varargin{index+1}; 
 			% increment index by 2 places
 			index = index + 2;
 		
@@ -70,17 +70,6 @@ while index <= nargin
 			error('%s: invalid option %s', mfilename, varargin{index});
 	end	
 end
-
-
-%------------------------------------------------------------------------
-%------------------------------------------------------------------------
-% Variables and Constants Declarations
-%------------------------------------------------------------------------
-%------------------------------------------------------------------------
-% set basepath and basename to empty and
-% use default calibration mode ('tones')
-inputfile = 'optotest_1.bin';
-outputfile = 'optotest_1_converted.mat';
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -100,7 +89,7 @@ if isempty(inputfile)
 	DefaultPath = pwd;
 	
 	%----------------------------------
-	% open panel to get .daq file name
+	% open panel to get .bin file name
 	%----------------------------------
 	[inputfile, basepath] = uigetfile(...
 			 {'*.bin', 'BIN output files (*.bin)'}, ...
