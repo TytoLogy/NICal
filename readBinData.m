@@ -102,11 +102,31 @@ fclose(fp);
 %------------------------------------------------------------------------
 D.cal = cal;
 % check that last sweep is not empty
-if (isempty(tmp{index, 1}) && isempty(tmp{index, 2}))
-	% if so, move back 1
-	index = index - 1;
-	if index < 1
-		error('%s: odd, or empty data file %s', mfilename, inputfile);
+% allocate temporary storage
+if cal.Side == 3
+	if (isempty(tmp{index, 1}) && isempty(tmp{index, 2}))
+		% if so, move back 1
+		index = index - 1;
+		if index < 1
+			error('%s: odd, or empty data file %s', mfilename, inputfile);
+		end
+	end
+elseif cal.Side == 1
+	if isempty(tmp{index, 1})
+		% if so, move back 1
+		index = index - 1;
+		if index < 1
+			error('%s: odd, or empty data file %s', mfilename, inputfile);
+		end
+	end
+elseif cal.Side == 2
+	if isempty(tmp{index, 2})
+		% if so, move back 1
+		index = index - 1;
+		if index < 1
+			error('%s: odd, or empty data file %s', mfilename, inputfile);
+		end
 	end
 end
+% store only valid data
 D.data = tmp(1:index, :);

@@ -181,7 +181,7 @@ end
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 D = readBinData(inputfile);
-nSweeps = length(D.data);
+[nSweeps, nChannels] = size(D.data);
 % get sample rate from the cal struct
 Fs = D.cal.Fs;
 %------------------------------------------------------------------------
@@ -223,7 +223,7 @@ if strcmpi(calmode, 'tones')
 			AUTOFREQ = 0;
 			fstr = '';
 			fstr = query_uservalue('Enter frequencies, separated by spaces', '');
-			calfreqs = str2num(fstr);
+			calfreqs = str2num(fstr); %#ok<ST2NM>
 			clear fstr;			
 		end
 	else
@@ -246,8 +246,11 @@ end
 % loop through daqfiles
 %--------------------------------
 for n = 1:nSweeps
-	tmpdata = [D.data{n, 1} D.data{n, 2}];
-	
+	if nChannels == 2
+		tmpdata = [D.data{n, 1} D.data{n, 2}];
+	else
+		tmpdata = [D.data{n, 1} D.data{n, 1}];
+	end
 	% ASSUME (!!) that stimulus data are collected on channel 1 (NI 0)
 	% and mic data are on channel 2 (NI AI0)
 	stimdata = tmpdata(:, S);
@@ -284,7 +287,7 @@ for n = 1:nSweeps
 % 			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
 			t2 = rms_windowsize_ms * 0.001 * rmw_windows;
 			% plot!
-
+			figure(n)
 			subplot(211)
 			plot(t1, micdata_reduced);
 			grid
@@ -294,6 +297,7 @@ for n = 1:nSweeps
 			ylabel('dB SPL')
 			xlabel('Time (seconds)');
 			grid
+			title(sprintf('Peak dB SPL = %.2f', max(dbvals{n})))
 
 		%--------------------------------
 		% TONES
