@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 06-Feb-2017 15:51:45
+% Last Modified by GUIDE v2.5 15-Sep-2017 12:01:49
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -245,6 +245,13 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	set(handles.Menu_ContinuousRecord, 'Checked', 'off');
 	handles.ContinuousRecord = 0;
 	guidata(hObject, handles);
+	%--------------------------------------------------
+	% 	SaveSweep settings
+	%--------------------------------------------------	
+	set(handles.Menu_SaveSweep, 'Checked', 'off');
+	handles.SaveSweep = 0;
+	handles.SweepFile = 'D:\Calibrate\CurrentSweep.mat';
+	guidata(hObject, handles);	
 	%----------------------------------------------------------
 	% Update handles structure
 	%----------------------------------------------------------
@@ -1183,9 +1190,11 @@ function Menu_CalibrateMicrophone_Callback(hObject, eventdata, handles)
 
 %--------------------------------------------------------------------------
 function Menu_ProcessTriggeredData_Callback(hObject, eventdata, handles)
-	disp('This will process .dat data collected during triggered acquisition')
+	disp(['This does not process .dat data collected ' ...
+			'during triggered acquisition'])
 %--------------------------------------------------------------------------
-
+function Menu_PlotSweepData_Callback(hObject, eventdata, handles)
+	PlotSweepData(handles);
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 
@@ -1387,6 +1396,17 @@ function Menu_ContinuousRecord_Callback(hObject, eventdata, handles)
 	end
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
+function Menu_SaveSweep_Callback(hObject, eventdata, handles)
+	newVal = get(handles.Menu_SaveSweep, 'Checked');
+	if strcmpi(newVal, 'off')
+		set(handles.Menu_SaveSweep, 'Checked', 'on');
+		handles.SaveSweep = 1;
+	else
+		set(handles.Menu_SaveSweep, 'Checked', 'off');
+		handles.SaveSweep = 0;
+	end
+	guidata(hObject, handles);
+%--------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
@@ -1486,6 +1506,7 @@ function StimDelayCtrl_CreateFcn(hObject, eventdata, handles)
 function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 	bgcolorset(hObject);
 %-------------------------------------------------------------------------
+
 
 
 

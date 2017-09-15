@@ -16,6 +16,7 @@
 % Revisions:
 %	7 Feb 2017 (SJS): updated for DAQ Session interface
 %	23 Mar 2017 (SJS): fixing ignored handles.cal.InputFilter
+%	15 Sep 2017 (SJS): adding option to store current sweep
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -27,7 +28,8 @@
 NICal_Constants;
 % global (needed for use by callback)
 global VtoPa Gain fcoeffa fcoeffb filtEnable ...
-		tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints
+		tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints ...
+		SaveSweep SweepFile
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -35,6 +37,14 @@ global VtoPa Gain fcoeffa fcoeffb filtEnable ...
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 currentState = read_ui_val(handles.MonitorCtrl);
+
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% Need to do different things depending on state of button
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+SaveSweep = handles.SaveSweep;
+SweepFile = handles.SweepFile;
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
