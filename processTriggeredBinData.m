@@ -303,7 +303,7 @@ for n = 1:nSweeps
 		% TONES
 		%--------------------------------
 		case 'tones'		
-			[mags(n), phis(n), calfreqs(n)] = ...
+			[mags(n), phase(n), calfreqs(n)] = ...
 				processTones(micdata, Fs, calfreqs(n), FreqDetectWidth); %#ok<AGROW>
 			
 		%--------------------------------
@@ -324,27 +324,27 @@ switch lower(calmode)
 		ndatums = length(calfreqs);
 		out.freqs = calfreqs;
 		out.mags = mags;
-		out.phis = phis;
+		out.phase = phase;
 		out.dbvals = dbspl(VtoPa * rmssin * out.mags);
 
 		figure
 		subplot(211)
 		plot(dbspl(VtoPa * rmssin * out.mags), '.-')
-		set(gca, 'XTick', 1:ndatums);
-		set(gca, 'XTickLabel', '');
+% 		set(gca, 'XTick', 1:ndatums);
+% 		set(gca, 'XTickLabel', '');
 		xlim([0 ndatums+1])
 		grid
-		title(basename);
+		title(basename, 'Interpreter', 'none');
 		ylabel('dB SPL')
 
 		subplot(212)
-		plot(unwrap(out.phis), '.-')
-		set(gca, 'XTick', 1:ndatums);
-		labels = cell(ndatums, 1);
-		for n = 1:ndatums
-			labels{n} = sprintf('%.1f', 0.001*calfreqs(n));
-		end
-		set(gca, 'XTickLabel', labels);
+		plot(unwrap(out.phase), '.-')
+% 		set(gca, 'XTick', 1:ndatums);
+% 		labels = cell(ndatums, 1);
+% 		for n = 1:ndatums
+% 			labels{n} = sprintf('%.1f', 0.001*calfreqs(n));
+% 		end
+% 		set(gca, 'XTickLabel', labels);
 		xlim([0 ndatums+1])
 		grid
 		ylabel('phase (rad)');
