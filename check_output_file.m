@@ -39,6 +39,8 @@ if exist(handles.cal.calfile, 'file')
 		else
 			calfile = fullfile(newpath, newname);
 		end
+	elseif strcmpi(resp, 'Yes')
+		calfile = handles.cal.calfile;
 	end
 else
 	calfile = handles.cal.calfile;
