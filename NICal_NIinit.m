@@ -44,13 +44,14 @@ function [handles, init_status] = NICal_NIinit(handles)
 %--------------------------------------------------------------------------
 	fprintf('%s: starting NI hardware...\n', mfilename);
 	if handles.DAQSESSION == 0
+		fprintf('%s: using legacy interface\n', mfilename);
 		[handles, init_status] = legacy_init(handles);
 	else
+		fprintf('%s: using session interface\n', mfilename);
 		[handles, init_status] = session_init(handles);
 	end
 	fprintf('done\n');
 end
-
 
 function [handles, init_status] = legacy_init(handles)
 	%-----------------------------------------------------------------------

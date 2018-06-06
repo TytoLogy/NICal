@@ -25,7 +25,7 @@ function calfile = check_output_file(handles)
 if exist(handles.cal.calfile, 'file')
 	% if it exists, ask if necessary to overwrite
 	resp = uiyesno('title', 'Save File', 'string', ...
-							'File exists! Overwrite?', 'default', 'No');
+							'Overwrite?', 'default', 'No');
 	% if no, get a new file
 	if strcmpi(resp, 'No')
 		[pathstr, fname, fext] = fileparts(handles.cal.calfile);
@@ -39,6 +39,8 @@ if exist(handles.cal.calfile, 'file')
 		else
 			calfile = fullfile(newpath, newname);
 		end
+	elseif strcmpi(resp, 'Yes')
+		calfile = handles.cal.calfile;
 	end
 else
 	calfile = handles.cal.calfile;

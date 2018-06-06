@@ -101,6 +101,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 		warning('Using legacy interface');
 		handles.DAQSESSION = 0;
 	else
+		fprintf('Using Session interface');
 		handles.DAQSESSION = 1;
 	end
 	guidata(hObject, handles);
