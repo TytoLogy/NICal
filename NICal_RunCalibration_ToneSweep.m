@@ -136,6 +136,8 @@ else
 end
 % create null stimulus
 zerostim = syn_null(handles.cal.StimDuration, handles.iodev.Fs, 0);
+% save length of raw stimulus (without delay)
+outpts = length(zerostim);
 % insert stim delay
 zerostim = insert_delay(zerostim, handles.cal.StimDelay, handles.iodev.Fs);
 % append post-stim
@@ -150,6 +152,7 @@ tvec_stim = 1000*dt*(0:(length(zerostim)-1));
 zeroacq = syn_null(handles.cal.SweepDuration, handles.iodev.Fs, 0);
 zeroacq = downsample(zeroacq, handles.cal.deciFactor);
 acqpts = length(zeroacq);
+
 % time vector for stimulus plots
 tvec_acq = 1000*dt*(0:(acqpts-1));
 % compute # of points per sweep

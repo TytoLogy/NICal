@@ -107,17 +107,19 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	guidata(hObject, handles);
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	% load the configuration information, store in config structure
-	% The HPSearch_Configuration.m function file will usually live in the
-	% <tytology path>\TytoSettings\<username\ directory
+	% load the configuration information and store as config structure
+	% The HPSearch_Configuration.m function file will usually live in:
+	%	<tytology base path>\<Toolboxes>TytoSettings\<username>\ 
+	% directory
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	% define user config path
+	% define user configuration path
 	userconfigpath = ['C:\TytoLogy\Toolboxes\TytoLogySettings\' ...
 								getenv('USERNAME') '\NICal\'];
 	% load the configuration information, store in config structure
 	if isempty(which('NICal_Configuration'))
 		if ~exist(userconfigpath, 'dir')
+			% if config isn't found, see if NICal should create it
 			qstr = sprintf('User config directory %s does not exist!', ...
 										userconfigpath);
 			uresp = questdlg(	{qstr, 'Shall I create it?'}, ...
@@ -126,11 +128,14 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 									'Yes' );
 			switch uresp
 				case 'Yes'
+					% create directory and create config from the program
+					% default configuration
 					mkdir(userconfigpath);
 					addpath(userconfigpath);
 					disp('Loading Defaults...');
 					config = NICal_DefaultConfiguration;
 				case 'No'
+					% just load default
 					disp('Loading Defaults...');
 					config = NICal_DefaultConfiguration;
 			end
@@ -1205,7 +1210,7 @@ function Menu_LoadSettings_Callback(hObject, eventdata, handles)
 													handles.userconfigpath );
 	if sfilename ~= 0
 		cal = [];
-		load(fullfile(sfilepath, sfilename));
+		load(fullfile(sfilepath, sfilename), 'cal');
 		handles.cal = cal;
 		guidata(hObject, handles);
 	end
