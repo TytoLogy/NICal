@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 06-Feb-2017 15:51:45
+% Last Modified by GUIDE v2.5 24-Aug-2018 15:31:20
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -246,6 +246,12 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	handles.ToneSweep = 0;
 	guidata(hObject, handles);
 	%--------------------------------------------------
+	% Click settings
+	%--------------------------------------------------	
+	set(handles.Menu_Click, 'Checked', 'off');
+	handles.Click = 0;
+	guidata(hObject, handles);
+	%--------------------------------------------------
 	% 	ContinuousRecord settings
 	%--------------------------------------------------	
 	set(handles.Menu_ContinuousRecord, 'Checked', 'off');
@@ -295,6 +301,8 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles) %#ok<*DEFNU>
 				NICal_RunCalibration_ToneStack
 			elseif handles.ToneSweep
 				NICal_RunCalibration_ToneSweep
+			elseif handles.Click
+				NICal_RunCalibration_Click
 			elseif handles.ContinuousRecord
 				NICal_RunCalibration_ContinuousRecord
 			else
@@ -1378,6 +1386,21 @@ function Menu_ToneSweep_Callback(hObject, eventdata, handles)
 	end
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
+function Menu_Click_Callback(hObject, eventdata, handles)
+	newVal = get(handles.Menu_Click, 'Checked');
+	if strcmpi(newVal, 'off')
+		set(handles.Menu_Click, 'Checked', 'on');
+		handles.Click = 1;
+		set(handles.Menu_ToneSweep, 'Checked', 'off');
+		handles.ToneSweep = 0;
+		set(handles.Menu_ToneStack, 'Checked', 'off');
+		handles.ToneStack = 0;
+	else
+		set(handles.Menu_Click, 'Checked', 'off');
+		handles.Click = 0;
+	end
+	guidata(hObject, handles);	
+%--------------------------------------------------------------------------
 function Menu_ContinuousRecord_Callback(hObject, eventdata, handles)
 	newVal = get(handles.Menu_ContinuousRecord, 'Checked');
 	if strcmpi(newVal, 'off')
@@ -1492,6 +1515,3 @@ function StimDelayCtrl_CreateFcn(hObject, eventdata, handles)
 function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 	bgcolorset(hObject);
 %-------------------------------------------------------------------------
-
-
-
