@@ -1235,7 +1235,8 @@ function Menu_SaveSettings_Callback(hObject, eventdata, handles)
 													handles.userconfigpath );
 	if sfilename ~= 0
 		cal = handles.cal; %#ok<NASGU>
-		save(fullfile(sfilepath, sfilename), '-MAT', 'cal');
+		[~, sfilename] = fileparts(sfilename);
+		save(fullfile(sfilepath, [sfilename '_settings.mat']), '-MAT', 'cal');
 	end
 %--------------------------------------------------------------------------
 

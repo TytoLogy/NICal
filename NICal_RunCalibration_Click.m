@@ -318,9 +318,6 @@ if cal.Side == 1 || cal.Side == 3
 	S = [csig; 0*csig];
 	% scale the sound
 	S = cal.DAscale * S;
-	% apply the sin^2 amplitude envelope to the stimulus before adding 
-	% pre and post zeros
-	S = sin2array(S, cal.StimRamp, iodev.Fs);
 	% insert delay, add zeros to pad end
 	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
 								syn_null(PostDuration, iodev.Fs, 1)];
@@ -497,8 +494,6 @@ if cal.Side == 2 || cal.Side == 3
 	S = [0*csig; csig];
 	% scale the sound
 	S = cal.DAscale * S;
-	% apply the sin^2 amplitude envelope to the stimulus
-	S = sin2array(S, cal.StimRamp, iodev.Fs);
 	% insert delay, add zeros to pad end
 	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
 								syn_null(PostDuration, iodev.Fs, 1)];
