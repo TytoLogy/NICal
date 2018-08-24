@@ -233,12 +233,17 @@ set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
 %-------------------------------------------------------
 % plot null data, save handles for frequency-domain plots
 %-------------------------------------------------------
-H.Lfft = plot(handles.Lfftplot, fvec, Lfft);
-set(H.Lfft, 'XDataSource', 'fvec', 'YDataSource', 'Lfft');
+% H.Lfft = plot(handles.Lfftplot, fvec, Lfft);
+% set(H.Lfft, 'XDataSource', 'fvec', 'YDataSource', 'Lfft');
+% xlabel(handles.Lfftplot, 'Frequency (kHz)')
+% ylabel(handles.Lfftplot, 'dBV')
+% H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
+% set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
+% xlabel(handles.Rfftplot, 'Frequency (kHz)');
+plot(handles.Lfftplot, fvec, Lfft);
 xlabel(handles.Lfftplot, 'Frequency (kHz)')
 ylabel(handles.Lfftplot, 'dBV')
-H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
-set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
+plot(handles.Rfftplot, fvec, Rfft);
 xlabel(handles.Rfftplot, 'Frequency (kHz)');
 
 %-----------------------------------------------------------------------
@@ -366,13 +371,15 @@ if cal.Side == 1 || cal.Side == 3
 		refreshdata(H.Lacq, 'caller');
 		[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), ...
 										iodev.Fs, length(resp{L}(start_bin:end_bin)));
-		refreshdata(H.Lfft, 'caller');
+% 		refreshdata(H.Lfft, 'caller');
+		plot(handles.Lfftplot, fvec, Lfft);
 		if handles.cal.MeasureLeak
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Racq, 'caller');
 			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), ...
 											iodev.Fs, length(resp{R}(start_bin:end_bin)));
-			refreshdata(H.Rfft, 'caller');
+% 			refreshdata(H.Rfft, 'caller');
+			plot(handles.Rfftplot, fvec, Rfft);
 		end
 		drawnow
 		% draw spectrogram

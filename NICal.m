@@ -693,7 +693,12 @@ function CheckCalCtrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 function StimDurationCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
-	if ~between(tmp, 1, 1000)
+	if handles.Click
+		if ~between(tmp, 0.001, 1)
+			warndlg('Click must be between 0.001 & 1 ms', 'Invalid StimDuration');
+			update_ui_str(hObject, handles.cal.StimDuration);
+		end
+	elseif ~between(tmp, 1, 1000)
 		warndlg('Stimuli must be between 1 & 1000 ms', 'Invalid StimDuration');
 		update_ui_str(hObject, handles.cal.StimDuration);
 	else
@@ -1236,7 +1241,10 @@ function Menu_SaveSettings_Callback(hObject, eventdata, handles)
 	if sfilename ~= 0
 		cal = handles.cal; %#ok<NASGU>
 		[~, sfilename] = fileparts(sfilename);
-		save(fullfile(sfilepath, [sfilename '_settings.mat']), '-MAT', 'cal');
+		if ~contains(sfilename, '_settings')
+			sfilename = [sfilename '_settings'];
+		end
+		save(fullfile(sfilepath, [sfilename, '.mat']), '-MAT', 'cal');
 	end
 %--------------------------------------------------------------------------
 
