@@ -37,7 +37,7 @@ COMPLETE = 0;
 %---------------------------------------------
 NICal_settings;
 % max duration for click
-MAX_CLICKDUR_MS = 1;
+MAX_CLICKDUR_MS = 2;
 % save the GUI handle information
 guidata(hObject, handles);
 
@@ -144,6 +144,7 @@ if handles.cal.StimDuration > MAX_CLICKDUR_MS
 else
 	clickDur_ms = handles.cal.StimDuration;
 end
+fprintf('Click Duration = %.4f\n', clickDur_ms);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -285,7 +286,6 @@ else
 	Ratten = handles.cal.StartAtten;
 end
 
-
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -337,18 +337,23 @@ if cal.Side == 1 || cal.Side == 3
 	%-------------------------------------------------------
 	% Build stimulus output array for this frequency
 	%-------------------------------------------------------
-	% synthesize the sweep
-	% need time vector
-	%t = (1/iodev.Fs) * (0:(ms2samples(cal.StimDuration, iodev.Fs)-1));
+	% synthesize the stimulus
 	% use syn_click(duration, delay, Fs) to create click, scale using
-	% cal.DAscale
-	csig = syn_click(clickDur_ms, 0, iodev.Fs);
+	% cal.DAscale... if clickDur_ms == 0, use single sample for click
+% 	csig = syn_click(clickDur_ms, 0, iodev.Fs);
+	if clickDur_ms > 0
+		csig = syn_click(handles.cal.SweepDuration, handles.cal.StimDelay, ...
+							iodev.Fs, 'ClickDurMS', clickDur_ms);
+	else
+		csig = syn_click(handles.cal.SweepDuration, ...
+									handles.cal.StimDelay, iodev.Fs);
+	end
 	S = [csig; 0*csig];
 	% scale the sound
 	S = cal.DAscale * S;
-	% insert delay, add zeros to pad end
-	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
-								syn_null(PostDuration, iodev.Fs, 1)];
+% 	% insert delay, add zeros to pad end
+% 	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
+% 								syn_null(PostDuration, iodev.Fs, 1)];
 	% save in Satt
 	Satt = S;
 	% plot the stimuli - set R stim to zero
@@ -511,9 +516,17 @@ if cal.Side == 2 || cal.Side == 3
 	% synthesize the R sine wave;
 	%-------------------------------------------------------------
 	% synthesize 
-	% need time vector
-	%t = 0:(1/iodev.Fs):0.001*cal.StimDuration;
-	csig = syn_click(clickDur_ms, 0, iodev.Fs);
+	% synthesize the stimulus
+	% use syn_click(duration, delay, Fs) to create click, scale using
+	% cal.DAscale... if clickDur_ms == 0, use single sample for click
+% 	csig = syn_click(clickDur_ms, 0, iodev.Fs);
+	if clickDur_ms > 0
+		csig = syn_click(handles.cal.SweepDuration, handles.cal.StimDelay, ...
+							iodev.Fs, 'ClickDurMS', clickDur_ms);
+	else
+		csig = syn_click(handles.cal.SweepDuration, ...
+									handles.cal.StimDelay, iodev.Fs);
+	end
 	S = [0*csig; csig];
 	% scale the sound
 	S = cal.DAscale * S;
@@ -661,11 +674,19 @@ if exist(clickfile, 'file')
 	eq = uiyesno('title', 'CLICK file exists!', 'string', 'Overwrite?');
 	if strcmpi(eq, 'no')
 		[newfile, newpath] = uiputfile('*.mat','Save raw data to file');
-		clickfile = fullfile(newpath, newfile);
+		if newfile == 0
+			clickfile = [];
+		else
+			clickfile = fullfile(newpath, newfile);
+		end
 	end
 end
-fprintf('Writing click data to %s\n', clickfile);
-save(clickfile, '-MAT', 'C');
+if isempty(clickfile)
+	fprintf('%s: Skipping writing of data\n', mfilename);
+else
+	fprintf('Writing click data to %s\n', clickfile);
+	save(clickfile, '-MAT', 'C');
+end
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
