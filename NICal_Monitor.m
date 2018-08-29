@@ -250,9 +250,11 @@ if currentState == 1
 	set(H.Lfft, 'XDataSource', 'fvec', 'YDataSource', 'Lfft');
 	xlabel(handles.Lfftplot, 'Frequency (kHz)')
 	ylabel(handles.Lfftplot, 'dBV')
+	grid(handles.Lfftplot, 'on');
 	H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
 	set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
 	xlabel(handles.Rfftplot, 'Frequency (kHz)');
+	grid(handles.Rfftplot, 'on');
 	%-------------------------------------------------------
 	% store text handles in H
 	%-------------------------------------------------------

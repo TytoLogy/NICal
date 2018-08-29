@@ -102,7 +102,7 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 		handles.DAQSESSION = 0;
 	else
 		fprintf('Using Session interface\n');
-		handles.DAQSESSION = 1;s
+		handles.DAQSESSION = 1;
 	end
 	guidata(hObject, handles);
 	%----------------------------------------------------------
