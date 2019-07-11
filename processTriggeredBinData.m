@@ -1,6 +1,6 @@
 function varargout = processTriggeredBinData(varargin)
 %------------------------------------------------------------------------
-% dbvals = processTriggeredBinData(	'filename', <file name for .bin file>,
+% dbvals = processTriggeredBinData(	'inputfile', <file name for .bin file>,
 %												'mode', <analysis mode>,
 % 										'freqwidth' <automagic frequency detect width> )
 %------------------------------------------------------------------------
