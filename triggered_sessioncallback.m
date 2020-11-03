@@ -78,7 +78,7 @@ if any(side == [1 3])
 	% find peak value (mV)
 	maxval(1) = 1000*max(abs(tmp));
 	% compute dB and update the dB SPL value
-	dbSPLval(1) = dbspl(VtoPa * (rms(tmp) ./ Gain(1)));
+	dbSPLval(1) = dbspl(VtoPa * (rms(tmp(start_bin:end_bin)) ./ Gain(1)));
 	% update fft data
 	[~, Lfft] = daqdbfft(tmp(start_bin:end_bin), src.Rate, nfft);
 	% update display on GUI

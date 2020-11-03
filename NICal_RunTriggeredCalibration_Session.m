@@ -152,6 +152,10 @@ fclose(fp);
 % set the start and end bins for the calibration based on 
 % front panel settings
 %-----------------------------------------------------------------------
+
+% 3 Nov 2020: modifying to be more general (don't assume ramped stimuli)
+%{
+OLD CODE
 start_bin = ms2bin(handles.cal.StimDelay + handles.cal.StimRamp, ...
 							handles.iodev.Fs);
 if ~start_bin
@@ -159,6 +163,14 @@ if ~start_bin
 end
 end_bin = start_bin + ms2bin(handles.cal.StimDuration-handles.cal.StimRamp, ...
 											handles.iodev.Fs);
+%}
+% compute startbin using stimulus delay
+start_bin = ms2bin(handles.cal.StimDelay, handles.iodev.Fs);
+% if start_bin is 0 of undefined, set it to 1
+if ~start_bin
+	start_bin = 1;
+end
+end_bin = start_bin + ms2bin(handles.cal.StimDuration, handles.iodev.Fs);
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -181,22 +193,23 @@ acqpts = length(zeroacq);
 % time vector for stimulus plots
 tvec_acq = 1000*(handles.cal.deciFactor/handles.iodev.Fs) * ...
 															(0:(length(plotacq)-1));
-% % compute # of points per sweep
+% compute # of points per sweep
 % SweepPoints = ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
 % acq
 Lacq = plotacq;
 Racq = plotacq;
 % FFT
-temp = zeroacq(start_bin:end_bin);
+% temp = zeroacq(start_bin:end_bin);
+temp = randn(size(zeroacq(start_bin:end_bin)));
 nfft = length(temp);
-temp = zeros(1, nfft);
+% temp = zeros(1, nfft);
 [fvec, Lfft] = daqdbfft(temp, handles.iodev.Fs, nfft);
 Rfft = Lfft;
 % convert fvec to kHz
 fvec = 0.001 * fvec;
 clear temp
 %-------------------------------------------------------
-% plot null data, save handles for time-domain plots
+% plot null sweep data, save handles for time-domain plots
 %-------------------------------------------------------
 % stimulus (null)
 H.Lstim = plot(handles.Lstimplot, 0);
@@ -210,7 +223,7 @@ H.Racq = plot(handles.Rmicplot, tvec_acq, Racq, 'r');
 set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
 xlabel(handles.Rmicplot, 'Time (ms)')
 %-------------------------------------------------------
-% plot null data, save handles for frequency-domain plots
+% plot null fft data, save handles for frequency-domain plots
 %-------------------------------------------------------
 H.Lfft = plot(handles.Lfftplot, fvec, Lfft);
 set(H.Lfft, 'XDataSource', 'fvec', 'YDataSource', 'Lfft');
