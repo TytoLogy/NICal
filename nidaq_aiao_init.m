@@ -157,9 +157,8 @@ elseif strcmpi(iface, 'NI-SESSION')
 		NI.chI(2) = addAnalogInputChannel(NI.S, Dnum, 1, 'Voltage');
 		fprintf('...done\n');
 	catch errEvent
-		fprintf('\nProblem while adding ai channels to NIDAQ device!\n\n')
 		disp(errEvent)
-		return
+		error('\n%s: Problem while adding ai channels to NIDAQ device!\n\n', mfilename)
 	end
 	%---------------------------------------------------------------------
 	% CONFIGURE ANALOG OUTPUT SUBSYSTEM
@@ -170,9 +169,8 @@ elseif strcmpi(iface, 'NI-SESSION')
 		NI.chO(2) = addAnalogOutputChannel(NI.S, Dnum, 1, 'Voltage');
 		fprintf('...done\n');
 	catch errEvent
-		fprintf('\nProblem while adding ao channels to NIDAQ devicet!\n\n')
 		disp(errEvent)
-		return
+		error('\n%s: Problem while adding ao channels to NIDAQ devicet!\n\n', mfilename)
 	end
 	% set outputs to 0
 	outputSingleScan(NI.S, [0 0]);

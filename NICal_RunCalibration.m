@@ -96,6 +96,13 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 if handles.cal.SaveRawData
 	[pathstr, fname, fext] = fileparts(handles.cal.calfile);
 	rawfile = fullfile(pathstr, [fname '.dat']);
+	if exist(rawfile, 'file')
+		eq = uiyesno('title', 'RAW file exists!', 'string', 'Overwrite?');
+		if strcmpi(eq, 'no')
+			[newfile, newpath] = uiputfile('*.dat','Save raw data to file');
+			rawfile = fullfile(newpath, newfile);
+		end
+	end
 	fp = fopen(rawfile, 'w');
 	writeStruct(fp, handles.cal, 'cal');
 	fclose(fp);

@@ -38,7 +38,7 @@ function varargout = NICal(varargin)
 % 
 %-------------------------------------------------------------------------
 
-% Last Modified by GUIDE v2.5 06-Feb-2017 15:51:45
+% Last Modified by GUIDE v2.5 24-Aug-2018 15:31:20
 
 % Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -101,22 +101,25 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 		warning('Using legacy interface');
 		handles.DAQSESSION = 0;
 	else
+		fprintf('Using Session interface\n');
 		handles.DAQSESSION = 1;
 	end
 	guidata(hObject, handles);
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	% load the configuration information, store in config structure
-	% The HPSearch_Configuration.m function file will usually live in the
-	% <tytology path>\TytoSettings\<username\ directory
+	% load the configuration information and store as config structure
+	% The HPSearch_Configuration.m function file will usually live in:
+	%	<tytology base path>\<Toolboxes>TytoSettings\<username>\ 
+	% directory
 	%----------------------------------------------------------
 	%----------------------------------------------------------
-	% define user config path
+	% define user configuration path
 	userconfigpath = ['C:\TytoLogy\Toolboxes\TytoLogySettings\' ...
 								getenv('USERNAME') '\NICal\'];
 	% load the configuration information, store in config structure
 	if isempty(which('NICal_Configuration'))
 		if ~exist(userconfigpath, 'dir')
+			% if config isn't found, see if NICal should create it
 			qstr = sprintf('User config directory %s does not exist!', ...
 										userconfigpath);
 			uresp = questdlg(	{qstr, 'Shall I create it?'}, ...
@@ -125,11 +128,14 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 									'Yes' );
 			switch uresp
 				case 'Yes'
+					% create directory and create config from the program
+					% default configuration
 					mkdir(userconfigpath);
 					addpath(userconfigpath);
 					disp('Loading Defaults...');
 					config = NICal_DefaultConfiguration;
 				case 'No'
+					% just load default
 					disp('Loading Defaults...');
 					config = NICal_DefaultConfiguration;
 			end
@@ -240,6 +246,12 @@ function NICal_OpeningFcn(hObject, eventdata, handles, varargin) %#ok<*INUSL>
 	handles.ToneSweep = 0;
 	guidata(hObject, handles);
 	%--------------------------------------------------
+	% Click settings
+	%--------------------------------------------------	
+	set(handles.Menu_Click, 'Checked', 'off');
+	handles.Click = 0;
+	guidata(hObject, handles);
+	%--------------------------------------------------
 	% 	ContinuousRecord settings
 	%--------------------------------------------------	
 	set(handles.Menu_ContinuousRecord, 'Checked', 'off');
@@ -289,6 +301,8 @@ function RunCalibrationCtrl_Callback(hObject, eventdata, handles) %#ok<*DEFNU>
 				NICal_RunCalibration_ToneStack
 			elseif handles.ToneSweep
 				NICal_RunCalibration_ToneSweep
+			elseif handles.Click
+				NICal_RunCalibration_Click
 			elseif handles.ContinuousRecord
 				NICal_RunCalibration_ContinuousRecord
 			else
@@ -675,11 +689,18 @@ function CheckCalCtrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function StimDurationCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
-	if ~between(tmp, 1, 1000)
+	if handles.Click
+		if ~between(tmp, 0, 1)
+			warndlg('Click must be between 0 & 1 ms', 'Invalid StimDuration');
+			update_ui_str(hObject, handles.cal.StimDuration);
+		else
+			 handles.cal.StimDuration = tmp;
+			 guidata(hObject, handles);
+		end
+	elseif ~between(tmp, 1, 1000)
 		warndlg('Stimuli must be between 1 & 1000 ms', 'Invalid StimDuration');
 		update_ui_str(hObject, handles.cal.StimDuration);
 	else
@@ -687,7 +708,6 @@ function StimDurationCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function SweepDurationCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -699,7 +719,6 @@ function SweepDurationCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function StimDelayCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -711,7 +730,6 @@ function StimDelayCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function StimRampCtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -723,7 +741,6 @@ function StimRampCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function ISICtrl_Callback(hObject, eventdata, handles)
 	tmp = read_ui_str(hObject, 'n');
@@ -736,7 +753,6 @@ function ISICtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 	end
 %-------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % sets peak amplitude of output signal (tone)
 %--------------------------------------------------------------------------
@@ -766,7 +782,6 @@ function DAscaleCtrl_Callback(hObject, eventdata, handles)
 	% update handles
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 % --- Executes on button press in InputFilterCtrl.
 %-------------------------------------------------------------------------
@@ -794,7 +809,6 @@ function InputFilterCtrl_Callback(hObject, eventdata, handles)
 		
 	guidata(hObject, handles);
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 % sets bandpass filter lower Fc
 %-------------------------------------------------------------------------
@@ -832,7 +846,6 @@ function HiPassFcCtrl_Callback(hObject, eventdata, handles)
 	% update handles
 	guidata(hObject, handles);
 %-------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 % runs when LoPassFc engaged
 %-------------------------------------------------------------------------
@@ -884,7 +897,6 @@ function LoPassFcCtrl_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % Enables FR file use on button press in FRenableCtrl.
 %--------------------------------------------------------------------------
@@ -908,7 +920,6 @@ function FRenableCtrl_Callback(hObject, eventdata, handles)
 	end
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % Sets input channel on selection change in InputChannelCtrl.
 %--------------------------------------------------------------------------
@@ -926,7 +937,6 @@ function InputChannelCtrl_Callback(hObject, eventdata, handles)
 	end
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-	
 %--------------------------------------------------------------------------
 % sets mic Gain
 %--------------------------------------------------------------------------
@@ -957,7 +967,6 @@ function MicGainCtrl_Callback(hObject, eventdata, handles)
 	end
 	guidata(hObject, handles);
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % sets Mic sensitiviy
 %--------------------------------------------------------------------------
@@ -989,12 +998,10 @@ function MicSensitivityCtrl_Callback(hObject, eventdata, handles)
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
 %-------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % get microphone fr file for frdata
 %--------------------------------------------------------------------------
 function MicFRFileCtrl_Callback(hObject, eventdata, handles)
-
 	tmpfile = read_ui_str(hObject);
 	
 	if ~exist(tmpfile, 'file')
@@ -1030,7 +1037,6 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
 	end
-
 %{
 
 	% get the fr file data
@@ -1049,7 +1055,6 @@ function MicFRFileCtrl_Callback(hObject, eventdata, handles)
 	end
 %}
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % get file to save data to
 %--------------------------------------------------------------------------
@@ -1066,7 +1071,6 @@ function CalFileCtrl_Callback(hObject, eventdata, handles)
 	end
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-
 % --- If Enable == 'on', executes on mouse press in 5 pixel border.
 % --- Otherwise, executes on mouse press in 5 pixel border or over CalFileCtrl.
 function CalFileCtrl_ButtonDownFcn(hObject, eventdata, handles)
@@ -1082,7 +1086,6 @@ function CalFileCtrl_ButtonDownFcn(hObject, eventdata, handles)
 	end
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-
 %-------------------------------------------------------------------------
 function AutoSaveCtrl_Callback(hObject, eventdata, handles)
 	handles.cal.AutoSave = read_ui_val(hObject);
@@ -1103,7 +1106,6 @@ function AutoSaveCtrl_Callback(hObject, eventdata, handles)
 % File Menu
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 function Menu_SaveCal_Callback(hObject, eventdata, handles)
 	[calfile, calpath] = uiputfile('*.cal', ...
@@ -1115,7 +1117,6 @@ function Menu_SaveCal_Callback(hObject, eventdata, handles)
 		save(datafile, '-MAT', 'caldata');
 	end
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 function Menu_Close_Callback(hObject, eventdata, handles)
  	CloseRequestFcn(handles.figure1, eventdata, handles);
@@ -1127,7 +1128,6 @@ function Menu_Close_Callback(hObject, eventdata, handles)
 % MICROPHONE Menu
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function Menu_LoadFRData_Callback(hObject, eventdata, handles)
@@ -1140,8 +1140,6 @@ function Menu_LoadFRData_Callback(hObject, eventdata, handles)
 		guidata(hObject, handles);
 		update_ui_str(handles.MicFRFileCtrl, handles.cal.mic_fr_file);
 	end
-%--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function Menu_CalibrateMicrophone_Callback(hObject, eventdata, handles)
@@ -1180,12 +1178,10 @@ function Menu_CalibrateMicrophone_Callback(hObject, eventdata, handles)
 % Analysis Menu
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 function Menu_ProcessTriggeredData_Callback(hObject, eventdata, handles)
 	disp('This will process .dat data collected during triggered acquisition')
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 
@@ -1195,7 +1191,6 @@ function Menu_ProcessTriggeredData_Callback(hObject, eventdata, handles)
 % Calibration Settings Menu
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 function Menu_LoadSettings_Callback(hObject, eventdata, handles)
 	% get the settings file name
@@ -1204,14 +1199,12 @@ function Menu_LoadSettings_Callback(hObject, eventdata, handles)
 													handles.userconfigpath );
 	if sfilename ~= 0
 		cal = [];
-		load(fullfile(sfilepath, sfilename));
+		load(fullfile(sfilepath, sfilename), 'cal');
 		handles.cal = cal;
 		guidata(hObject, handles);
 	end
 	% update user interface
 	NICal_UpdateUIFromCal(handles, handles.cal);		
-%--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function Menu_SaveSettings_Callback(hObject, eventdata, handles)
@@ -1221,10 +1214,13 @@ function Menu_SaveSettings_Callback(hObject, eventdata, handles)
 													handles.userconfigpath );
 	if sfilename ~= 0
 		cal = handles.cal; %#ok<NASGU>
-		save(fullfile(sfilepath, sfilename), '-MAT', 'cal');
+		[~, sfilename] = fileparts(sfilename);
+		if ~contains(sfilename, '_settings')
+			sfilename = [sfilename '_settings'];
+		end
+		save(fullfile(sfilepath, [sfilename, '.mat']), '-MAT', 'cal');
 	end
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 function Menu_EditCalibrationSettings_Callback(hObject, eventdata, handles)
 	% make local copy of cal
@@ -1253,7 +1249,6 @@ function Menu_EditCalibrationSettings_Callback(hObject, eventdata, handles)
 		NICal_UpdateUIFromCal(handles, handles.cal);
 	end
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % Load default cal settings
 %--------------------------------------------------------------------------
@@ -1267,7 +1262,6 @@ function Menu_ReloadDefaults_Callback(hObject, eventdata, handles)
 	% update user interface
 	NICal_UpdateUIFromCal(handles, handles.cal);
 %--------------------------------------------------------------------------
-
 %--------------------------------------------------------------------------
 % save cal settings as default
 %--------------------------------------------------------------------------
@@ -1344,6 +1338,8 @@ function Menu_DAQReset_Callback(hObject, eventdata, handles)
 %--------------------------------------------------------------------------
 % Options Menu
 %--------------------------------------------------------------------------
+% % % Should probably make some of these options disable other 
+% % % incompatible settings in this menu
 %--------------------------------------------------------------------------
 %--------------------------------------------------------------------------
 function Menu_ToneStack_Callback(hObject, eventdata, handles)
@@ -1371,6 +1367,29 @@ function Menu_ToneSweep_Callback(hObject, eventdata, handles)
 		handles.ToneStack = 0;
 	end
 	guidata(hObject, handles);
+%--------------------------------------------------------------------------
+function Menu_Click_Callback(hObject, eventdata, handles)
+	newVal = get(handles.Menu_Click, 'Checked');
+	if strcmpi(newVal, 'off')
+		set(handles.Menu_Click, 'Checked', 'on');
+		handles.Click = 1;
+		set(handles.Menu_ToneSweep, 'Checked', 'off');
+		handles.ToneSweep = 0;
+		set(handles.Menu_ToneStack, 'Checked', 'off');
+		handles.ToneStack = 0;
+		% set stim duration to 0 (will create 1 sample long click)
+		handles.cal.StimDuration = 0;
+		update_ui_str(handles.StimDurationCtrl, handles.cal.StimDuration);
+		guidata(hObject, handles);
+	else
+		set(handles.Menu_Click, 'Checked', 'off');
+		handles.Click = 0;
+		% reset stim duration
+		handles.cal.StimDuration = 1;
+		update_ui_str(handles.StimDurationCtrl, handles.cal.StimDuration);
+		guidata(hObject, handles);
+	end
+	guidata(hObject, handles);	
 %--------------------------------------------------------------------------
 function Menu_ContinuousRecord_Callback(hObject, eventdata, handles)
 	newVal = get(handles.Menu_ContinuousRecord, 'Checked');
@@ -1486,6 +1505,3 @@ function StimDelayCtrl_CreateFcn(hObject, eventdata, handles)
 function StimRampCtrl_CreateFcn(hObject, eventdata, handles)
 	bgcolorset(hObject);
 %-------------------------------------------------------------------------
-
-
-
