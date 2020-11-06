@@ -14,11 +14,11 @@ function varargout = processTriggeredBinData(varargin)
 % mode will select how the data are processed:
 % 	mode = 'tones'  (default) will look for tone magnitudes in
 % 					each .daq file and compute a freq-dB SPL curve
-% 
 % 	mode = 'rms'	will simply compute the overall db SPL level
-% 							for each file
+% 						(using entire recorded sweep) for each file
 % 	mode = 'window' will compute db SPL levels for each file 
 % 							broken up into 100 msec windows
+%  mode = '
 % 
 %	'rmswin', <value> where value is time window, in ms, to calculate 
 %							running rms of signal
@@ -39,6 +39,7 @@ function varargout = processTriggeredBinData(varargin)
 % Created: 14 April, 2017 from processTriggeredData (SJS)
 %
 % Revisions:
+%  6 Nov 2020 (SJS): modifying to deal with non-tone stimuli
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -279,13 +280,10 @@ for n = 1:nSweeps
 
 			% decimate data for plotting
 			micdata_reduced = decimate(micdata, DeciFactor);
-			Fs_reduced = Fs / 10;
+			Fs_reduced = Fs / DeciFactor;
 			% build time vectors for plotting
-			t1 = ((1:length(micdata_reduced)) - 1) / Fs_reduced;
-			t2 = rms_windowsize_ms * 0.001 * (0:size(dbvals{n},1)-1); %#ok<NASGU>
-% 			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
-% 			t2 = rms_windowsize_ms * 0.001 * (0:rmsIndex);
-			t2 = rms_windowsize_ms * 0.001 * rmw_windows;
+			t1 = 1000*((1:length(micdata_reduced)) - 1) / Fs_reduced;
+			t2 = rms_windowsize_ms * ((1:length(rms_vals)) - 1);
 			% plot!
 			figure(n)
 			subplot(211)
@@ -295,7 +293,7 @@ for n = 1:nSweeps
 			subplot(212)
 			plot(t2, dbvals{n}, 'Marker', '.', 'Color', 'r');
 			ylabel('dB SPL')
-			xlabel('Time (seconds)');
+			xlabel('Time (msec)');
 			grid
 			title(sprintf('Peak dB SPL = %.2f', max(dbvals{n})))
 
