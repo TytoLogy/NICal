@@ -1,0 +1,59 @@
+
+original NI chain for std calibration:
+
+NICal_Constants
+	constants:
+		L = 1;
+		R = 2;
+		REF = 3;
+		BOTH = 3;
+		REFL = 3;
+		REFR = 4;
+		MAX_ATTEN = 120;
+		DEBUG = 0;
+		MIN_BACKGROUND_TIME = 20;
+		CLIPVAL = 5;
+		FILTSMOOTH_MS = 2;
+	
+NICal_settings
+	sets up microphone stuff
+
+[handles, initFlag] = NICal_NIinit(handles)
+	calls
+	NI = nidaq_aiao_init.m
+		NI struct with 
+			NI.ao		analog output object
+			NI.ai		analog input object
+			NI.chO	analog output channel object
+			NI.chI	analog input channel object
+
+	then sets input/output settings
+	
+
+% plays sound;
+[resp, indx] = handles.iofunction(iodev, Satt, SweepPoints);
+handles.iofunction = @nidaq_calibration_io;
+handles.initfunction = @nidaq_aiao_init;
+
+
+
+NICal_NIexit.m
+	close things using delete function on DAQ objects
+	delete(handles.iodev.NI.ai);
+	delete(handles.iodev.NI.ao);
+	delete(handles.iodev.NI.chI);
+	delete(handles.iodev.NI.chO);
+	clear handles.iodev.NI.ai handles.iodev.NI.ao 
+	clear handles.iodev.NI.chI handles.iodev.NI.chO
+
+
+
+Triggered Acq
+[handles, init_status] = NICal_NIinit_triggeredacq(handles)
+	calls
+	NI = nidaq_ai_init.m
+		NI struct with 
+			NI.ai		analog input object
+			NI.chI	analog input channel object
+
+	then sets triggered input settings

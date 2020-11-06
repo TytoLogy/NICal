@@ -1,9 +1,9 @@
 %--------------------------------------------------------------------------
-% NICal_RunCalibration_ToneSweep.m
+% NICal_RunCalibration_Click.m
 %--------------------------------------------------------------------------
 % TytoLogy -> Calibration -> NICal program
 %--------------------------------------------------------------------------
-% Runs the speaker calibration
+% Plays click, records response
 % if FR Correction is selected, apply mic correction using data from
 % MicrophoneCal program (earphone fr data)
 %--------------------------------------------------------------------------
@@ -12,11 +12,9 @@
 % Sharad Shanbhag
 % sshanbhag@neomed.edu
 %--------------------------------------------------------------------------
-% Created:	16 Oct 2014 from NICal_RunCalibration_ToneStack,	SJS
+% Created:	24 Aug 2018 from NICal_RunCalibration_ToneSweep,	SJS
 %
 % Revisions:
-%	1 Feb 2017 (SJS): updated for session interface
-%	9 Feb 2017 (SJS): modifying stimulus to include pre/post stim time
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
@@ -38,6 +36,8 @@ COMPLETE = 0;
 % Load the settings and constants 
 %---------------------------------------------
 NICal_settings;
+% max duration for click
+MAX_CLICKDUR_MS = 2;
 % save the GUI handle information
 guidata(hObject, handles);
 
@@ -84,12 +84,31 @@ handles.cal.fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
 % if raw data are to be saved, initialize the file
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-if handles.cal.SaveRawData
-	[pathstr, fname, fext] = fileparts(handles.cal.calfile);
-	rawfile = fullfile(pathstr, [fname '.dat']);
-	fp = fopen(rawfile, 'w');
-	writeStruct(fp, handles.cal, 'cal');
-	fclose(fp);
+% if handles.cal.SaveRawData
+% 	[pathstr, fname, fext] = fileparts(handles.cal.calfile);
+% 	rawfile = fullfile(pathstr, [fname '.dat']);
+% 	fp = fopen(rawfile, 'w');
+% 	writeStruct(fp, handles.cal, 'cal');
+% 	fclose(fp);
+% end
+
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% setup storage for data
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% store sweep data in {2, Nreps} cell array left in row 1, right in r 2
+C.raw = cell(2, handles.cal.Nreps);
+% background data?
+if handles.cal.CollectBackground
+	C.bg = cell(2,handles.cal.Nreps);
+else
+	C.bg = {};
+end
+if handles.cal.MeasureLeak
+	C.leak = cell(2, handles.cal.Nreps);
+else
+	C.leak = {};
 end
 
 %-----------------------------------------------------------------------
@@ -114,6 +133,21 @@ NICal_caldata_init;
 
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
+% check click duration
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+if handles.cal.StimDuration > MAX_CLICKDUR_MS
+	warning(['%s: StimDuration (%d) > MAX MAX_CLICKDUR_MS DUR (%d), ' ...
+					'using MAX MAX_CLICKDUR_MS DUR'], ...
+						mfilename, handles.cal.StimDuration, MAX_CLICKDUR_MS);
+	clickDur_ms = MAX_CLICKDUR_MS;
+else
+	clickDur_ms = handles.cal.StimDuration;
+end
+fprintf('Click Duration = %.4f\n', clickDur_ms);
+
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
 % create null stimulus and time vector for plots, set up plots
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
@@ -123,7 +157,7 @@ NICal_caldata_init;
 % determine the number of samples to read in. For the legacy interface,
 % this shouldn't make a difference
 PostDuration = handles.cal.SweepDuration - ...
-						(handles.cal.StimDelay + handles.cal.StimDuration);
+						(handles.cal.StimDelay + clickDur_ms);
 % make sure PostDuration is ok (greater than or equal to 0)
 if PostDuration < 0
 	errordlg('SweepDuration must be greater than StimDelay + StimDuration');
@@ -219,12 +253,17 @@ set(H.Racq, 'XDataSource', 'tvec_acq', 'YDataSource', 'Racq');
 %-------------------------------------------------------
 % plot null data, save handles for frequency-domain plots
 %-------------------------------------------------------
-H.Lfft = plot(handles.Lfftplot, fvec, Lfft);
-set(H.Lfft, 'XDataSource', 'fvec', 'YDataSource', 'Lfft');
+% H.Lfft = plot(handles.Lfftplot, fvec, Lfft);
+% set(H.Lfft, 'XDataSource', 'fvec', 'YDataSource', 'Lfft');
+% xlabel(handles.Lfftplot, 'Frequency (kHz)')
+% ylabel(handles.Lfftplot, 'dBV')
+% H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
+% set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
+% xlabel(handles.Rfftplot, 'Frequency (kHz)');
+plot(handles.Lfftplot, fvec, Lfft);
 xlabel(handles.Lfftplot, 'Frequency (kHz)')
 ylabel(handles.Lfftplot, 'dBV')
-H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
-set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
+plot(handles.Rfftplot, fvec, Rfft);
 xlabel(handles.Rfftplot, 'Frequency (kHz)');
 
 %-----------------------------------------------------------------------
@@ -259,6 +298,7 @@ stopFlag = 0;
 % make a local copy of the cal settings structure
 %---------------------------------------------------
 cal = handles.cal;
+
 %---------------------------------------------------
 % make local copy of iodev  control struct
 %---------------------------------------------------
@@ -266,10 +306,13 @@ iodev = handles.iodev;
 % update the frequency display value
 update_ui_str(handles.FreqValText, 'Tone Sweep');
 
+%---------------------------------------------------
 % check for abort button press
+%---------------------------------------------------
 if read_ui_val(handles.AbortCtrl) == 1
 	% if so, stop
 	disp('abortion detected')
+	NICal_NIexit;
 	return
 end
 
@@ -294,19 +337,23 @@ if cal.Side == 1 || cal.Side == 3
 	%-------------------------------------------------------
 	% Build stimulus output array for this frequency
 	%-------------------------------------------------------
-	% synthesize the sweep
-	% need time vector
-	t = (1/iodev.Fs) * (0:(ms2samples(cal.StimDuration, iodev.Fs)-1));
-	csig = chirp(t, Freqs(1), 0.001*cal.StimDuration, Freqs(end));
+	% synthesize the stimulus
+	% use syn_click(duration, delay, Fs) to create click, scale using
+	% cal.DAscale... if clickDur_ms == 0, use single sample for click
+% 	csig = syn_click(clickDur_ms, 0, iodev.Fs);
+	if clickDur_ms > 0
+		csig = syn_click(handles.cal.SweepDuration, handles.cal.StimDelay, ...
+							iodev.Fs, 'ClickDurMS', clickDur_ms);
+	else
+		csig = syn_click(handles.cal.SweepDuration, ...
+									handles.cal.StimDelay, iodev.Fs);
+	end
 	S = [csig; 0*csig];
 	% scale the sound
 	S = cal.DAscale * S;
-	% apply the sin^2 amplitude envelope to the stimulus before adding 
-	% pre and post zeros
-	S = sin2array(S, cal.StimRamp, iodev.Fs);
-	% insert delay, add zeros to pad end
-	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
-								syn_null(PostDuration, iodev.Fs, 1)];
+% 	% insert delay, add zeros to pad end
+% 	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
+% 								syn_null(PostDuration, iodev.Fs, 1)];
 	% save in Satt
 	Satt = S;
 	% plot the stimuli - set R stim to zero
@@ -325,7 +372,7 @@ if cal.Side == 1 || cal.Side == 3
 	update_ui_str(handles.RAttenText, MAX_ATTEN);
 	pause(0.001*cal.ISI);
 	%-------------------------------------------------------
-	% now, collect the data for frequency FREQ, LEFT channel
+	% now, collect the data for LEFT channel
 	%-------------------------------------------------------
 	for rep = 1:cal.Nreps
 		% update the reps display value
@@ -347,18 +394,25 @@ if cal.Side == 1 || cal.Side == 3
 			end
 			clear tmp
 		end
+		% save data in C struct
+		C.raw{L, rep} = resp{L};
+		if handles.cal.MeasureLeak
+			C.leak{L, rep} = resp{R};
+		end
 		% plot the response and FFT
 		Lacq = downsample(resp{L}, handles.cal.deciFactor);
 		refreshdata(H.Lacq, 'caller');
 		[tmpf, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), ...
 										iodev.Fs, length(resp{L}(start_bin:end_bin)));
-		refreshdata(H.Lfft, 'caller');
+% 		refreshdata(H.Lfft, 'caller');
+		plot(handles.Lfftplot, fvec, Lfft);
 		if handles.cal.MeasureLeak
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
 			refreshdata(H.Racq, 'caller');
 			[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), ...
 											iodev.Fs, length(resp{R}(start_bin:end_bin)));
-			refreshdata(H.Rfft, 'caller');
+% 			refreshdata(H.Rfft, 'caller');
+			plot(handles.Rfftplot, fvec, Rfft);
 		end
 		drawnow
 		% draw spectrogram
@@ -371,16 +425,6 @@ if cal.Side == 1 || cal.Side == 3
 			myspectrogram(resp{R}, iodev.Fs, ...
 									[10 5], @hamming, handles.SpectrumWindow, ...
 									[-100 -1], false, 'default', false, 'per');			
-		end
-		% save raw data
-		if handles.cal.SaveRawData
-			fp = fopen(rawfile, 'a');
-			if handles.cal.MeasureLeak
-				writeCell(fp, resp);
-			else
-				writeCell(fp, resp(L));
-			end
-			fclose(fp);
 		end
 		% Pause for ISI
 		pause(0.001*cal.ISI);
@@ -418,6 +462,8 @@ if cal.Side == 1 || cal.Side == 3
 				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 				clear tmp
 			end
+			% assign data to C struct
+			C.bg{L, rep} = resp{L};
 			% plot the response
 			Lacq = downsample(resp{L}, handles.cal.deciFactor);
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
@@ -430,16 +476,11 @@ if cal.Side == 1 || cal.Side == 3
 			plot(tmpf, tmpm);
 			title('Left Background')
 			% Pause for ISI
-			if handles.cal.SaveRawData
-				fp = fopen(rawfile, 'a');
-				writeCell(fp, resp); 				
-				fclose(fp);
-			end
 			pause(0.001*cal.ISI);
 			% check for abort button press
 			if read_ui_val(handles.AbortCtrl) == 1
 				% if so, stop
-				disp('abortion detected')
+				disp('abortion detected');
 				break
 			end
 		end		
@@ -452,6 +493,7 @@ end		% END OF L CHANNEL
 if read_ui_val(handles.AbortCtrl) == 1
 	% if so, stop
 	disp('abortion detected')
+	NICal_NIexit;
 	return
 end
 %------------------------------------
@@ -474,14 +516,20 @@ if cal.Side == 2 || cal.Side == 3
 	% synthesize the R sine wave;
 	%-------------------------------------------------------------
 	% synthesize 
-	% need time vector
-	t = 0:(1/iodev.Fs):0.001*cal.StimDuration;
-	csig = chirp(t, Freqs(1), 0.001*cal.StimDuration, Freqs(end));
+	% synthesize the stimulus
+	% use syn_click(duration, delay, Fs) to create click, scale using
+	% cal.DAscale... if clickDur_ms == 0, use single sample for click
+% 	csig = syn_click(clickDur_ms, 0, iodev.Fs);
+	if clickDur_ms > 0
+		csig = syn_click(handles.cal.SweepDuration, handles.cal.StimDelay, ...
+							iodev.Fs, 'ClickDurMS', clickDur_ms);
+	else
+		csig = syn_click(handles.cal.SweepDuration, ...
+									handles.cal.StimDelay, iodev.Fs);
+	end
 	S = [0*csig; csig];
 	% scale the sound
 	S = cal.DAscale * S;
-	% apply the sin^2 amplitude envelope to the stimulus
-	S = sin2array(S, cal.StimRamp, iodev.Fs);
 	% insert delay, add zeros to pad end
 	S = [insert_delay(S, cal.StimDelay, iodev.Fs) ...
 								syn_null(PostDuration, iodev.Fs, 1)];
@@ -500,7 +548,9 @@ if cal.Side == 2 || cal.Side == 3
 	update_ui_str(handles.LAttenText, MAX_ATTEN);
 	update_ui_str(handles.RAttenText, Ratten);
 	pause(0.001*cal.ISI);
-	% now, collect the data for frequency FREQ, RIGHT headphone
+	%-------------------------------------------------------
+	% now, collect the data for RIGHT channel
+	%-------------------------------------------------------
 	for rep = 1:cal.Nreps
 		% update the reps display value
 		update_ui_str(handles.RepNumText, sprintf('%d R', rep));
@@ -521,42 +571,38 @@ if cal.Side == 2 || cal.Side == 3
 			resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 			clear tmp
 		end
-		% plot the response
+		% save data in C struct
+		C.raw{R, rep} = resp{R};
+		if handles.cal.MeasureLeak
+			C.leak{R, rep} = resp{L};
+		end
+		% plot the response and FFT
 		if handles.cal.MeasureLeak
 			Lacq = downsample(resp{L}, handles.cal.deciFactor);
 			refreshdata(H.Lacq, 'caller');
 			[~, Lfft] = daqdbfft(resp{L}(start_bin:end_bin), iodev.Fs, ...
 												length(resp{L}(start_bin:end_bin)));
-			refreshdata(H.Lfft, 'caller');
+% 			refreshdata(H.Lfft, 'caller');
+			plot(handles.Lfftplot, fvec, Lfft);
 		end
 		Racq = downsample(resp{R}, handles.cal.deciFactor);
-		refreshdata(H.Racq, 'caller');
-
+ 		refreshdata(H.Racq, 'caller');
 		[tmpf, Rfft] = daqdbfft(resp{R}(start_bin:end_bin), iodev.Fs, ...
 											length(resp{R}(start_bin:end_bin)));
-		refreshdata(H.Rfft, 'caller');
+% 		refreshdata(H.Rfft, 'caller');
+		plot(handles.Rfftplot, fvec, Rfft);
 		drawnow
 		% draw spectrogram
 		axes(handles.Rspecgram);
 		myspectrogram(resp{R}, iodev.Fs, ...
 								[10 5], @hamming, handles.SpectrumWindow, ...
 								[-100 -1], false, 'default', false, 'per');
-		% save raw data
-		if handles.cal.SaveRawData
-			fp = fopen(rawfile, 'a');
-			if handles.cal.MeasureLeak
-				writeCell(fp, resp);
-			else
-				writeCell(fp, resp(R));
-			end
-			fclose(fp);
-		end
 		% pause for ISI (convert to seconds)
 		pause(0.001*cal.ISI);
 		% check for abort button press
 		if read_ui_val(handles.AbortCtrl) == 1
 			% if so, stop
-			disp('abortion detected')
+			disp('abortion detected');
 			break
 		end
 	end
@@ -587,6 +633,8 @@ if cal.Side == 2 || cal.Side == 3
 				resp{R} = filtfilt(handles.cal.fcoeffb, handles.cal.fcoeffa, tmp);
 				clear tmp
 			end
+			% assign data to C struct
+			C.bg{R, rep} = resp{R};
 			% plot the response
 			Lacq = downsample(resp{L}, handles.cal.deciFactor);
 			Racq = downsample(resp{R}, handles.cal.deciFactor);
@@ -598,24 +646,48 @@ if cal.Side == 2 || cal.Side == 3
 										iodev.Fs, length(resp{R}(start_bin:end_bin)));
 			plot(tmpf, tmpm);
 			title('Right Background')
-			% save raw data
-			if handles.cal.SaveRawData
-				fp = fopen(rawfile, 'a');
-				writeCell(fp, resp); 				
-				fclose(fp);
-			end
 			% Pause for ISI
 			pause(0.001*cal.ISI);
 			% check for abort button press
 			if read_ui_val(handles.AbortCtrl) == 1
 				% if so, stop
 				disp('abortion detected')
-				break
+				NICal_NIexit;
 			end
 		end
 	end
 % END OF R CAL
 end
+
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+% save handles and data
+%-----------------------------------------------------------------------
+%-----------------------------------------------------------------------
+handles.caldata = caldata;
+guidata(hObject, handles);
+C.caldata = caldata;
+% check filename
+[pathstr, fname, fext] = fileparts(handles.cal.calfile);
+clickfile = fullfile(pathstr, [fname '.mat']);
+if exist(clickfile, 'file')
+	eq = uiyesno('title', 'CLICK file exists!', 'string', 'Overwrite?');
+	if strcmpi(eq, 'no')
+		[newfile, newpath] = uiputfile('*.mat','Save raw data to file');
+		if newfile == 0
+			clickfile = [];
+		else
+			clickfile = fullfile(newpath, newfile);
+		end
+	end
+end
+if isempty(clickfile)
+	fprintf('%s: Skipping writing of data\n', mfilename);
+else
+	fprintf('Writing click data to %s\n', clickfile);
+	save(clickfile, '-MAT', 'C');
+end
+
 %-----------------------------------------------------------------------
 %-----------------------------------------------------------------------
 % Exit gracefully (close TDT objects, etc)

@@ -14,49 +14,20 @@
 % 	- adapted from monitordB script
 %
 % Revisions:
+%	7 Feb 2017 (SJS): updated for DAQ Session interface
+%	23 Mar 2017 (SJS): fixing ignored handles.cal.InputFilter
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-% Global Constants
+% Constants
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
+% NICal
 NICal_Constants;
-
-global VtoPa Gain fcoeffa fcoeffb ...
+% global (needed for use by callback)
+global VtoPa Gain fcoeffa fcoeffb filtEnable ...
 		tvec_acq fvec Lacq Racq Lfft Rfft H SweepPoints
-
-%---------------------------------------------
-%---------------------------------------------
-% Load Microphone calibration data
-%---------------------------------------------
-%---------------------------------------------
-if read_ui_val(handles.FRenableCtrl) == 0
-	DAscale = read_ui_str(handles.DAscaleCtrl, 'n');
-	handles.cal.mic_fr = [];
-	handles.cal.DAscale = DAscale;
-else
-	load(handles.cal.mic_fr_file, 'frdata', '-MAT');
-	if ~isfield(frdata, 'DAscale')
-		frdata.DAscale = frdata.calsettings.DAscale;
-	end
-	handles.cal.mic_fr = frdata;
-end
-
-%-------------------------------------------------------------
-% need some conversion factors
-%-------------------------------------------------------------
-Gain = handles.cal.Gain;
-% this is the sensitivity of the calibration mic in V / Pa
-% if FR file is used, get sens. from there, 
-if read_ui_val(handles.FRenableCtrl) == 1
-	CalMic_sense = frdata.calsettings.MicSensitivity;
-else
-	% otherwise, use cal information
-	CalMic_sense = handles.cal.MicSensitivity;
-end
-% pre-compute the V -> Pa conversion factor
-VtoPa = (CalMic_sense^-1);
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -71,21 +42,58 @@ currentState = read_ui_val(handles.MonitorCtrl);
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 if currentState == 1
+	%---------------------------------------------
+	% Update Monitor Button
+	%---------------------------------------------
 	update_ui_str(handles.MonitorCtrl, 'Monitor ON');
 	set(handles.MonitorCtrl, 'FontAngle', 'italic');
 	% save the GUI handle information
 	guidata(hObject, handles);
+	%---------------------------------------------
+	% Load Microphone calibration data
+	%---------------------------------------------
+	if read_ui_val(handles.FRenableCtrl) == 0
+		DAscale = read_ui_str(handles.DAscaleCtrl, 'n');
+		handles.cal.mic_fr = [];
+		handles.cal.DAscale = DAscale;
+	else
+		load(handles.cal.mic_fr_file, 'frdata', '-MAT');
+		if ~isfield(frdata, 'DAscale')
+			frdata.DAscale = frdata.calsettings.DAscale;
+		end
+		handles.cal.mic_fr = frdata;
+	end
+	%-------------------------------------------------------------
+	% need some conversion factors
+	%-------------------------------------------------------------
+	Gain = handles.cal.Gain;
+	% this is the sensitivity of the calibration mic in V / Pa
+	% if FR file is used, get sens. from there, 
+	if read_ui_val(handles.FRenableCtrl) == 1
+		CalMic_sense = frdata.calsettings.MicSensitivity;
+	else
+		% otherwise, use cal information
+		CalMic_sense = handles.cal.MicSensitivity;
+	end
+	% pre-compute the V -> Pa conversion factor
+	VtoPa = (CalMic_sense^-1);
 	
 	%-------------------------------------------------------------
 	% Start DAQ things
 	%-------------------------------------------------------------
 	% Initialize the NI device
 	try
-		handles.iodev.NI = nidaq_ai_init('NI', handles.iodev.Dnum);
+		if handles.DAQSESSION
+			handles.iodev.NI = nidaq_ai_init('NI-SESSION', handles.iodev.Dnum);
+		else
+			handles.iodev.NI = nidaq_ai_init('NI', handles.iodev.Dnum);
+		end
 	catch errMsg
-		disp('error initializing NI device')
+		warning('%s: error initializing NI device', mfilename)
+		fprintf('Message: %s\n', errMsg.message');
 		init_status = 0;
 		update_ui_str(handles.MonitorCtrl, 'Monitor');
+		update_ui_val(handles.MonitorCtrl, 0);
 		set(handles.MonitorCtrl, 'FontAngle', 'normal');
 		return
 	end
@@ -95,73 +103,110 @@ if currentState == 1
 	%-------------------------------------------------------------
 	disable_ui(handles.RunCalibrationCtrl);
 	
-	%------------------------------------------------------
-	% AI subsystem
-	%------------------------------------------------------
-	set(handles.iodev.NI.ai, 'SampleRate', handles.cal.Fs);
-	ActualRate = get(handles.iodev.NI.ai, 'SampleRate');
-	if handles.cal.Fs ~= ActualRate
-		warning('NICal:NIDAQ', 'Requested ai Fs (%f) ~= ActualRate (%f)', handles.cal.Fs, ActualRate);
-	end
-	handles.iodev.Fs = ActualRate;
-	handles.cal.Fs = ActualRate;
+	%------------------------------------------------------------------------
+	%------------------------------------------------------------------------
+	% Hardware Settings
+	%------------------------------------------------------------------------
+	%------------------------------------------------------------------------
+	if handles.DAQSESSION
+		%-----------------------------------------------------------------------
+		%-----------------------------------------------------------------------
+		% SESSSION interface
+		%-----------------------------------------------------------------------
+		%------------------------------------------------------
+		% AI subsystem
+		%------------------------------------------------------
+		% set sample rate
+		handles.iodev.NI.S.Rate = handles.cal.Fs;
+		% check actual rate for mismatch
+		ActualRate = handles.iodev.NI.S.Rate;
+		if handles.cal.Fs ~= ActualRate
+			warning('NICal:NIDAQ', 'Requested ai Fs (%f) ~= ActualRate (%f)', ...
+							handles.cal.Fs, ActualRate);
+		end
+		% store actual rate
+		handles.iodev.Fs = ActualRate;
+		handles.cal.Fs = ActualRate;
+		% set input range
+		%	range needs to be in [RangeMin RangeMax] format
+		aiaoRange = 5 * [-1 1];
+		for n = 1:length(handles.iodev.NI.chI)
+			% set analog input range
+			handles.iodev.NI.chI(n).Range = aiaoRange;
+			% set input TerminalConfig to 'SingleEnded' (default is
+			% 'Differential')
+			handles.iodev.NI.chI(n).TerminalConfig = 'SingleEnded';
+		end
+		% make session continuous
+		handles.iodev.NI.S.IsContinuous = true;
+		%------------------------------------------------------------------------
+		% EVENT and CALLBACK PARAMETERS
+		%------------------------------------------------------------------------
+		% add listener for DataAvailable trigger
+		handles.iodev.hl = addlistener(handles.iodev.NI.S, 'DataAvailable', ...
+													@monitor_sessioncallback);
+		% set the object to trigger the DataAvailable callback when
+		% BufferSize # of points are available
+		handles.iodev.NI.S.NotifyWhenDataAvailableExceeds = ...
+						ms2samples(handles.cal.SweepDuration, handles.iodev.Fs);
 
-	%------------------------------------------------------------------------
-	%------------------------------------------------------------------------
-	% Define a bandpass filter for processing the data
-	%------------------------------------------------------------------------
-	%------------------------------------------------------------------------
-	% Nyquist frequency
-	fnyq = handles.iodev.Fs / 2;
-	% passband definition
-	fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
-	% filter coefficients using a butterworth bandpass filter
-	[fcoeffb,fcoeffa] = ...
-						butter(handles.cal.forder, fband, 'bandpass');
+	else
+		%-----------------------------------------------------------------------
+		%-----------------------------------------------------------------------
+		% Legacy interface
+		%-----------------------------------------------------------------------
+		%------------------------------------------------------
+		% AI subsystem
+		%------------------------------------------------------
+		% set sample rate
+		set(handles.iodev.NI.ai, 'SampleRate', handles.cal.Fs);
+		% check to see what actual rate is
+		ActualRate = get(handles.iodev.NI.ai, 'SampleRate');
+		if handles.cal.Fs ~= ActualRate
+			warning('NICal:NIDAQ', 'Requested ai Fs (%f) ~= ActualRate (%f)', ...
+									handles.cal.Fs, ActualRate);
+		end
+		% store actual rate
+		handles.iodev.Fs = ActualRate;
+		handles.cal.Fs = ActualRate;
+		% set input range
+		% range needs to be in [RangeMin RangeMax] format
+		aiaoRange = 5 * [-1 1];
+		% set analog input range (might be overkill to set 
+		% InputRange, SensorRange and UnitsRange, but is seems to work)
+		for n = 1:length(handles.iodev.NI.ai.Channel)
+			handles.iodev.NI.ai.Channel(n).InputRange = aiaoRange;
+			handles.iodev.NI.ai.Channel(n).SensorRange = aiaoRange;
+			handles.iodev.NI.ai.Channel(n).UnitsRange = aiaoRange;
+		end
+		% set SamplesPerTrigger to Inf for continous acquisition
+		set(handles.iodev.NI.ai, 'SamplesPerTrigger', Inf);
+		% set TriggerType to 'Manual' so that program starts acquisition
+		set(handles.iodev.NI.ai, 'TriggerType', 'Manual');
+		% set input type to single ended
+		set(handles.iodev.NI.ai, 'InputType', 'SingleEnded');
+		%------------------------------------------------------------------------
+		% EVENT and CALLBACK PARAMETERS
+		%------------------------------------------------------------------------
+		% first, set the object to call the SamplesAcquiredFunction when
+		% BufferSize # of points are available
+		set(handles.iodev.NI.ai, 'SamplesAcquiredFcnCount', ...
+							ms2samples(handles.cal.SweepDuration, handles.iodev.Fs));
+		% provide callback function
+		set(handles.iodev.NI.ai, 'SamplesAcquiredFcn', {@monitor_callback});
+		% set logging mode
+		%	'Disk'			sets logging mode to a file on disk 
+		%						(specified by 'LogFileName)
+		%	'Memory'			sets logging mode to memory only
+		%	'Disk&Memory'	logs to file and memory
+		set(handles.iodev.NI.ai, 'LoggingMode', 'Memory');
+		% set channel skew mode to Equisample
+		set(handles.iodev.NI.ai, 'ChannelSkewMode', 'Equisample');
+	end
 	
-	%-----------------------------------------------------------------------
-	%-----------------------------------------------------------------------
-	% set input range
-	%-----------------------------------------------------------------------
-	%-----------------------------------------------------------------------
-	% range needs to be in [RangeMin RangeMax] format
-	aiaoRange = 5 * [-1 1];
-	% set analog input range (might be overkill to set 
-	% InputRange, SensorRange and UnitsRange, but is seems to work)
-	for n = 1:length(handles.iodev.NI.ai.Channel)
-		handles.iodev.NI.ai.Channel(n).InputRange = aiaoRange;
-		handles.iodev.NI.ai.Channel(n).SensorRange = aiaoRange;
-		handles.iodev.NI.ai.Channel(n).UnitsRange = aiaoRange;
-	end
-
-	% set SamplesPerTrigger to Inf for continous acquisition
-	set(handles.iodev.NI.ai, 'SamplesPerTrigger', Inf);
-	% set TriggerType to 'Manual' so that program starts acquisition
-	set(handles.iodev.NI.ai, 'TriggerType', 'Manual');
-	% set input type to single ended
-	set(handles.iodev.NI.ai, 'InputType', 'SingleEnded');
-
 	%------------------------------------------------------------------------
-	% EVENT and CALLBACK PARAMETERS
 	%------------------------------------------------------------------------
-	% first, set the object to call the SamplesAcquiredFunction when
-	% BufferSize # of points are available
-	set(handles.iodev.NI.ai, 'SamplesAcquiredFcnCount', ms2samples(handles.cal.SweepDuration, handles.iodev.Fs));
-	% provide callback function
-	set(handles.iodev.NI.ai, 'SamplesAcquiredFcn', {@monitor_callback});
-	%-------------------------------------------------------
-	% set logging mode
-	%	'Disk'	sets logging mode to a file on disk (specified by 'LogFileName)
-	%	'Memory'	sets logging mode to memory only
-	%	'Disk&Memory'	logs to file and memory
-	%-------------------------------------------------------
-	set(handles.iodev.NI.ai, 'LoggingMode', 'Memory');
-	%-------------------------------------------------------
-	% set channel skew mode to Equisample
-	%-------------------------------------------------------
-	set(handles.iodev.NI.ai, 'ChannelSkewMode', 'Equisample');
-
-	%-----------------------------------------------------------------------
+	% Plots Initialization
 	% create null acq and time vectors for plots, set up plots
 	%-----------------------------------------------------------------------
 	% to speed up plotting, the vectors Lacq, Racq, tvec_acq, L/Rfft, fvec
@@ -205,9 +250,11 @@ if currentState == 1
 	set(H.Lfft, 'XDataSource', 'fvec', 'YDataSource', 'Lfft');
 	xlabel(handles.Lfftplot, 'Frequency (kHz)')
 	ylabel(handles.Lfftplot, 'dBV')
+	grid(handles.Lfftplot, 'on');
 	H.Rfft = plot(handles.Rfftplot, fvec, Rfft);
 	set(H.Rfft, 'XDataSource', 'fvec', 'YDataSource', 'Rfft');
 	xlabel(handles.Rfftplot, 'Frequency (kHz)');
+	grid(handles.Rfftplot, 'on');
 	%-------------------------------------------------------
 	% store text handles in H
 	%-------------------------------------------------------
@@ -220,11 +267,33 @@ if currentState == 1
 	%-------------------------------------------------------
 	guidata(hObject, handles);
 	
-	
-	%START ACQUIRING
-	start(handles.iodev.NI.ai);
-	trigger(handles.iodev.NI.ai);
-	
+	%------------------------------------------------------------------------
+	%------------------------------------------------------------------------
+	% Define a bandpass filter for processing the data
+	%------------------------------------------------------------------------
+	%------------------------------------------------------------------------
+	% Nyquist frequency
+	fnyq = handles.iodev.Fs / 2;
+	% passband definition
+	fband = [handles.cal.InputHPFc handles.cal.InputLPFc] ./ fnyq;
+	% filter coefficients using a butterworth bandpass filter
+	[fcoeffb, fcoeffa] = ...
+						butter(handles.cal.forder, fband, 'bandpass');
+	% assign filter/no filter to filtEnable
+	filtEnable = handles.cal.InputFilter;
+	%------------------------------------------------------------------------
+	%------------------------------------------------------------------------
+	% START ACQUIRING
+	%------------------------------------------------------------------------
+	%------------------------------------------------------------------------
+	if handles.DAQSESSION
+		% start in background
+		fprintf('Starting Monitor\n');
+		startBackground(handles.iodev.NI.S);
+	else
+		start(handles.iodev.NI.ai);
+		trigger(handles.iodev.NI.ai);
+	end
 	guidata(hObject, handles);
 	
 %------------------------------------------------------------------------
@@ -237,21 +306,29 @@ else
 	set(handles.MonitorCtrl, 'FontAngle', 'normal');
 	guidata(hObject, handles);
 	%------------------------------------------------------------------------
-	%------------------------------------------------------------------------
 	% clean up
 	%------------------------------------------------------------------------
-	%------------------------------------------------------------------------
 	disp('...closing NI devices...');
-	% stop acquiring
-	stop(handles.iodev.NI.ai);
-	% get event log
-	% EventLog = showdaqevents(handles.iodev.NI.ai);
-
-	% delete and clear ai and ch0 object
-	delete(handles.iodev.NI.ai);
-	clear handles.iodev.NI.ai
+	if handles.DAQSESSION
+		fprintf('Stopping Monitor\n');
+		% stop acquisition
+		handles.iodev.NI.S.stop();
+		% stop continuous acq
+		handles.iodev.NI.S.IsContinuous = false;
+		% delete callback
+		delete(handles.iodev.hl);
+		% release hardware
+		release(handles.iodev.NI.S);
+		% clear
+		clear handles.iodev.NI.S;
+	else
+		% stop acquiring
+		stop(handles.iodev.NI.ai);
+		% delete and clear ai and ch0 object
+		delete(handles.iodev.NI.ai);
+		clear handles.iodev.NI.ai
+	end
 	
+	% re-enable the RunCalibration button
 	enable_ui(handles.RunCalibrationCtrl);
-
-	
-end
+end	% END if currentState
