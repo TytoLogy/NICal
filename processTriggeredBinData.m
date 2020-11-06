@@ -171,9 +171,9 @@ end
 matfile = fullfile(basepath, [basename '.mat']);
 if ~exist(matfile, 'file')
 	warning('%s: cannot locate NICal information file %s', mfilename, matfile);
-	cal = [];
+	cal = []; %#ok<NASGU>
 else
-	load(matfile, '-MAT');
+	load(matfile, '-MAT'); %#ok<LOAD>
 end
 
 %------------------------------------------------------------------------
@@ -221,14 +221,14 @@ if strcmpi(calmode, 'tones')
 		end
 		% don't use else-if in order to allow fall-through from previous if
 		if fVal == 0
-			AUTOFREQ = 0;
-			fstr = '';
+			AUTOFREQ = 0; %#ok<NASGU>
+			fstr = ''; %#ok<NASGU>
 			fstr = query_uservalue('Enter frequencies, separated by spaces', '');
 			calfreqs = str2num(fstr); %#ok<ST2NM>
 			clear fstr;			
 		end
 	else
-		AUTOFREQ = 1;
+		AUTOFREQ = 1; %#ok<NASGU>
 		calfreqs = zeros(1, nSweeps);
 	end
 	if length(calfreqs) ~= nSweeps
@@ -254,7 +254,7 @@ for n = 1:nSweeps
 	end
 	% ASSUME (!!) that stimulus data are collected on channel 1 (NI 0)
 	% and mic data are on channel 2 (NI AI0)
-	stimdata = tmpdata(:, S);
+	stimdata = tmpdata(:, S); %#ok<NASGU>
 	micdata = tmpdata(:, M);
 	clear tmpdata
 
@@ -263,7 +263,7 @@ for n = 1:nSweeps
 	%------------------------------------------------------------------------
 	% window and filter the data
 	micdata = sin2array(micdata', 1, Fs);
-	micdata = filter(fcoeffb, fcoeffa, micdata);
+	micdata = filtfilt(fcoeffb, fcoeffa, micdata);
 	
 	%--------------------------------
 	% process data according to mode
@@ -273,7 +273,7 @@ for n = 1:nSweeps
 		% WINDOW
 		%--------------------------------
 		case 'window'
-			[rms_vals, rmw_windows] =  processWindows(micdata, ...
+			[rms_vals, ~] =  processWindows(micdata, ...
 																	rms_windowsize_ms, Fs);
 			% convert to dB SPL
 			dbvals{n} = dbspl(VtoPa * rms_vals); %#ok<AGROW>
@@ -379,7 +379,7 @@ end
 %------------------------------------------------------------------------
 function [mag, phi, freq] = processTones(micdata, Fs, calfreq, FreqDetectWidth)
 	% get spectrum of data
-	[tmpfreqs, tmpmags, fmax, magmax] = daqdbfft(micdata, Fs, length(micdata));
+	[tmpfreqs, tmpmags, fmax, ~] = daqdbfft(micdata, Fs, length(micdata));
 	
 	if calfreq == 0
 		% if  calfreq == 0, use fmax to detect magnitude (automatic freq. detection)
