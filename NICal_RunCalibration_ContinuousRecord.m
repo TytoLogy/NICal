@@ -11,6 +11,9 @@
 % Created:	7 Nov 2014 from NICal_RunCalibration,	SJS
 %
 % Revisions:
+% 5 Jun 2024: plotting isn't working correctly, need to debug., also record
+% for longer than 1 sweep, maybe incorporate some stuff from chirocall (but
+% using newer interface to NI-DAQ)
 %--------------------------------------------------------------------------
 
 %-----------------------------------------------------------------------
