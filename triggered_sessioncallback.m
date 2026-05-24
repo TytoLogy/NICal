@@ -63,6 +63,7 @@ end
 % close file
 fclose(fp);
 
+%{
 %---------------------------------------------------------------
 % Update plots with new data
 %---------------------------------------------------------------
@@ -115,4 +116,6 @@ refreshdata(H.Racq, 'caller');
 refreshdata(H.Lfft, 'caller');
 refreshdata(H.Rfft, 'caller');
 drawnow
+
+%}
 
