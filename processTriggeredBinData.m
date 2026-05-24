@@ -47,6 +47,10 @@ function varargout = processTriggeredBinData(varargin)
 % Variables and Constants Declarations
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
+
+
+
+
 % window size (in milliseconds) for computing rms (and dB) values
 %	use smaller values for greater resolution, larger for coarse resolution
 rms_windowsize_ms = 100;
@@ -183,6 +187,7 @@ end
 %------------------------------------------------------------------------
 D = readBinData(inputfile);
 [nSweeps, nChannels] = size(D.data);
+fprintf('%s: read %d sweeps from %s\n', mfilename, nSweeps, inputfile);
 % get sample rate from the cal struct
 Fs = D.cal.Fs;
 %------------------------------------------------------------------------
@@ -210,13 +215,15 @@ if strcmpi(calmode, 'tones')
 			% open panel to get .txt file name
 			[freqfile, freqpath] = uigetfile(...
 					 {'*.txt', 'txt frequency list files (*.txt)'}, ...
-					  'Pick a .txt file');
+					  'Pick a .txt file', basename);
 			% check if user hit cancel (tmpfile, or basepath == 0)
 			if isequal(freqfile, 0) || isequal(freqpath, 0)
 				disp('Cancelled file load...')
 				fVal = 0;
 			else
 				calfreqs = load(fullfile(freqpath, freqfile));
+				fprintf('%s: read %d frequencies from %s\n', mfilename, ...
+					length(calfreqs), freqfile);
 			end
 		end
 		% don't use else-if in order to allow fall-through from previous if
@@ -232,10 +239,10 @@ if strcmpi(calmode, 'tones')
 		calfreqs = zeros(1, nSweeps);
 	end
 	if length(calfreqs) ~= nSweeps
+		warning('# of frequencies in calfreqs ~= nSweeps in bin file!');
 		calfreqs = calfreqs * ones(1, nSweeps);
 	end
 end
-
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -295,7 +302,8 @@ for n = 1:nSweeps
 			ylabel('dB SPL')
 			xlabel('Time (msec)');
 			grid
-			title(sprintf('Peak dB SPL = %.2f', max(dbvals{n})))
+			title(sprintf('Peak dB SPL = %.2f', max(dbvals{n})), ...
+								'Interpreter', 'none')
 
 		%--------------------------------
 		% TONES
@@ -332,7 +340,7 @@ switch lower(calmode)
 		set(gca, 'XTickLabel', '');
 		xlim([0 ndatums+1])
 		grid
-		title(basename);
+		title(basename, 'Interpreter', 'none');
 		ylabel('dB SPL')
 
 		subplot(212)
