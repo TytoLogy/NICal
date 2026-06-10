@@ -2,7 +2,7 @@ function varargout = processTriggeredBinData(varargin)
 %------------------------------------------------------------------------
 % dbvals = processTriggeredBinData(	'inputfile', <file name for .bin file>,
 %												'mode', <analysis mode>,
-% 										'freqwidth' <automagic frequency detect width> )
+%												'freqwidth' <automagic frequency detect width> )
 %------------------------------------------------------------------------
 % TytoLogy:NICal program
 %------------------------------------------------------------------------
@@ -18,16 +18,20 @@ function varargout = processTriggeredBinData(varargin)
 % 						(using entire recorded sweep) for each file
 % 	mode = 'window' will compute db SPL levels for each file 
 % 							broken up into 100 msec windows
-%  mode = '
+% 'freqwidth', <value> sets the width to search for peak frequency magnitude
+% 		default is 21 Hz
 % 
-%	'rmswin', <value> where value is time window, in ms, to calculate 
+% 'rmswin', <value> where value is time window, in ms, to calculate 
 %							running rms of signal
 % 
-% 	'stimchannel', <value>	default is 1
-% 	'micchannel', <value>	default is 2
+% 'stimchannel', <value>	default is 1
+% 'micchannel', <value>	default is 2
 %
-% freqwidth sets the width to search for peak frequency magnitude
-% 		default is 21 Hz
+% 'freqfile', <filename> provides a text file with list of frequencies
+%		played for the calibration data
+%
+% 'analysiswindow', <[start stop]> (milliseconds)
+%		defines data window for calculating db SPL
 %------------------------------------------------------------------------
 % See also: NICal 
 %------------------------------------------------------------------------
@@ -40,6 +44,13 @@ function varargout = processTriggeredBinData(varargin)
 %
 % Revisions:
 %  6 Nov 2020 (SJS): modifying to deal with non-tone stimuli
+%	2026-06-10 (SJS): updating for use with new TDT system. found issue with
+%	triggering - with ~260 ms of data recorded per sweep at 500kHz, stimulus
+%	ISI of 500 ms, some triggeres were missed (~50%). things that help:
+%		- don't plot recorded data on each sweep
+%		- longer ISI (750 ms)
+%		- shorter stimuli (200 instead of 250 ms)
+%		- use C drive for storage (SSD vs HD/magnetic)
 %------------------------------------------------------------------------
 
 %------------------------------------------------------------------------
@@ -47,9 +58,6 @@ function varargout = processTriggeredBinData(varargin)
 % Variables and Constants Declarations
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-
-
-
 
 % window size (in milliseconds) for computing rms (and dB) values
 %	use smaller values for greater resolution, larger for coarse resolution
@@ -72,10 +80,15 @@ S = 1;
 % mic channel
 M = 2;
 
+% analysis window - time window for calculating dB SPL 
+% if empty, uses entire chunk of data
+AnalysisWindow = [];
+
 % set basepath and basename to empty and
 % use default calibration mode ('tones')
 inputfile = ''; 
 calmode = 'tones';
+freqfile = '';
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -118,7 +131,19 @@ while index <= nargin
 		case 'micchannel'
 			M = varargin{index+1};
 			index = index + 2;
+			
+		case 'freqfile'
+			% set freqfile
+			freqfile = varargin{index+1}; 
+			% increment index by 2 places
+			index = index + 2;
 
+		case 'analysiswindow'
+			% set analysis window
+			AnalysisWindow = varargin{index+1};
+			% increment index by 2 places
+			index = index + 2;
+			
 		otherwise
 			error('%s: invalid option %s', mfilename, varargin{index});
 	end	
@@ -202,45 +227,55 @@ VtoPa = 1 ./ (D.cal.Gain(1) * invdb(D.cal.MicGain(1)) * D.cal.MicSensitivity);
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-% should consider loading/asking user for 
+% loading/asking user for 
 % tone frequencies if tone is specified
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 if strcmpi(calmode, 'tones')
-	qVal = query_user('Auto-detect tone frequencies', 1);
-	if qVal == 0
-		% check if user has text list of frequencies
-		fVal = query_user('Read list of frequencies from .txt file', 1);
-		if fVal == 1
-			% open panel to get .txt file name
-			[freqfile, freqpath] = uigetfile(...
-					 {'*.txt', 'txt frequency list files (*.txt)'}, ...
-					  'Pick a .txt file', basename);
-			% check if user hit cancel (tmpfile, or basepath == 0)
-			if isequal(freqfile, 0) || isequal(freqpath, 0)
-				disp('Cancelled file load...')
-				fVal = 0;
-			else
-				calfreqs = load(fullfile(freqpath, freqfile));
-				fprintf('%s: read %d frequencies from %s\n', mfilename, ...
-					length(calfreqs), freqfile);
-			end
-		end
-		% don't use else-if in order to allow fall-through from previous if
-		if fVal == 0
-			AUTOFREQ = 0; %#ok<NASGU>
-			fstr = ''; %#ok<NASGU>
-			fstr = query_uservalue('Enter frequencies, separated by spaces', '');
-			calfreqs = str2num(fstr); %#ok<ST2NM>
-			clear fstr;			
-		end
+	
+	% if user provided frequency file, use that
+	if ~isempty(freqfile)
+		[freqpath, freqfile, fext] = fileparts(freqfile);
+		freqfile = [freqfile fext];
+		calfreqs = load(fullfile(freqpath, freqfile));
+					fprintf('%s: read %d frequencies from %s\n', mfilename, ...
+						length(calfreqs), freqfile);		
 	else
-		AUTOFREQ = 1; %#ok<NASGU>
-		calfreqs = zeros(1, nSweeps);
-	end
-	if length(calfreqs) ~= nSweeps
-		warning('# of frequencies in calfreqs ~= nSweeps in bin file!');
-		calfreqs = calfreqs * ones(1, nSweeps);
+		qVal = query_user('Auto-detect tone frequencies', 1);
+		if qVal == 0
+			% check if user has text list of frequencies
+			fVal = query_user('Read list of frequencies from .txt file', 1);
+			if fVal == 1
+				% open panel to get .txt file name
+				[freqfile, freqpath] = uigetfile(...
+						 {'*.txt', 'txt frequency list files (*.txt)'}, ...
+						  'Pick a .txt file', basepath);
+				% check if user hit cancel (tmpfile, or basepath == 0)
+				if isequal(freqfile, 0) || isequal(freqpath, 0)
+					disp('Cancelled file load...')
+					fVal = 0;
+				else
+					calfreqs = load(fullfile(freqpath, freqfile));
+					fprintf('%s: read %d frequencies from %s\n', mfilename, ...
+						length(calfreqs), freqfile);
+				end
+			end
+			% don't use else-if in order to allow fall-through from previous if
+			if fVal == 0
+				AUTOFREQ = 0; %#ok<NASGU>
+				fstr = ''; %#ok<NASGU>
+				fstr = query_uservalue('Enter frequencies, separated by spaces', '');
+				calfreqs = str2num(fstr); %#ok<ST2NM>
+				clear fstr;			
+			end
+		else
+			AUTOFREQ = 1; %#ok<NASGU>
+			calfreqs = zeros(1, nSweeps);
+		end
+		if length(calfreqs) ~= nSweeps
+			warning('# of frequencies in calfreqs ~= nSweeps in bin file!');
+			calfreqs = calfreqs * ones(1, nSweeps);
+		end
 	end
 end
 
@@ -251,7 +286,7 @@ end
 %------------------------------------------------------------------------
 
 %--------------------------------
-% loop through daqfiles
+% loop through "daqfiles" (now sweeps)
 %--------------------------------
 for n = 1:nSweeps
 	if nChannels == 2
@@ -308,9 +343,10 @@ for n = 1:nSweeps
 		%--------------------------------
 		% TONES
 		%--------------------------------
-		case 'tones'		
+		case 'tones'
 			[mags(n), phis(n), calfreqs(n)] = ...
-				processTones(micdata, Fs, calfreqs(n), FreqDetectWidth); %#ok<AGROW>
+				processTones(micdata, Fs, calfreqs(n), FreqDetectWidth, ...
+									AnalysisWindow); %#ok<AGROW>
 			
 		%--------------------------------
 		% RMS
@@ -324,7 +360,7 @@ for n = 1:nSweeps
 end
 
 
-% assign output vars
+% plot data, assign output vars
 switch lower(calmode)
 	case 'tones'
 		ndatums = length(calfreqs);
@@ -376,6 +412,9 @@ out.fcoeff.b = fcoeffb;
 out.VtoPa = VtoPa;
 out.data = D.data;
 out.cal = D.cal;
+out.AnalysisWindow = AnalysisWindow;
+out.calfreqs = calfreqs;
+out.freqfile = fullfile(freqpath, freqfile);
 varargout{1} = out;
 
 end
@@ -385,7 +424,15 @@ end
 %% processTones function
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
-function [mag, phi, freq] = processTones(micdata, Fs, calfreq, FreqDetectWidth)
+function [mag, phi, freq] = processTones(micdata, Fs, calfreq, ...
+															FreqDetectWidth, ...
+															AnalysisWindow)
+	
+	% if AnalysisWindow is defined, use that to select window of data 
+	if ~isempty(AnalysisWindow)
+			tmp = ms2bin(AnalysisWindow, Fs);
+			micdata = micdata(tmp(1):tmp(2));
+	end
 	% get spectrum of data
 	[tmpfreqs, tmpmags, fmax, ~] = daqdbfft(micdata, Fs, length(micdata));
 	
