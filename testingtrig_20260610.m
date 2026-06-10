@@ -8,6 +8,18 @@ D = processTriggeredBinData(...
 		fullfile(calpath, 'Freqlist_4000-500-101000.txt'), ...
 	'analysiswindow', AnalysisWindow);
 
+%% save data
+caldatafile = '2026_iCONout_4-101kHz_0dBatten_caldata.mat';
+caldata.freqs = D.freqs;
+caldata.mags = D.mags;
+caldata.phis = D.phis;
+caldata.dbcals = D.dbvals;
+caldata.datafile = fullfile(D.path, D.files);
+caldata.cal = D.cal;
+caldata.freqfile = D.freqfile;
+caldata.AnalysisWindow = D.AnalysisWindow;
+save(fullfile(calpath, caldatafile), 'caldata');
+
 %%
 
 figure(4)
