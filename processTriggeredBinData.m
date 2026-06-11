@@ -368,7 +368,9 @@ switch lower(calmode)
 		out.mags = mags;
 		out.phis = phis;
 		out.dbvals = dbspl(VtoPa * rmssin * out.mags);
-
+		out.calfreqs = calfreqs;
+		out.freqfile = fullfile(freqpath, freqfile);
+		
 		figure
 		subplot(211)
 		plot(dbspl(VtoPa * rmssin * out.mags), '.-')
@@ -395,7 +397,12 @@ switch lower(calmode)
 	case 'window'
 		out.dbvals = dbvals;
 		out.rms_windowsize_ms = rms_windowsize_ms;
-
+		% find peak level, rms window for peak level
+		out.peakdb = zeros(length(dbvals), 2);
+		for n = 1:length(dbvals)
+			[out.peakdb(n, 1), out.peakdb(n, 2)] = max(out.dbvals{n});
+		end
+		
 	case 'rms'
 		out.dbvals = dbvals;
 		out.rms_vals = rms_vals;
@@ -413,8 +420,7 @@ out.VtoPa = VtoPa;
 out.data = D.data;
 out.cal = D.cal;
 out.AnalysisWindow = AnalysisWindow;
-out.calfreqs = calfreqs;
-out.freqfile = fullfile(freqpath, freqfile);
+
 varargout{1} = out;
 
 end
