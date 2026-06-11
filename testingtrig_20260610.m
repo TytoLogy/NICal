@@ -18,7 +18,11 @@ caldata.datafile = fullfile(D.path, D.files);
 caldata.cal = D.cal;
 caldata.freqfile = D.freqfile;
 caldata.AnalysisWindow = D.AnalysisWindow;
-save(fullfile(calpath, caldatafile), 'caldata');
+if ~exist(fullfile(calpath, caldatafile), 'file')
+	save(fullfile(calpath, caldatafile), 'caldata');
+else
+	warning('caldata file exists! %s', caldatafile);
+end
 
 %%
 
@@ -32,3 +36,5 @@ for n = 1:length(D.data)
 	tmpD = filtfilt(D.fcoeff.b, D.fcoeff.a, D.data{n});
 	fftplot(tmpD(dv), D.Fs, figure(4));
 end
+%%
+
