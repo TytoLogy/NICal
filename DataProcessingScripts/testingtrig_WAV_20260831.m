@@ -1,18 +1,52 @@
-calpath = 'C:\Users\Calibrate\Data\ACElab\E111\20260611';
-calfile = 'WAVtest_0dBatten_3sISI_nicaldata.bin';
+% calpath = 'C:\Users\Calibrate\Data\ACElab\E111\20260611';
+% calfile = 'WAVtest_0dBatten_3sISI_nicaldata.bin';
+
+calpath = 'F:\Data2\ACElab\E111\20260831';
+calfile = '20260831_iCON_WAVstim_12dBatten.bin';
+
 AnalysisWindow = [20 210];
 AnalysisWindow = [];
 
-D = processTriggeredBinData(...
-	'inputfile', ...
-		fullfile(calpath, calfile), ...
-	'mode', 'window', ...
-	'rmswin', 2);
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+% Variables and Constants Declarations
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+
+% window size (in milliseconds) for computing rms (and dB) values
+%	use smaller values for greater resolution, larger for coarse resolution
+rms_windowsize_ms = 100;
+
+% highpass cutoff frequency (Hz)
+fcutoff = 90;
+% filter order
+forder = 3;
+
+% Decimation factor - plotted data will be 1 / DeciFactor shorter
+% and sampling rate will be Fs / DeciFactor
+DeciFactor = 10;
+
+rmswin = 2;
+
+D = readBinData(fullfile(calpath, calfile));
+
+[nSweeps, nChannels] = size(D.data);
+fprintf('%s: read %d sweeps from %s\n', mfilename, nSweeps, inputfile);
+% get sample rate from the cal struct
+Fs = D.cal.Fs;
+%------------------------------------------------------------------------
+% get a highpass filter for processing the  data
+%------------------------------------------------------------------------
+% Nyquist frequency
+fnyq = Fs/2;
+% filter coefficients
+[fcoeffb, fcoeffa] = butter(forder, fcutoff/fnyq, 'high');
+% SPL conversion
+VtoPa = 1 ./ (D.cal.Gain(1) * invdb(D.cal.MicGain(1)) * D.cal.MicSensitivity);
 
 
 %% plot response
 
-DeciFactor = 10;
 for n = 1:length(D.data)
 	% decimate data for plotting
 	tmp = filtfilt(D.fcoeff.b, D.fcoeff.a, D.data{n});
@@ -38,7 +72,7 @@ for n = 1:length(D.data)
 	hold on
 		plot(D.rms_windowsize_ms*D.peakdb(n, 2), D.peakdb(n, 1), 'go');
 	hold off
-	ylim([30 85]);
+	ylim([0 85]);
 end
 
 %% save peak db data
