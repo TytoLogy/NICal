@@ -1,7 +1,16 @@
-calpath = 'F:\Data2\ACElab\E111\20260831';
-calfile = 'E111_20260831_allWAVstim_12dBatten.bin';
-calfile = 'E111_20260831_allWAVstim_6dBatten.bin';
+[~, hostnm] = system('hostname');
+hostnm = sscanf(hostnm, '%s');
+if strcmpi(hostnm, 'ACErig')
+   calpath = 'D:\AuditoryStimuli\Calibration\RawWAVoutputData_20260831';
+else
+   calpath = 'F:\Data2\ACElab\E111\20260831';
+end
+% calfile = 'E111_20260831_allWAVstim_12dBatten.bin';
+% calfile = 'E111_20260831_allWAVstim_6dBatten.bin';
+calfile = 'E111_20260831_allWAVstim_0dBatten.bin';
 inputfile = fullfile(calpath, calfile);
+
+fprintf('%s: will read data from:\n\t%s\n', mfilename, inputfile);
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -12,6 +21,8 @@ inputfile = fullfile(calpath, calfile);
 S = 1;
 % mic channel
 M = 2;
+
+SeparatePlots = false;
 
 AnalysisWindow = [];
 
@@ -29,6 +40,9 @@ forder = 3;
 % and sampling rate will be Fs / DeciFactor
 DeciFactor = 10;
 
+% !mic sensitivity was 0.316 V/Pa, not 0.1 V/Pa as stored in the datafile!
+MicSensitivity = 0.316;
+
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 %% read in data
@@ -37,6 +51,9 @@ DeciFactor = 10;
 D = readBinData(fullfile(calpath, calfile));
 [nSweeps, nChannels] = size(D.data);
 fprintf('%s: read %d sweeps from %s\n', mfilename, nSweeps, inputfile);
+
+% !mic sensitivity was 0.316 V/Pa, not 0.1 V/Pa as stored in the datafile!
+D.cal.MicSensitivity = MicSensitivity;
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -66,8 +83,8 @@ D.rms_windowsize_ms = rms_windowsize_ms;
 %--------------------------------
 % loop through "daqfiles" (now sweeps)
 %--------------------------------
-% for n = 1:nSweeps
-for n = 50
+for n = 1:nSweeps
+% for n = 50
 	if nChannels == 2
 		tmpdata = [D.data{n, 1} D.data{n, 2}];
 	else
@@ -88,7 +105,7 @@ for n = 50
 	micdata = sin2array(micdata', 5, Fs);
 	micdata = filtfilt(fcoeffb, fcoeffa, micdata);
 
-	[rms_vals, ~] =  processWindows(micdata, rms_windowsize_ms, Fs);
+	[rms_vals, ~] = processWindows(micdata, rms_windowsize_ms, Fs);
 	
 	% throw away last rms value as it is likely to be corrupted by
 	% truncation (rms_bins don't evenly divide nsamples)
@@ -104,7 +121,11 @@ for n = 50
 	t1 = 1000*((1:length(micdata_reduced)) - 1) / Fs_reduced;
 	t2 = rms_windowsize_ms * ((1:length(D.rms_vals{n})) - 1);
 	% plot!
-	figure(n)
+   if SeparatePlots
+      figure(n)
+   else
+   	figure(1)
+   end
 	subplot(311)
 	plot(t1, micdata_reduced);
 	grid
@@ -130,7 +151,8 @@ for n = 50
 	colorbar off
 	colormap('gray')
 	
-	
+	drawnow
+   pause
 end
 
 
@@ -175,9 +197,9 @@ end
 dbfile = [tmp '_peakdB.txt'];
 fp = fopen(fullfile(calpath, dbfile), 'wt');
 fprintf(fp, 'Stimulus\tPeakdBSPL\tPeakTime_bin\tPeakTime_ms\n');
-for n = 1:length(D.peakdb)
-	fprintf(fp, '%d\t%f\t%d\t%.1f\n', n, D.peakdb(n, 1), D.peakdb(n, 2), ...
-												D.rms_windowsize_ms*D.peakdb(n, 2));
+for n = 1:length(D.peakdB)
+	fprintf(fp, '%d\t%f\t%d\t%.1f\n', n, D.peakdB(n, 1), D.peakdB(n, 2), ...
+												D.rms_windowsize_ms*D.peakdB(n, 2));
 end
 fclose(fp);
 %% plot raw data
